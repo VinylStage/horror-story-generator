@@ -1,0 +1,132 @@
+{
+  "name": "Horror Story - Basic Generation",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /Users/vinyl/vinylstudio/n8n-test && poetry run python3 main.py",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "name": "Execute: Generate Story",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Execute Command 노드의 출력에서 파일 경로 추출\nconst stdout = $input.item.json.stdout;\n\n// 정규식으로 파일 경로 추출\nconst mdPathMatch = stdout.match(/저장 위치: (.+\\.md)/);\nconst logPathMatch = stdout.match(/로그 파일: (.+\\.log)/);\n\nif (mdPathMatch) {\n  // 상대 경로를 절대 경로로 변환\n  const mdPath = mdPathMatch[1];\n  const absoluteMdPath = mdPath.startsWith('/') ? mdPath : `/Users/vinyl/vinylstudio/n8n-test/${mdPath}`;\n  \n  // 메타데이터 파일 경로 생성\n  const metadataPath = absoluteMdPath.replace('.md', '_metadata.json');\n  \n  return {\n    json: {\n      md_file_path: absoluteMdPath,\n      metadata_file_path: metadataPath,\n      log_file_path: logPathMatch ? logPathMatch[1] : '',\n      full_output: stdout,\n      exit_code: $input.item.json.exitCode\n    }\n  };\n} else {\n  throw new Error('파일 경로를 찾을 수 없습니다');\n}"
+      },
+      "name": "Extract File Paths",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "filePath": "={{ $json.md_file_path }}",
+        "options": {}
+      },
+      "name": "Read: Markdown File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "filePath": "={{ $json.metadata_file_path }}",
+        "options": {}
+      },
+      "name": "Read: Metadata JSON",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 마크다운 파일 내용\nconst mdContent = $input.first().binary.data;\nconst mdText = Buffer.from(mdContent.data, 'base64').toString('utf-8');\n\n// 메타데이터 JSON 내용\nconst metadataContent = $input.last().binary.data;\nconst metadataText = Buffer.from(metadataContent.data, 'base64').toString('utf-8');\nconst metadata = JSON.parse(metadataText);\n\n// 결과 반환\nreturn {\n  json: {\n    markdown_content: mdText.substring(0, 500) + '...', // 미리보기 (처음 500자)\n    full_markdown_length: mdText.length,\n    metadata: metadata,\n    generation_success: true\n  }\n};"
+      },
+      "name": "Parse Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execute: Generate Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: Generate Story": {
+      "main": [
+        [
+          {
+            "node": "Extract File Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract File Paths": {
+      "main": [
+        [
+          {
+            "node": "Read: Markdown File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read: Metadata JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read: Markdown File": {
+      "main": [
+        [
+          {
+            "node": "Parse Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read: Metadata JSON": {
+      "main": [
+        [
+          {
+            "node": "Parse Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-02T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,135 @@
+{
+  "name": "Horror Story - Template Selection",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "template_path",
+              "value": "templates/horror_story_prompt_template.json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set: Template Selection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [460, 300],
+      "notes": "여기서 템플릿을 선택하세요:\n- templates/horror_story_prompt_template.json (기본)\n- templates/sample.json\n- templates/horror_story_prompt_short.json (짧은 버전)\n- templates/horror_story_prompt_psychological.json (심리 호러)"
+    },
+    {
+      "parameters": {
+        "command": "=cd /Users/vinyl/vinylstudio/n8n-test && poetry run python3 -c \"from horror_story_generator import generate_horror_story; generate_horror_story(template_path='{{ $json.template_path }}')\"",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "name": "Execute: Generate with Template",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Execute Command 노드의 출력에서 파일 경로 추출\nconst stdout = $input.item.json.stdout;\n\n// 정규식으로 파일 경로 추출\nconst mdPathMatch = stdout.match(/저장 위치: (.+\\.md)/);\n\nif (mdPathMatch) {\n  const mdPath = mdPathMatch[1];\n  const absoluteMdPath = mdPath.startsWith('/') ? mdPath : `/Users/vinyl/vinylstudio/n8n-test/${mdPath}`;\n  const metadataPath = absoluteMdPath.replace('.md', '_metadata.json');\n  \n  return {\n    json: {\n      md_file_path: absoluteMdPath,\n      metadata_file_path: metadataPath,\n      template_used: $('Set: Template Selection').item.json.template_path,\n      full_output: stdout,\n      exit_code: $input.item.json.exitCode\n    }\n  };\n} else {\n  throw new Error('파일 경로를 찾을 수 없습니다');\n}"
+      },
+      "name": "Extract File Paths",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "filePath": "={{ $json.metadata_file_path }}",
+        "options": {}
+      },
+      "name": "Read: Metadata JSON",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 메타데이터 JSON 파싱\nconst metadataContent = $input.item.binary.data;\nconst metadataText = Buffer.from(metadataContent.data, 'base64').toString('utf-8');\nconst metadata = JSON.parse(metadataText);\n\n// 간단한 완결성 검증\nconst wordCount = metadata.word_count || 0;\nconst outputTokens = metadata.usage?.output_tokens || 0;\nconst maxTokens = 8192;\n\n// 검증 로직\nconst isComplete = wordCount >= 1000 && outputTokens < maxTokens;\n\nreturn {\n  json: {\n    template_used: $('Extract File Paths').item.json.template_used,\n    title: metadata.title,\n    word_count: wordCount,\n    output_tokens: outputTokens,\n    tags: metadata.tags,\n    is_complete: isComplete,\n    validation_message: isComplete ? 'Generation successful' : 'Output may be incomplete',\n    metadata: metadata\n  }\n};"
+      },
+      "name": "Validate Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set: Template Selection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Template Selection": {
+      "main": [
+        [
+          {
+            "node": "Execute: Generate with Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: Generate with Template": {
+      "main": [
+        [
+          {
+            "node": "Extract File Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract File Paths": {
+      "main": [
+        [
+          {
+            "node": "Read: Metadata JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read: Metadata JSON": {
+      "main": [
+        [
+          {
+            "node": "Validate Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-02T00:00:00.000Z",
+  "versionId": "1"
+}

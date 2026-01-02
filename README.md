@@ -5,9 +5,11 @@ Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시�
 ## 특징
 
 - **함수형 설계**: 각 기능이 독립적인 함수로 구현되어 확장 및 재사용이 쉽습니다
+- **다중 템플릿 지원**: templates 디렉토리에서 다양한 장르/스타일의 템플릿 선택 가능
 - **JSON 기반 프롬프트**: 소설의 모든 요소를 JSON 포맷으로 관리하여 커스터마이즈가 용이합니다
 - **자동 저장**: 생성된 소설과 메타데이터를 자동으로 파일로 저장합니다
 - **한국어 최적화**: 한국적 정서와 호러 요소를 반영한 프롬프트 설계
+- **n8n 연동 지원**: n8n 워크플로와 완벽하게 통합 가능한 구조
 
 ## 설치 방법
 
@@ -296,6 +298,68 @@ if __name__ == "__main__":
 2. **토큰 수 조정**: 긴 소설을 원하면 `MAX_TOKENS` 값을 높이세요 (최대 8192)
 
 3. **프롬프트 튜닝**: `horror_story_prompt_template.json`을 수정하여 원하는 스타일로 조정하세요
+
+---
+
+## n8n 워크플로 연동
+
+이 프로젝트는 **n8n 자동화 워크플로와 연동**할 수 있도록 설계되었습니다.
+
+### 빠른 시작
+
+1. **워크플로 Import**
+   ```bash
+   # n8n에서 다음 파일 import
+   n8n_workflows/01_basic_generation.json
+   ```
+
+2. **필수 설정**
+   - Execute Command 노드에서 프로젝트 경로 수정
+   - .env 파일에 ANTHROPIC_API_KEY 설정
+
+3. **실행**
+   - n8n에서 워크플로 실행 → 자동으로 소설 생성
+
+### n8n 연동 문서
+
+**1단계 (필수) - 기본 연동:**
+- 📖 [Execute Command 연동 가이드](docs/n8n_execute_command_guide.md)
+- 📖 [출력 검증 및 에러 처리](docs/n8n_output_validation.md)
+- 📖 [워크플로 Import 가이드](docs/n8n_workflow_import_guide.md)
+- 📖 [환경 설정 및 보안](docs/n8n_environment_setup.md)
+
+**2단계 (권장) - 활용 및 확장:**
+- 출력 파일 활용 (블로그 자동 업로드, 클라우드 저장)
+- 배치 생성 및 스케줄링
+
+**3단계 (선택) - 고급 기능:**
+- HTTP API 래퍼 (n8n.cloud 사용 시)
+- 연동 옵션 비교
+- 트러블슈팅 가이드
+
+### 템플릿 선택
+
+여러 템플릿 중 선택하여 다양한 스타일의 소설 생성:
+
+```python
+# 기본 템플릿
+generate_horror_story(template_path='templates/horror_story_prompt_template.json')
+
+# 짧은 버전
+generate_horror_story(template_path='templates/horror_story_prompt_short.json')
+
+# 심리 호러
+generate_horror_story(template_path='templates/horror_story_prompt_psychological.json')
+```
+
+n8n에서는 Set 노드로 템플릿을 변수로 설정 가능합니다.
+
+### 프로젝트 인수인계
+
+새 채팅에서 작업을 이어가려면:
+- 📋 [인수인계 문서](docs/PROJECT_HANDOFF.md) 참조
+
+---
 
 ## 라이선스
 
