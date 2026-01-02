@@ -1,0 +1,82 @@
+{
+  "story_config": {
+    "genre": "psychological_horror",
+    "atmosphere": "dark_unsettling",
+    "length": "medium",
+    "target_audience": "adult"
+  },
+  "story_elements": {
+    "setting": {
+      "location": "abandoned_hospital",
+      "time_period": "present_day",
+      "weather": "stormy_night",
+      "atmosphere_details": "decaying walls, flickering lights, distant echoes"
+    },
+    "characters": {
+      "protagonist": {
+        "name": "미정",
+        "age": "20-30대",
+        "occupation": "기자 또는 작가",
+        "personality_traits": ["curious", "skeptical", "determined"],
+        "fears": ["darkness", "isolation"]
+      },
+      "antagonist": {
+        "type": "supernatural_entity",
+        "reveal_timing": "gradual",
+        "threat_level": "severe"
+      }
+    },
+    "plot_structure": {
+      "act_1": {
+        "hook": "주인공이 기묘한 소문을 조사하기 위해 장소에 도착",
+        "inciting_incident": "첫 번째 초자연적 현상 목격",
+        "pacing": "slow_burn"
+      },
+      "act_2": {
+        "rising_tension": "점점 강해지는 공포 요소",
+        "revelations": "과거의 비밀이 드러남",
+        "character_development": "주인공의 심리적 변화"
+      },
+      "act_3": {
+        "climax": "진실과의 대면",
+        "resolution_type": "ambiguous_or_tragic",
+        "final_twist": "독자를 섬뜩하게 만들 반전"
+      }
+    },
+    "horror_techniques": {
+      "primary_fear_type": ["psychological", "supernatural", "isolation"],
+      "scare_tactics": ["atmospheric_dread", "jump_scares", "body_horror"],
+      "suspense_building": "gradual_revelation",
+      "use_of_silence": true,
+      "sensory_details": ["sound", "smell", "touch", "visual_distortion"]
+    },
+    "themes": {
+      "main_theme": "guilt_and_punishment",
+      "sub_themes": ["madness", "isolation", "past_trauma"],
+      "philosophical_question": "현실과 환상의 경계"
+    }
+  },
+  "writing_style": {
+    "narrative_perspective": "1인칭 또는 3인칭 제한",
+    "tense": "과거형",
+    "tone": ["dark", "ominous", "introspective"],
+    "language_style": {
+      "vocabulary": "풍부하고 감각적",
+      "sentence_structure": "긴장감을 위해 변화무쌍하게",
+      "metaphor_use": "공포를 암시하는 은유 활용",
+      "korean_style": "현대 한국어, 자연스러운 구어체와 문어체 혼용"
+    },
+    "pacing": {
+      "opening": "느리고 분위기 조성",
+      "middle": "점진적 가속",
+      "ending": "빠르고 충격적"
+    }
+  },
+  "additional_requirements": {
+    "word_count": 3000,
+    "chapter_structure": "단편 형식 또는 3-5개 챕터",
+    "cultural_context": "한국적 정서와 공포 요소 반영",
+    "avoid": ["과도한 폭력 묘사", "진부한 클리셰", "설명적 서술"],
+    "emphasize": ["분위기", "심리 묘사", "감각적 디테일", "복선과 반전"]
+  }
+}

@@ -1,0 +1,742 @@
+"""
+호러 소설 생성기 - Claude API를 사용한 함수형 구현
+
+이 모듈은 Claude API를 활용하여 한국어 호러 소설을 자동으로 생성합니다.
+Astro + GraphQL 블로그에 최적화된 마크다운 포맷으로 출력합니다.
+
+향후 API 서버로 확장 가능하도록 설계되었습니다.
+"""
+
+import json
+import logging
+import os
+import re
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Union
+from dotenv import load_dotenv
+import anthropic
+
+
+# 로깅 설정 함수
+def setup_logging(log_level: str = "INFO") -> logging.Logger:
+    """
+    로깅을 설정하고 logger 인스턴스를 반환합니다.
+
+    실행할 때마다 별도의 타임스탬프 기반 로그 파일을 logs/ 디렉토리에 생성합니다.
+
+    Args:
+        log_level (str): 로깅 레벨 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+
+    Returns:
+        logging.Logger: 설정된 logger 인스턴스
+    """
+    # logs 디렉토리 생성
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+
+    # 타임스탬프 기반 로그 파일명
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_filename = log_dir / f"horror_story_{timestamp}.log"
+
+    # 로깅 레벨 설정
+    numeric_level = getattr(logging, log_level.upper(), logging.INFO)
+
+    # 로거 설정
+    logger = logging.getLogger(__name__)
+    logger.setLevel(numeric_level)
+
+    # propagate를 False로 설정하여 root logger로 전파 방지 (중복 로그 방지)
+    logger.propagate = False
+
+    # 기존 핸들러 제거 (중복 방지)
+    if logger.handlers:
+        logger.handlers.clear()
+
+    # 포맷터
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # 콘솔 핸들러
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(numeric_level)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    # 파일 핸들러
+    file_handler = logging.FileHandler(log_filename, encoding='utf-8')
+    file_handler.setLevel(numeric_level)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    logger.info(f"로깅 시작 - 레벨: {log_level}, 로그 파일: {log_filename}")
+
+    return logger
+
+
+# 초기 로거 생성 (환경 변수 로드 전 기본값)
+logger = setup_logging()
+
+
+def load_environment() -> Dict[str, Union[str, int, float]]:
+    """
+    환경 변수를 로드하고 필요한 설정을 반환합니다.
+
+    .env 파일에서 API 키, 모델 설정, 출력 디렉토리, 로깅 레벨 등을 로드합니다.
+    필수 환경 변수가 없을 경우 ValueError를 발생시킵니다.
+
+    Returns:
+        Dict[str, Union[str, int, float]]: API 키 및 모델 설정 정보
+            - api_key (str): Anthropic API 키
+            - model (str): Claude 모델 이름
+            - max_tokens (int): 최대 토큰 수
+            - temperature (float): 생성 온도 (0.0~1.0)
+            - output_dir (str): 출력 디렉토리 경로
+            - log_level (str): 로깅 레벨
+
+    Raises:
+        ValueError: ANTHROPIC_API_KEY가 설정되지 않은 경우
+
+    Example:
+        >>> config = load_environment()
+        >>> print(config['model'])
+        'claude-sonnet-4-5-20250929'
+    """
+    global logger
+    load_dotenv()
+
+    # 로깅 레벨 재설정
+    log_level = os.getenv("LOG_LEVEL", "INFO")
+    logger = setup_logging(log_level)
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        logger.error("ANTHROPIC_API_KEY가 .env 파일에 설정되지 않았습니다.")
+        raise ValueError("ANTHROPIC_API_KEY가 .env 파일에 설정되지 않았습니다.")
+
+    config = {
+        "api_key": api_key,
+        "model": os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5-20250929"),
+        "max_tokens": int(os.getenv("MAX_TOKENS", "8192")),
+        "temperature": float(os.getenv("TEMPERATURE", "0.8")),
+        "output_dir": os.getenv("OUTPUT_DIR", "./generated_stories"),
+        "log_level": log_level
+    }
+
+    logger.info(f"환경 변수 로드 완료 - 모델: {config['model']}")
+    return config
+
+
+def load_prompt_template(template_path: str = "horror_story_prompt_template.json") -> Dict[str, Any]:
+    """
+    JSON 형식의 프롬프트 템플릿을 로드합니다.
+
+    템플릿 파일에는 장르, 분위기, 캐릭터, 플롯 구조 등
+    호러 소설 생성에 필요한 모든 설정이 포함됩니다.
+
+    Args:
+        template_path (str): 템플릿 파일 경로. 기본값은 "horror_story_prompt_template.json"
+
+    Returns:
+        Dict[str, Any]: 프롬프트 템플릿 데이터
+            - story_config: 기본 설정 (장르, 분위기 등)
+            - story_elements: 스토리 요소 (설정, 캐릭터, 플롯)
+            - writing_style: 글쓰기 스타일
+            - additional_requirements: 추가 요구사항
+
+    Raises:
+        FileNotFoundError: 템플릿 파일이 존재하지 않는 경우
+
+    Example:
+        >>> template = load_prompt_template()
+        >>> genre = template['story_config']['genre']
+    """
+    if not os.path.exists(template_path):
+        logger.error(f"프롬프트 템플릿 파일을 찾을 수 없습니다: {template_path}")
+        raise FileNotFoundError(f"프롬프트 템플릿 파일을 찾을 수 없습니다: {template_path}")
+
+    with open(template_path, 'r', encoding='utf-8') as f:
+        template = json.load(f)
+
+    logger.info(f"프롬프트 템플릿 로드 완료: {template_path}")
+    return template
+
+
+def build_system_prompt(template: Dict[str, Any]) -> str:
+    """
+    JSON 템플릿으로부터 시스템 프롬프트를 생성합니다.
+
+    템플릿의 모든 설정을 분석하여 Claude API에 전달할
+    상세한 시스템 프롬프트를 구성합니다.
+
+    Args:
+        template (Dict[str, Any]): 프롬프트 템플릿 데이터
+
+    Returns:
+        str: 완성된 시스템 프롬프트 문자열
+
+    Example:
+        >>> template = load_prompt_template()
+        >>> system_prompt = build_system_prompt(template)
+    """
+    logger.debug("시스템 프롬프트 생성 시작")
+
+    system_prompt = """당신은 한국의 최고 호러 소설 작가입니다. 독자들을 섬뜩하게 만들고 심리적 공포를 자아내는 이야기를 만드는 전문가입니다.
+
+다음 가이드라인을 따라 호러 소설을 작성해주세요:
+
+"""
+
+    # 장르 및 분위기 설정
+    config = template.get("story_config", {})
+    system_prompt += f"""
+## 기본 설정
+- 장르: {config.get('genre', 'horror')}
+- 분위기: {config.get('atmosphere', 'dark')}
+- 분량: {config.get('length', 'medium')}
+- 대상 독자: {config.get('target_audience', 'adult')}
+"""
+
+    # 스토리 요소
+    elements = template.get("story_elements", {})
+    if elements:
+        system_prompt += "\n## 스토리 구성 요소\n"
+        system_prompt += f"스토리 요소: {json.dumps(elements, ensure_ascii=False, indent=2)}\n"
+
+    # 글쓰기 스타일
+    style = template.get("writing_style", {})
+    if style:
+        system_prompt += "\n## 글쓰기 스타일\n"
+        system_prompt += f"- 시점: {style.get('narrative_perspective', '1인칭')}\n"
+        system_prompt += f"- 시제: {style.get('tense', '과거형')}\n"
+        system_prompt += f"- 톤: {', '.join(style.get('tone', []))}\n"
+
+        lang_style = style.get("language_style", {})
+        if lang_style:
+            system_prompt += f"- 어휘: {lang_style.get('vocabulary', '풍부하고 감각적')}\n"
+            system_prompt += f"- 한국어 스타일: {lang_style.get('korean_style', '현대 한국어')}\n"
+
+    # 추가 요구사항
+    requirements = template.get("additional_requirements", {})
+    if requirements:
+        system_prompt += "\n## 추가 요구사항\n"
+        system_prompt += f"- 목표 분량: {requirements.get('word_count', 3000)}자\n"
+        system_prompt += f"- 구조: {requirements.get('chapter_structure', '단편')}\n"
+
+        if "avoid" in requirements:
+            system_prompt += f"- 피해야 할 요소: {', '.join(requirements['avoid'])}\n"
+
+        if "emphasize" in requirements:
+            system_prompt += f"- 강조할 요소: {', '.join(requirements['emphasize'])}\n"
+
+    system_prompt += """
+
+독자가 마지막 문장까지 긴장감을 놓지 못하게 만들고,
+이야기가 끝난 후에도 오래도록 기억에 남을 섬뜩한 여운을 남겨주세요.
+"""
+
+    logger.debug("시스템 프롬프트 생성 완료")
+    return system_prompt
+
+
+def build_user_prompt(custom_request: Optional[str] = None, template: Optional[Dict[str, Any]] = None) -> str:
+    """
+    사용자 요청을 기반으로 user 프롬프트를 생성합니다.
+
+    커스텀 요청이 있으면 그대로 사용하고, 없으면 템플릿 기반으로
+    기본 요청 프롬프트를 생성합니다.
+
+    Args:
+        custom_request (Optional[str]): 사용자의 커스텀 요청사항. None이면 기본 프롬프트 사용
+        template (Optional[Dict[str, Any]]): 프롬프트 템플릿 (추가 컨텍스트용)
+
+    Returns:
+        str: 완성된 user 프롬프트 문자열
+
+    Example:
+        >>> user_prompt = build_user_prompt("1980년대 시골 마을 배경의 귀신 이야기")
+    """
+    if custom_request:
+        logger.debug(f"커스텀 요청 프롬프트 사용: {custom_request[:50]}...")
+        return custom_request
+
+    # 기본 요청
+    user_prompt = "위의 가이드라인을 따라 독창적이고 섬뜩한 호러 소설을 작성해주세요."
+
+    if template:
+        elements = template.get("story_elements", {})
+        setting = elements.get("setting", {})
+
+        if setting:
+            user_prompt += f"\n\n배경: {setting.get('location', '미정')} - {setting.get('time_period', '현재')}"
+
+        plot = elements.get("plot_structure", {})
+        if plot and "act_1" in plot:
+            user_prompt += f"\n도입부: {plot['act_1'].get('hook', '')}"
+
+    logger.debug("기본 프롬프트 생성 완료")
+    return user_prompt
+
+
+def call_claude_api(
+    system_prompt: str,
+    user_prompt: str,
+    config: Dict[str, Union[str, int, float]]
+) -> Dict[str, Any]:
+    """
+    Claude API를 호출하여 호러 소설을 생성합니다.
+
+    Anthropic Messages API를 사용하여 시스템 및 사용자 프롬프트를 전달하고
+    생성된 텍스트와 토큰 사용량을 반환합니다.
+
+    Args:
+        system_prompt (str): 시스템 프롬프트 (작가 역할 및 가이드라인)
+        user_prompt (str): 사용자 프롬프트 (구체적 요청사항)
+        config (Dict[str, Union[str, int, float]]): API 설정 정보
+            - api_key: API 키
+            - model: 모델 이름
+            - max_tokens: 최대 토큰 수
+            - temperature: 생성 온도
+
+    Returns:
+        Dict[str, Any]: 생성 결과
+            - story_text (str): 생성된 호러 소설 텍스트
+            - usage (Dict): 토큰 사용량 정보
+                - input_tokens (int): 입력 토큰 수
+                - output_tokens (int): 출력 토큰 수
+
+    Raises:
+        Exception: API 호출 실패 시 (네트워크 오류, 인증 실패 등)
+
+    Example:
+        >>> result = call_claude_api(system_prompt, user_prompt, config)
+        >>> print(result['story_text'][:100])
+        >>> print(f"Used {result['usage']['input_tokens']} input tokens")
+    """
+    logger.info("Claude API 호출 시작...")
+    client = anthropic.Anthropic(api_key=config["api_key"])
+
+    try:
+        message = client.messages.create(
+            model=config["model"],
+            max_tokens=int(config["max_tokens"]),
+            temperature=float(config["temperature"]),
+            system=system_prompt,
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ]
+        )
+
+        story_text = message.content[0].text
+        usage = {
+            "input_tokens": message.usage.input_tokens,
+            "output_tokens": message.usage.output_tokens,
+            "total_tokens": message.usage.input_tokens + message.usage.output_tokens
+        }
+
+        logger.info(f"소설 생성 완료 - 길이: {len(story_text)}자")
+        logger.info(f"토큰 사용량 - Input: {usage['input_tokens']}, Output: {usage['output_tokens']}, Total: {usage['total_tokens']}")
+
+        return {
+            "story_text": story_text,
+            "usage": usage
+        }
+
+    except Exception as e:
+        logger.error(f"Claude API 호출 중 오류 발생: {str(e)}", exc_info=True)
+        raise Exception(f"Claude API 호출 중 오류 발생: {str(e)}")
+
+
+def extract_title_from_story(story_text: str) -> str:
+    """
+    생성된 소설에서 제목을 추출합니다.
+
+    마크다운 형식의 # 제목을 찾아 반환합니다.
+    제목을 찾을 수 없으면 기본 제목을 반환합니다.
+
+    Args:
+        story_text (str): 생성된 소설 전체 텍스트
+
+    Returns:
+        str: 추출된 제목 또는 기본 제목
+
+    Example:
+        >>> title = extract_title_from_story("# 녹색 복도\\n\\n본문...")
+        >>> print(title)
+        '녹색 복도'
+    """
+    # 마크다운 제목 패턴 찾기 (# 제목)
+    title_match = re.search(r'^#\s+(.+)$', story_text, re.MULTILINE)
+    if title_match:
+        title = title_match.group(1).strip()
+        logger.debug(f"제목 추출 성공: {title}")
+        return title
+
+    logger.warning("제목을 찾을 수 없어 기본 제목 사용")
+    return "무제"
+
+
+def extract_tags_from_story(story_text: str, template: Dict[str, Any]) -> List[str]:
+    """
+    소설과 템플릿에서 태그를 추출합니다.
+
+    소설 본문의 태그 섹션과 템플릿의 설정을 분석하여
+    한영 혼용 태그 리스트를 생성합니다.
+
+    Args:
+        story_text (str): 생성된 소설 전체 텍스트
+        template (Dict[str, Any]): 프롬프트 템플릿
+
+    Returns:
+        List[str]: 추출된 태그 리스트
+
+    Example:
+        >>> tags = extract_tags_from_story(story_text, template)
+        >>> print(tags)
+        ['호러', 'horror', '심리스릴러', 'psychological']
+    """
+    tags = ["호러", "horror"]
+
+    # 템플릿에서 장르 태그 추가
+    config = template.get("story_config", {})
+    genre = config.get("genre", "")
+    if genre and genre not in tags:
+        tags.append(genre)
+
+    # 템플릿에서 공포 타입 태그 추가
+    elements = template.get("story_elements", {})
+    horror_techniques = elements.get("horror_techniques", {})
+    fear_types = horror_techniques.get("primary_fear_type", [])
+    if isinstance(fear_types, list):
+        tags.extend(fear_types[:2])  # 최대 2개만 추가
+
+    # 소설 본문에서 태그 섹션 찾기 (## 태그)
+    tag_section_match = re.search(r'##\s*태그\s*\n([\s\S]+?)(?=\n##|\Z)', story_text, re.MULTILINE)
+    if tag_section_match:
+        tag_content = tag_section_match.group(1)
+        # - #태그명 또는 - 태그명 형식 추출
+        found_tags = re.findall(r'-\s*#?(\w+)', tag_content)
+        tags.extend(found_tags[:5])  # 최대 5개만 추가
+
+    # 중복 제거 및 정리
+    unique_tags = []
+    seen = set()
+    for tag in tags:
+        tag_clean = tag.strip().lower()
+        if tag_clean not in seen:
+            seen.add(tag_clean)
+            unique_tags.append(tag.strip())
+
+    logger.debug(f"태그 추출 완료: {unique_tags}")
+    return unique_tags[:10]  # 최대 10개
+
+
+def generate_description(story_text: str) -> str:
+    """
+    소설의 첫 부분에서 간단한 설명을 생성합니다.
+
+    첫 문단 또는 첫 200자를 추출하여 설명으로 사용합니다.
+
+    Args:
+        story_text (str): 생성된 소설 전체 텍스트
+
+    Returns:
+        str: 생성된 설명 (최대 200자)
+
+    Example:
+        >>> desc = generate_description(story_text)
+    """
+    # 첫 번째 # 제목 이후의 텍스트 추출
+    content_start = re.search(r'^#\s+.+$', story_text, re.MULTILINE)
+    if content_start:
+        content = story_text[content_start.end():].strip()
+    else:
+        content = story_text.strip()
+
+    # 첫 문단 또는 200자 추출
+    first_para = content.split('\n\n')[0] if content else ""
+    # ## 제목 제거
+    first_para = re.sub(r'^##\s+.+$', '', first_para, flags=re.MULTILINE).strip()
+
+    description = first_para[:200].strip()
+    if len(first_para) > 200:
+        description += "..."
+
+    logger.debug(f"설명 생성 완료: {description[:50]}...")
+    return description
+
+
+def save_story(
+    story_text: str,
+    output_dir: str,
+    metadata: Optional[Dict[str, Any]] = None,
+    template: Optional[Dict[str, Any]] = None
+) -> str:
+    """
+    생성된 소설을 Astro + GraphQL 블로그용 마크다운 파일로 저장합니다.
+
+    YAML frontmatter를 포함한 마크다운 파일을 생성하고,
+    별도로 메타데이터 JSON 파일도 저장합니다.
+
+    Args:
+        story_text (str): 생성된 소설 내용
+        output_dir (str): 출력 디렉토리 경로
+        metadata (Optional[Dict[str, Any]]): 저장할 메타데이터
+        template (Optional[Dict[str, Any]]): 프롬프트 템플릿 (태그 추출용)
+
+    Returns:
+        str: 저장된 마크다운 파일 경로
+
+    Example:
+        >>> file_path = save_story(story_text, "./output", metadata, template)
+        >>> print(file_path)
+        './output/horror_story_20260102_150000.md'
+    """
+    logger.info("파일 저장 시작...")
+
+    # 출력 디렉토리 생성
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    # 타임스탬프 기반 파일명 생성
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    story_filename = f"horror_story_{timestamp}.md"
+    story_path = os.path.join(output_dir, story_filename)
+
+    # 제목, 태그, 설명 추출
+    title = extract_title_from_story(story_text)
+    tags = extract_tags_from_story(story_text, template) if template else ["호러", "horror"]
+    description = generate_description(story_text)
+
+    # YAML frontmatter 생성
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    frontmatter = f"""---
+title: "{title}"
+date: {date_str}
+description: "{description}"
+tags: {json.dumps(tags, ensure_ascii=False)}
+genre: "호러"
+wordCount: {len(story_text)}
+"""
+
+    if metadata:
+        frontmatter += f"""model: "{metadata.get('model', 'unknown')}"
+temperature: {metadata.get('config', {}).get('temperature', 0.8)}
+"""
+
+    frontmatter += """draft: false
+---
+
+"""
+
+    # 마크다운 파일 저장
+    with open(story_path, 'w', encoding='utf-8') as f:
+        f.write(frontmatter)
+        f.write(story_text)
+
+    logger.info(f"마크다운 파일 저장 완료: {story_path}")
+
+    # 메타데이터 JSON 파일 저장
+    if metadata:
+        metadata_filename = f"horror_story_{timestamp}_metadata.json"
+        metadata_path = os.path.join(output_dir, metadata_filename)
+
+        # 메타데이터에 추출된 정보 추가
+        metadata["title"] = title
+        metadata["tags"] = tags
+        metadata["description"] = description
+
+        with open(metadata_path, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+        logger.info(f"메타데이터 파일 저장 완료: {metadata_path}")
+
+    return story_path
+
+
+def generate_horror_story(
+    template_path: str = "horror_story_prompt_template.json",
+    custom_request: Optional[str] = None,
+    save_output: bool = True
+) -> Dict[str, Any]:
+    """
+    호러 소설 생성의 전체 파이프라인을 실행합니다.
+
+    환경 설정 로드부터 API 호출, 파일 저장까지 전체 프로세스를 관리합니다.
+    각 단계의 진행 상황을 로그로 기록합니다.
+
+    Args:
+        template_path (str): 프롬프트 템플릿 파일 경로
+        custom_request (Optional[str]): 사용자 커스텀 요청. None이면 템플릿 기반 생성
+        save_output (bool): 결과를 파일로 저장할지 여부. 기본값 True
+
+    Returns:
+        Dict[str, Any]: 생성 결과 및 메타데이터
+            - story (str): 생성된 소설 텍스트
+            - metadata (Dict): 생성 메타데이터
+            - file_path (str): 저장된 파일 경로 (save_output=True인 경우)
+
+    Raises:
+        ValueError: 환경 변수 설정 오류
+        FileNotFoundError: 템플릿 파일 없음
+        Exception: API 호출 또는 파일 저장 실패
+
+    Example:
+        >>> result = generate_horror_story()
+        >>> print(result['story'][:100])
+        >>> print(result['file_path'])
+
+        >>> result = generate_horror_story(
+        ...     custom_request="1980년대 시골 마을 배경의 귀신 이야기",
+        ...     save_output=True
+        ... )
+    """
+    logger.info("=" * 80)
+    logger.info("호러 소설 생성기 시작")
+    logger.info("=" * 80)
+
+    # 1. 환경 변수 로드
+    config = load_environment()
+    logger.info(f"설정 - Max Tokens: {config['max_tokens']}, Temperature: {config['temperature']}")
+
+    # 2. 프롬프트 템플릿 로드
+    template = load_prompt_template(template_path)
+
+    # 3. 프롬프트 빌드
+    logger.info("프롬프트 생성 중...")
+    system_prompt = build_system_prompt(template)
+    user_prompt = build_user_prompt(custom_request, template)
+    logger.info("프롬프트 생성 완료")
+
+    # 4. API 호출
+    api_result = call_claude_api(system_prompt, user_prompt, config)
+    story_text = api_result["story_text"]
+    usage = api_result["usage"]
+
+    # 5. 결과 구성
+    result = {
+        "story": story_text,
+        "metadata": {
+            "generated_at": datetime.now().isoformat(),
+            "model": config["model"],
+            "template_used": template_path,
+            "custom_request": custom_request,
+            "config": {
+                "max_tokens": config["max_tokens"],
+                "temperature": config["temperature"]
+            },
+            "word_count": len(story_text),
+            "usage": usage
+        }
+    }
+
+    # 6. 파일 저장
+    if save_output:
+        file_path = save_story(
+            story_text,
+            config["output_dir"],
+            result["metadata"],
+            template
+        )
+        result["file_path"] = file_path
+        logger.info(f"저장 완료: {file_path}")
+
+    logger.info("=" * 80)
+    logger.info("호러 소설 생성 완료")
+    logger.info("=" * 80)
+
+    return result
+
+
+def customize_template(
+    template_path: str = "horror_story_prompt_template.json",
+    **kwargs: Any
+) -> Dict[str, Any]:
+    """
+    템플릿의 특정 값을 커스터마이즈합니다.
+
+    kwargs로 전달된 키-값 쌍을 템플릿에 적용하여
+    커스터마이즈된 템플릿을 반환합니다.
+
+    Args:
+        template_path (str): 원본 템플릿 경로
+        **kwargs: 수정할 필드와 값
+            - genre: 장르 변경
+            - location: 배경 장소 변경
+            - atmosphere: 분위기 변경
+            - 기타 템플릿 내 필드명 사용 가능
+
+    Returns:
+        Dict[str, Any]: 커스터마이즈된 템플릿
+
+    Example:
+        >>> custom = customize_template(
+        ...     genre="gothic_horror",
+        ...     location="old_mansion",
+        ...     atmosphere="oppressive"
+        ... )
+        >>> result = generate_horror_story_with_template(custom)
+    """
+    logger.info(f"템플릿 커스터마이즈 시작: {len(kwargs)}개 항목")
+    template = load_prompt_template(template_path)
+
+    # kwargs로 전달된 값들을 템플릿에 적용
+    for key, value in kwargs.items():
+        # nested dictionary 업데이트를 위한 dot notation 지원
+        if '.' in key:
+            keys = key.split('.')
+            current = template
+            for k in keys[:-1]:
+                if k not in current:
+                    current[k] = {}
+                current = current[k]
+            current[keys[-1]] = value
+            logger.debug(f"템플릿 업데이트: {key} = {value}")
+        else:
+            # 일반적인 필드 찾기 및 업데이트
+            if key in template.get("story_config", {}):
+                template["story_config"][key] = value
+                logger.debug(f"story_config 업데이트: {key} = {value}")
+            elif "setting" in template.get("story_elements", {}) and \
+                 key in template["story_elements"]["setting"]:
+                template["story_elements"]["setting"][key] = value
+                logger.debug(f"setting 업데이트: {key} = {value}")
+
+    logger.info("템플릿 커스터마이즈 완료")
+    return template
+
+
+def main() -> None:
+    """
+    메인 실행 함수.
+
+    호러 소설 생성기를 실행하고 결과를 출력합니다.
+    향후 API 서버로 확장 시 이 함수는 테스트 용도로만 사용됩니다.
+
+    Raises:
+        Exception: 생성 프로세스 중 오류 발생 시
+    """
+    try:
+        # 기본 실행: 템플릿 그대로 사용
+        result = generate_horror_story()
+
+        logger.info(f"생성 완료 - 단어 수: {result['metadata']['word_count']}자")
+
+        if "file_path" in result:
+            logger.info(f"저장 위치: {result['file_path']}")
+
+        # 미리보기 출력
+        preview_length = min(500, len(result["story"]))
+        logger.info("=" * 80)
+        logger.info("생성된 소설 미리보기:")
+        logger.info("=" * 80)
+        logger.info(result["story"][:preview_length] + "...")
+
+    except Exception as e:
+        logger.error(f"오류 발생: {str(e)}", exc_info=True)
+        raise
+
+
+if __name__ == "__main__":
+    main()
