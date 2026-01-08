@@ -1,0 +1,526 @@
+{
+  "generated_at": "2026-01-08",
+  "total_kus": 52,
+  "canonical_features": [
+    {
+      "ku_id": "KU-001",
+      "canonical_features": {
+        "possible_setting_archetype": ["abstract", "any"],
+        "possible_primary_fear": ["cognitive_dissonance", "unknown", "disgust"],
+        "possible_antagonist_archetype": ["monster", "hybrid_entity", "categorical_violator"],
+        "possible_threat_mechanism": ["ontological_violation", "category_transgression", "simultaneous_attraction_repulsion"],
+        "possible_twist_family": ["reality_breakdown", "nature_violation", "identity_paradox"]
+      }
+    },
+    {
+      "ku_id": "KU-002",
+      "canonical_features": {
+        "possible_setting_archetype": ["hospital", "domestic", "birthing_space"],
+        "possible_primary_fear": ["ego_death", "mutilation", "boundary_collapse"],
+        "possible_antagonist_archetype": ["body", "maternal_force", "decay"],
+        "possible_threat_mechanism": ["bodily_boundary_violation", "fluid_contamination", "self_other_collapse"],
+        "possible_twist_family": ["identity_dissolution", "bodily_betrayal", "maternal_horror"]
+      }
+    },
+    {
+      "ku_id": "KU-003",
+      "canonical_features": {
+        "possible_setting_archetype": ["domestic", "apartment", "familiar_space"],
+        "possible_primary_fear": ["ego_death", "unknown", "familiarity_distorted"],
+        "possible_antagonist_archetype": ["doppelganger", "familiar_turned_hostile", "double"],
+        "possible_threat_mechanism": ["familiar_defamiliarization", "repressed_return", "safe_space_violation"],
+        "possible_twist_family": ["doppelganger_reveal", "home_betrayal", "memory_unreliable"]
+      }
+    },
+    {
+      "ku_id": "KU-004",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["extinction", "mutilation", "loss_of_autonomy", "separation", "ego_death"],
+        "possible_antagonist_archetype": ["any"],
+        "possible_threat_mechanism": ["layered_fear", "multi_vector_threat", "psychological_targeting"],
+        "possible_twist_family": ["none"]
+      }
+    },
+    {
+      "ku_id": "KU-005",
+      "canonical_features": {
+        "possible_setting_archetype": ["any_korean"],
+        "possible_primary_fear": ["separation", "ego_death", "resentment"],
+        "possible_antagonist_archetype": ["ghost", "wronged_spirit", "system"],
+        "possible_threat_mechanism": ["accumulated_grievance", "unresolved_injustice", "systemic_oppression"],
+        "possible_twist_family": ["revenge_justified", "victim_becomes_monster", "systemic_causation"]
+      }
+    },
+    {
+      "ku_id": "KU-006",
+      "canonical_features": {
+        "possible_setting_archetype": ["apartment", "urban_dwelling"],
+        "possible_primary_fear": ["loss_of_autonomy", "separation", "class_anxiety"],
+        "possible_antagonist_archetype": ["neighbor", "system", "space_itself"],
+        "possible_threat_mechanism": ["noise_invasion", "privacy_violation", "class_resentment"],
+        "possible_twist_family": ["neighbor_reveal", "social_class_horror", "thin_walls"]
+      }
+    },
+    {
+      "ku_id": "KU-007",
+      "canonical_features": {
+        "possible_setting_archetype": ["rural", "countryside", "village"],
+        "possible_primary_fear": ["separation", "extinction", "unknown"],
+        "possible_antagonist_archetype": ["ghost", "historical_trauma", "landscape"],
+        "possible_threat_mechanism": ["palimpsest_haunting", "historical_return", "colonial_wound"],
+        "possible_twist_family": ["buried_history", "land_remembers", "modernization_curse"]
+      }
+    },
+    {
+      "ku_id": "KU-008",
+      "canonical_features": {
+        "possible_setting_archetype": ["any_korean"],
+        "possible_primary_fear": ["loss_of_autonomy", "separation"],
+        "possible_antagonist_archetype": ["system", "ghost", "individual_avenger"],
+        "possible_threat_mechanism": ["vortex_dynamics", "individual_resentment", "unpredictable_revenge"],
+        "possible_twist_family": ["none"]
+      }
+    },
+    {
+      "ku_id": "KU-009",
+      "canonical_features": {
+        "possible_setting_archetype": ["domestic", "traditional_space"],
+        "possible_primary_fear": ["ego_death", "separation", "extinction"],
+        "possible_antagonist_archetype": ["ghost", "virgin_ghost", "female_spirit"],
+        "possible_threat_mechanism": ["patriarchal_revenge", "unfulfilled_obligation", "gender_oppression"],
+        "possible_twist_family": ["feminist_subversion", "victim_vindication", "patriarchy_horror"]
+      }
+    },
+    {
+      "ku_id": "KU-010",
+      "canonical_features": {
+        "possible_setting_archetype": ["ritual_space", "domestic", "shrine"],
+        "possible_primary_fear": ["unknown", "ego_death", "loss_of_autonomy"],
+        "possible_antagonist_archetype": ["ghost", "spirit", "supernatural_force"],
+        "possible_threat_mechanism": ["ritual_failure", "spiritual_negotiation", "possession"],
+        "possible_twist_family": ["exorcism_backfire", "ritual_trap", "shaman_corrupted"]
+      }
+    },
+    {
+      "ku_id": "KU-011",
+      "canonical_features": {
+        "possible_setting_archetype": ["hospital", "laboratory", "clinic"],
+        "possible_primary_fear": ["mutilation", "loss_of_autonomy", "ego_death"],
+        "possible_antagonist_archetype": ["body", "disease", "mutation"],
+        "possible_threat_mechanism": ["uncontrolled_transformation", "bodily_betrayal", "mutation"],
+        "possible_twist_family": ["body_rebellion", "transformation_irreversible", "human_becoming_other"]
+      }
+    },
+    {
+      "ku_id": "KU-012",
+      "canonical_features": {
+        "possible_setting_archetype": ["hospital", "clinic", "research_facility"],
+        "possible_primary_fear": ["loss_of_autonomy", "mutilation", "ego_death"],
+        "possible_antagonist_archetype": ["system", "medical_institution", "biotech"],
+        "possible_threat_mechanism": ["involuntary_experimentation", "medical_control", "consent_violation"],
+        "possible_twist_family": ["institution_betrayal", "medical_conspiracy", "eugenics_revealed"]
+      }
+    },
+    {
+      "ku_id": "KU-013",
+      "canonical_features": {
+        "possible_setting_archetype": ["digital", "broadcast_space", "media"],
+        "possible_primary_fear": ["unknown", "separation", "ego_death"],
+        "possible_antagonist_archetype": ["unknown", "broadcast_entity", "media_ghost"],
+        "possible_threat_mechanism": ["information_ambiguity", "visual_distortion", "nostalgic_dread"],
+        "possible_twist_family": ["found_footage_reveal", "broadcast_intrusion", "media_curse"]
+      }
+    },
+    {
+      "ku_id": "KU-014",
+      "canonical_features": {
+        "possible_setting_archetype": ["liminal_space", "transitional_zone", "empty_public"],
+        "possible_primary_fear": ["separation", "ego_death", "unknown"],
+        "possible_antagonist_archetype": ["space_itself", "emptiness", "absence"],
+        "possible_threat_mechanism": ["disorientation", "purposelessness", "infinite_transition"],
+        "possible_twist_family": ["no_exit", "space_loops", "emptiness_sentient"]
+      }
+    },
+    {
+      "ku_id": "KU-015",
+      "canonical_features": {
+        "possible_setting_archetype": ["abstract", "office_maze", "infinite_corridor"],
+        "possible_primary_fear": ["separation", "extinction", "ego_death"],
+        "possible_antagonist_archetype": ["space_itself", "system", "unknown"],
+        "possible_threat_mechanism": ["infinite_procedural_space", "corporate_alienation", "identity_erosion"],
+        "possible_twist_family": ["no_escape", "reality_glitch", "capitalist_nightmare"]
+      }
+    },
+    {
+      "ku_id": "KU-016",
+      "canonical_features": {
+        "possible_setting_archetype": ["hospital", "home", "courtroom"],
+        "possible_primary_fear": ["extinction", "loss_of_autonomy", "separation"],
+        "possible_antagonist_archetype": ["system", "hospital", "debt_collector"],
+        "possible_threat_mechanism": ["medical_debt", "financial_predation", "legal_entrapment"],
+        "possible_twist_family": ["system_betrayal", "help_becomes_harm", "survival_destroys_life"]
+      }
+    },
+    {
+      "ku_id": "KU-017",
+      "canonical_features": {
+        "possible_setting_archetype": ["corporate_office", "seminar_room", "domestic"],
+        "possible_primary_fear": ["loss_of_autonomy", "ego_death", "separation"],
+        "possible_antagonist_archetype": ["system", "cult_leader", "organization"],
+        "possible_threat_mechanism": ["brainwashing", "financial_exploitation", "gaslighting"],
+        "possible_twist_family": ["cult_reveal", "pyramid_collapse", "leader_exposed"]
+      }
+    },
+    {
+      "ku_id": "KU-018",
+      "canonical_features": {
+        "possible_setting_archetype": ["digital", "office", "any_connected"],
+        "possible_primary_fear": ["ego_death", "extinction", "loss_of_autonomy"],
+        "possible_antagonist_archetype": ["technology", "ai", "digital_doppelganger"],
+        "possible_threat_mechanism": ["identity_theft", "authentication_crisis", "voice_face_unreliable"],
+        "possible_twist_family": ["deepfake_reveal", "impersonation", "trust_collapse"]
+      }
+    },
+    {
+      "ku_id": "KU-019",
+      "canonical_features": {
+        "possible_setting_archetype": ["apartment", "smart_home", "domestic"],
+        "possible_primary_fear": ["loss_of_autonomy", "separation", "ego_death"],
+        "possible_antagonist_archetype": ["technology", "smart_device", "hacker"],
+        "possible_threat_mechanism": ["iot_gaslighting", "remote_control", "domestic_invasion"],
+        "possible_twist_family": ["home_turns_hostile", "technology_betrayal", "invisible_intruder"]
+      }
+    },
+    {
+      "ku_id": "KU-020",
+      "canonical_features": {
+        "possible_setting_archetype": ["any_contemporary_us"],
+        "possible_primary_fear": ["extinction", "loss_of_autonomy", "separation"],
+        "possible_antagonist_archetype": ["system", "government", "institution"],
+        "possible_threat_mechanism": ["institutional_collapse", "corruption", "system_failure"],
+        "possible_twist_family": ["government_betrayal", "institution_corrupt", "internal_threat"]
+      }
+    },
+    {
+      "ku_id": "KU-021",
+      "canonical_features": {
+        "possible_setting_archetype": ["rural", "swamp", "wilderness"],
+        "possible_primary_fear": ["mutilation", "extinction", "unknown"],
+        "possible_antagonist_archetype": ["invasive_species", "parasite", "nature"],
+        "possible_threat_mechanism": ["ecological_collapse", "parasite_transmission", "unstoppable_invasion"],
+        "possible_twist_family": ["nature_revenge", "ecosystem_collapse", "human_hubris_punished"]
+      }
+    },
+    {
+      "ku_id": "KU-022",
+      "canonical_features": {
+        "possible_setting_archetype": ["rural", "ghost_town", "wasteland"],
+        "possible_primary_fear": ["extinction", "mutilation", "separation"],
+        "possible_antagonist_archetype": ["environment", "toxicity", "corporate_legacy"],
+        "possible_threat_mechanism": ["environmental_poisoning", "irreversible_contamination", "corporate_abandonment"],
+        "possible_twist_family": ["land_uninhabitable", "corporate_escape", "irreversible_damage"]
+      }
+    },
+    {
+      "ku_id": "KU-023",
+      "canonical_features": {
+        "possible_setting_archetype": ["urban", "any_modern"],
+        "possible_primary_fear": ["unknown", "separation", "ego_death"],
+        "possible_antagonist_archetype": ["urban_legend_entity", "unknown", "collective_fear"],
+        "possible_threat_mechanism": ["viral_transmission", "social_anxiety_manifestation", "oral_contagion"],
+        "possible_twist_family": ["legend_real", "collective_creation", "fear_manifests"]
+      }
+    },
+    {
+      "ku_id": "KU-024",
+      "canonical_features": {
+        "possible_setting_archetype": ["digital", "internet", "any_connected"],
+        "possible_primary_fear": ["unknown", "separation", "ego_death"],
+        "possible_antagonist_archetype": ["internet_entity", "creepypasta_monster", "collective_creation"],
+        "possible_threat_mechanism": ["digital_contagion", "collaborative_haunting", "memetic_horror"],
+        "possible_twist_family": ["fiction_becomes_real", "collaborative_nightmare", "internet_curse"]
+      }
+    },
+    {
+      "ku_id": "KU-025",
+      "canonical_features": {
+        "possible_setting_archetype": ["any_contemporary_us", "college", "domestic"],
+        "possible_primary_fear": ["loss_of_autonomy", "extinction", "ego_death"],
+        "possible_antagonist_archetype": ["system", "debt", "financial_structure"],
+        "possible_threat_mechanism": ["inescapable_debt", "mental_health_crisis", "generational_trap"],
+        "possible_twist_family": ["debt_inescapable", "system_trap", "suicide_ideation"]
+      }
+    },
+    {
+      "ku_id": "KU-026",
+      "canonical_features": {
+        "possible_setting_archetype": ["any_contemporary_us"],
+        "possible_primary_fear": ["separation", "ego_death"],
+        "possible_antagonist_archetype": ["system", "financial_racism", "institutional_structure"],
+        "possible_threat_mechanism": ["racialized_debt", "systemic_racism", "disproportionate_harm"],
+        "possible_twist_family": ["racial_inequality_revealed", "system_racist", "intersectional_trap"]
+      }
+    },
+    {
+      "ku_id": "KU-027",
+      "canonical_features": {
+        "possible_setting_archetype": ["any_domestic", "family_home"],
+        "possible_primary_fear": ["ego_death", "loss_of_autonomy", "separation"],
+        "possible_antagonist_archetype": ["trauma", "past", "inherited_curse"],
+        "possible_threat_mechanism": ["trauma_manifestation", "ptsd_horror", "generational_wound"],
+        "possible_twist_family": ["trauma_literal", "past_returns", "inherited_horror"]
+      }
+    },
+    {
+      "ku_id": "KU-028",
+      "canonical_features": {
+        "possible_setting_archetype": ["apartment", "domestic", "home"],
+        "possible_primary_fear": ["loss_of_autonomy", "separation", "ego_death"],
+        "possible_antagonist_archetype": ["domestic_abuser", "home_itself", "family_member"],
+        "possible_threat_mechanism": ["false_security", "home_invasion", "domestic_betrayal"],
+        "possible_twist_family": ["home_unsafe", "sanctuary_violated", "family_threat"]
+      }
+    },
+    {
+      "ku_id": "KU-029",
+      "canonical_features": {
+        "possible_setting_archetype": ["hospital", "domestic", "clinical"],
+        "possible_primary_fear": ["loss_of_autonomy", "mutilation", "ego_death"],
+        "possible_antagonist_archetype": ["system", "medical_authority", "state"],
+        "possible_threat_mechanism": ["bodily_autonomy_violation", "reproductive_control", "forced_procedure"],
+        "possible_twist_family": ["autonomy_stripped", "body_controlled", "reproductive_horror"]
+      }
+    },
+    {
+      "ku_id": "KU-030",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["any"],
+        "possible_antagonist_archetype": ["any"],
+        "possible_threat_mechanism": ["sensory_immersion"],
+        "possible_twist_family": ["none"]
+      }
+    },
+    {
+      "ku_id": "KU-031",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["any"],
+        "possible_antagonist_archetype": ["any"],
+        "possible_threat_mechanism": ["subversion", "expectation_violation"],
+        "possible_twist_family": ["cliche_inverted", "trope_subverted"]
+      }
+    },
+    {
+      "ku_id": "KU-032",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["any"],
+        "possible_antagonist_archetype": ["any"],
+        "possible_threat_mechanism": ["escalation", "tension_building"],
+        "possible_twist_family": ["ambiguous_resolution", "disturbing_ending"]
+      }
+    },
+    {
+      "ku_id": "KU-033",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["extinction", "mutilation", "loss_of_autonomy", "separation", "ego_death"],
+        "possible_antagonist_archetype": ["any"],
+        "possible_threat_mechanism": ["layered_fear_design"],
+        "possible_twist_family": ["none"]
+      }
+    },
+    {
+      "ku_id": "KU-034",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["any"],
+        "possible_antagonist_archetype": ["any"],
+        "possible_threat_mechanism": ["atmospheric_dread", "anticipatory_fear"],
+        "possible_twist_family": ["none"]
+      }
+    },
+    {
+      "ku_id": "KU-035",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["any"],
+        "possible_antagonist_archetype": ["any"],
+        "possible_threat_mechanism": ["linguistic_horror"],
+        "possible_twist_family": ["none"]
+      }
+    },
+    {
+      "ku_id": "KU-036",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["any"],
+        "possible_antagonist_archetype": ["any"],
+        "possible_threat_mechanism": ["multi_sensory_assault"],
+        "possible_twist_family": ["none"]
+      }
+    },
+    {
+      "ku_id": "KU-037",
+      "canonical_features": {
+        "possible_setting_archetype": ["rural", "small_town", "isolated_area"],
+        "possible_primary_fear": ["extinction", "separation", "loss_of_autonomy"],
+        "possible_antagonist_archetype": ["infrastructure", "system_decay", "environment"],
+        "possible_threat_mechanism": ["infrastructure_collapse", "isolation_through_failure", "systemic_neglect"],
+        "possible_twist_family": ["bridge_collapse", "power_failure", "communication_dead"]
+      }
+    },
+    {
+      "ku_id": "KU-038",
+      "canonical_features": {
+        "possible_setting_archetype": ["rural", "coastal", "any_vulnerable"],
+        "possible_primary_fear": ["extinction", "separation"],
+        "possible_antagonist_archetype": ["climate", "infrastructure", "cascading_system"],
+        "possible_threat_mechanism": ["cascading_failure", "climate_infrastructure_interaction", "compounding_disaster"],
+        "possible_twist_family": ["multiple_disasters", "system_cascade", "climate_amplified"]
+      }
+    },
+    {
+      "ku_id": "KU-039",
+      "canonical_features": {
+        "possible_setting_archetype": ["wilderness", "tropical", "any_natural"],
+        "possible_primary_fear": ["mutilation", "loss_of_autonomy", "extinction"],
+        "possible_antagonist_archetype": ["parasite", "infection", "organism"],
+        "possible_threat_mechanism": ["parasitic_invasion", "bodily_hijacking", "zoonotic_transmission"],
+        "possible_twist_family": ["parasite_control", "infection_spreads", "body_hijacked"]
+      }
+    },
+    {
+      "ku_id": "KU-040",
+      "canonical_features": {
+        "possible_setting_archetype": ["abandoned_mall", "empty_office", "dead_commercial"],
+        "possible_primary_fear": ["ego_death", "separation"],
+        "possible_antagonist_archetype": ["system", "capitalism", "economic_decay"],
+        "possible_threat_mechanism": ["economic_collapse", "communal_erosion", "consumption_critique"],
+        "possible_twist_family": ["capitalism_horror", "economic_ghost_town", "consumption_death"]
+      }
+    },
+    {
+      "ku_id": "KU-041",
+      "canonical_features": {
+        "possible_setting_archetype": ["hospital", "home", "courtroom"],
+        "possible_primary_fear": ["loss_of_autonomy", "extinction"],
+        "possible_antagonist_archetype": ["hospital", "system", "financial_predator"],
+        "possible_threat_mechanism": ["medical_extortion", "legal_violence", "institutional_predation"],
+        "possible_twist_family": ["hospital_villain", "healer_becomes_predator", "help_destroys"]
+      }
+    },
+    {
+      "ku_id": "KU-042",
+      "canonical_features": {
+        "possible_setting_archetype": ["corporate_retreat", "seminar", "compound"],
+        "possible_primary_fear": ["ego_death", "loss_of_autonomy", "separation"],
+        "possible_antagonist_archetype": ["cult_leader", "organization", "system"],
+        "possible_threat_mechanism": ["psychological_control", "branding", "sexual_exploitation"],
+        "possible_twist_family": ["corporate_cult_reveal", "leader_exposed", "brainwashing_revealed"]
+      }
+    },
+    {
+      "ku_id": "KU-043",
+      "canonical_features": {
+        "possible_setting_archetype": ["digital", "any_connected"],
+        "possible_primary_fear": ["ego_death", "loss_of_autonomy"],
+        "possible_antagonist_archetype": ["technology", "deepfake", "digital_impostor"],
+        "possible_threat_mechanism": ["epistemic_collapse", "trust_destruction", "evidence_unreliable"],
+        "possible_twist_family": ["nothing_real", "trust_impossible", "truth_dead"]
+      }
+    },
+    {
+      "ku_id": "KU-044",
+      "canonical_features": {
+        "possible_setting_archetype": ["any_contemporary_us", "government_building"],
+        "possible_primary_fear": ["loss_of_autonomy", "extinction", "separation"],
+        "possible_antagonist_archetype": ["government", "institution", "corruption"],
+        "possible_threat_mechanism": ["institutional_betrayal", "corruption", "democracy_collapse"],
+        "possible_twist_family": ["government_corrupt", "institution_fails", "no_protection"]
+      }
+    },
+    {
+      "ku_id": "KU-045",
+      "canonical_features": {
+        "possible_setting_archetype": ["any_contemporary_us", "grocery_store", "gas_station"],
+        "possible_primary_fear": ["extinction", "separation", "loss_of_autonomy"],
+        "possible_antagonist_archetype": ["economy", "system", "inflation"],
+        "possible_threat_mechanism": ["economic_precarity", "cost_of_living", "financial_survival"],
+        "possible_twist_family": ["poverty_trap", "economic_death", "survival_impossible"]
+      }
+    },
+    {
+      "ku_id": "KU-046",
+      "canonical_features": {
+        "possible_setting_archetype": ["wilderness", "rural", "natural_environment"],
+        "possible_primary_fear": ["extinction", "mutilation", "separation"],
+        "possible_antagonist_archetype": ["nature", "ecology", "environment"],
+        "possible_threat_mechanism": ["ecological_revenge", "environmental_collapse", "nature_strikes_back"],
+        "possible_twist_family": ["nature_wins", "human_extinction", "ecosystem_revenge"]
+      }
+    },
+    {
+      "ku_id": "KU-047",
+      "canonical_features": {
+        "possible_setting_archetype": ["urban_korean", "subway", "street"],
+        "possible_primary_fear": ["unknown", "mutilation", "ego_death"],
+        "possible_antagonist_archetype": ["ghost", "urban_legend_entity", "cultural_fear"],
+        "possible_threat_mechanism": ["cultural_anxiety", "modern_folklore", "urban_manifestation"],
+        "possible_twist_family": ["legend_real", "cultural_fear_manifests", "modern_curse"]
+      }
+    },
+    {
+      "ku_id": "KU-048",
+      "canonical_features": {
+        "possible_setting_archetype": ["apartment", "domestic", "home"],
+        "possible_primary_fear": ["loss_of_autonomy", "mutilation", "ego_death"],
+        "possible_antagonist_archetype": ["partner", "system", "domestic_abuser"],
+        "possible_threat_mechanism": ["domestic_violence", "gaslighting", "coercive_control"],
+        "possible_twist_family": ["abuser_revealed", "pattern_shown", "systemic_violence"]
+      }
+    },
+    {
+      "ku_id": "KU-049",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["ego_death", "separation"],
+        "possible_antagonist_archetype": ["cultural_anxiety", "societal_fear"],
+        "possible_threat_mechanism": ["cultural_catharsis", "fear_externalization"],
+        "possible_twist_family": ["none"]
+      }
+    },
+    {
+      "ku_id": "KU-050",
+      "canonical_features": {
+        "possible_setting_archetype": ["abstract", "cosmic", "remote"],
+        "possible_primary_fear": ["unknown", "extinction", "ego_death"],
+        "possible_antagonist_archetype": ["cosmic_entity", "unknowable", "incomprehensible"],
+        "possible_threat_mechanism": ["cosmic_indifference", "incomprehensibility", "forbidden_knowledge"],
+        "possible_twist_family": ["knowledge_destroys", "cosmic_reveal", "humanity_insignificant"]
+      }
+    },
+    {
+      "ku_id": "KU-051",
+      "canonical_features": {
+        "possible_setting_archetype": ["any"],
+        "possible_primary_fear": ["any"],
+        "possible_antagonist_archetype": ["any"],
+        "possible_threat_mechanism": ["ambiguity", "unresolved_threat"],
+        "possible_twist_family": ["ambiguous_ending", "no_resolution", "lingering_dread"]
+      }
+    },
+    {
+      "ku_id": "KU-052",
+      "canonical_features": {
+        "possible_setting_archetype": ["rural", "small_town", "isolated"],
+        "possible_primary_fear": ["separation", "extinction"],
+        "possible_antagonist_archetype": ["infrastructure", "isolation", "system_failure"],
+        "possible_threat_mechanism": ["communication_breakdown", "power_failure", "infrastructure_isolation"],
+        "possible_twist_family": ["no_escape", "no_communication", "infrastructure_trap"]
+      }
+    }
+  ]
+}

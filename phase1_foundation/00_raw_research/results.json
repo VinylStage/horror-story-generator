@@ -1,0 +1,438 @@
+{
+  "notebook_export": {
+    "created_at": "2024-05-22",
+    "description": "호러 장르 분석, 한국적 특수성, 사회적 공포 시스템, 창작 기법에 대한 종합 조사 및 추론 결과",
+    "items": [
+      {
+        "id": "ITEM-001",
+        "topic": "호러 장르의 이론적 정의와 심리적 기제",
+        "summary": "호러는 단순한 공포(Fear)를 넘어 혐오(Disgust)와 매혹이 공존하는 '아트 호러(Art-Horror)'로 정의됨. 이는 범주적 위반(Categorical Violation)을 통해 인지적 부조화를 일으키며, 5가지 근원적 공포(소멸, 훼손, 자율성 상실, 분리, 자아 상실)를 자극함.",
+        "sources": [
+          "Noël Carroll, 'The Philosophy of Horror'",
+          "Julia Kristeva, 'Powers of Horror'",
+          "Sigmund Freud, 'The Uncanny'",
+          "Writing Dark Using the Five Basic Types of Fear"
+        ],
+        "tags": [
+          "Philosophy of Horror",
+          "Abject",
+          "Uncanny",
+          "Art-Horror",
+          "Cognitive Dissonance"
+        ],
+        "related_notes": [
+          "ITEM-004 (바디 호러)",
+          "ITEM-005 (코스믹 호러)"
+        ],
+        "quotes": [
+          "The oldest and strongest emotion of mankind is fear, and the oldest and strongest kind of fear is fear of the unknown. (H.P. Lovecraft)",
+          "Fear is not the monster... fear lives in our own heads."
+        ],
+        "connections": [
+          "심리적 호러는 프로이트의 '언캐니' 이론과 밀접하게 연결됨.",
+          "크리스테바의 '비체(Abject)' 이론은 바디 호러의 이론적 배경이 됨."
+        ]
+      },
+      {
+        "id": "ITEM-002",
+        "topic": "한국적 호러(K-Horror)의 특수성과 공간성",
+        "summary": "한국 호러는 압축적 근대화 과정에서 발생한 '한(恨)'과 소외를 다룸. 특히 아파트(계급 상승과 소음 공포)와 시골(역사적 트라우마가 겹친 팔림세스트 공간)이 주요 무대가 되며, 일본의 폐쇄적 '상자형' 구조와 대비되는 역동적 '소용돌이형' 사회 구조를 반영함.",
+        "sources": [
+          "A Comparative Study of the Korean and Japanese Horror Genres",
+          "Sociological Representations of Apartments in Korean Thrillers",
+          "Shi-Gol: The Rural Palimpsest and Historical Trauma",
+          "Two Korean horror films explore apartment noise anxieties"
+        ],
+        "tags": [
+          "K-Horror",
+          "Apartment Horror",
+          "Rural Gothic",
+          "Han (Resentment)",
+          "Modernization"
+        ],
+        "related_notes": [
+          "ITEM-003 (한국 귀신 원형)",
+          "ITEM-008 (사회적 공포)"
+        ],
+        "quotes": [
+          "Apartments... were a means to hold the nation together during its postwar growth.",
+          "The rural setting in Korean Horror cinema... offer[s] a space untouched by progress."
+        ],
+        "connections": [
+          "아파트 호러는 '부동산 소셜 호러' 템플릿(T-001)의 기반이 됨.",
+          "시골의 이중성은 '농촌 고딕' 템플릿(T-004)과 연결됨."
+        ]
+      },
+      {
+        "id": "ITEM-003",
+        "topic": "한국 민속 신앙과 귀신 원형 (Cheonyeo Gwishin)",
+        "summary": "한국의 처녀귀신(손각시)은 가부장적 사회에서 결혼과 출산의 의무를 다하지 못하고 죽은 여성의 '한'을 상징함. 이들은 주로 흰 소복을 입고 머리를 풀어헤친 모습으로 나타나며, 무속 신앙(굿)을 통해 달래지거나 퇴치됨.",
+        "sources": [
+          "Korean virgin ghost - Wikipedia",
+          "Haunted Korea: Ghosts, Curses, and Creatures",
+          "K-Horror Rituals: Shamanism",
+          "Cho-nyo Gwishin: The Virgin Ghost That Haunts Korea (YouTube)"
+        ],
+        "tags": [
+          "Folklore",
+          "Shamanism",
+          "Virgin Ghost",
+          "Exorcism",
+          "Patriarchy"
+        ],
+        "related_notes": [
+          "ITEM-002 (K-Horror)",
+          "ITEM-010 (도시 괴담)"
+        ],
+        "quotes": [
+          "It was believed that a woman gets lifelong resentment and cannot move into the afterlife if she dies before fulfilling her responsibilities.",
+          "Fear in Korean folklore is rarely random; it is the price of a debt unpaid."
+        ],
+        "connections": [
+          "현대 호러 영화(여곡성, 장화홍련 등)의 주요 소재로 재해석됨."
+        ]
+      },
+      {
+        "id": "ITEM-004",
+        "topic": "바디 호러(Body Horror)와 신체 변형의 공포",
+        "summary": "신체의 훼손, 질병, 변형, 기생 등을 다루는 하위 장르. 현대 사회에서 의료 시스템이나 바이오 기술에 의한 통제 불가능한 신체 변화를 통해 실존적 불안을 자극함. 페미니즘 및 퀴어 이론과 결합하여 신체 자율성에 대한 담론으로 확장됨.",
+        "sources": [
+          "Contemporary Body Horror",
+          "Types of Horror Fiction: 5 Subgenres Explained",
+          "The Snakes That Ate Florida (Parasite example)"
+        ],
+        "tags": [
+          "Body Horror",
+          "Abject",
+          "Transformation",
+          "Bio-horror",
+          "Loss of Autonomy"
+        ],
+        "related_notes": [
+          "ITEM-001 (호러 이론)",
+          "ITEM-009 (환경 공포)"
+        ],
+        "quotes": [
+          "Body horror acts out the power flows of modern life, visualising often imperceptible or ignored processes of marginalisation.",
+          "Nobody wants their body to undergo a radical change (at least not without their permission)."
+        ],
+        "connections": [
+          "에코 호러의 기생충 감염(ITEM-009)과 연결되어 생태학적 바디 호러로 확장 가능."
+        ]
+      },
+      {
+        "id": "ITEM-005",
+        "topic": "아날로그 호러와 리미널 스페이스 (Liminality)",
+        "summary": "20세기 후반의 저화질 미디어(VHS, 아날로그 TV) 미학을 차용한 공포 장르. '백룸(The Backrooms)'과 같이 목적 없이 비어 있는 전이적 공간(Liminal Space)이 주는 기괴함과 소외감을 다룸. 점프 스케어보다는 분위기와 모호한 서사에 의존함.",
+        "sources": [
+          "Analog horror - Wikipedia",
+          "Lost in The Backrooms [or How I Learned to Love the Liminal]",
+          "The backrooms and liminal spaces: Explorations of a digital urban legend"
+        ],
+        "tags": [
+          "Analog Horror",
+          "Liminal Space",
+          "The Backrooms",
+          "Found Footage",
+          "Nostalgia"
+        ],
+        "related_notes": [
+          "ITEM-010 (도시 괴담)",
+          "ITEM-007 (디지털 공포)"
+        ],
+        "quotes": [
+          "The Backrooms... serves as a mirror reflecting the pervasive sense of alienation and the erosion of communal and individual identity.",
+          "Analog horror is commonly characterized by low-fidelity graphics, cryptic messages... and visual styles reminiscent of late 20th-century television."
+        ],
+        "connections": [
+          "후기 자본주의의 쇠락(쇼핑몰의 몰락 등)을 상징하는 공간적 공포로 해석됨."
+        ]
+      },
+      {
+        "id": "ITEM-006",
+        "topic": "시스템적 공포: 의료 부채 및 기업형 컬트",
+        "summary": "초자연적 존재보다 무서운 현실 시스템의 위협. 의료 부채로 인한 파산 및 주택 압류, 다단계 마케팅(MLM) 기업의 세뇌와 착취 구조(NXIVM 사례) 등이 현대인의 실존적 공포를 유발함.",
+        "sources": [
+          "A giant US hospital chain says it's leading the fight against medical debt",
+          "Thousands in Colorado face unexpected medical bills and wage garnishment",
+          "CFPB Takes Aim at Double Billing",
+          "Am I a Millionaire Yet? (MLM Brainwashing)",
+          "NXIVM - Wikipedia"
+        ],
+        "tags": [
+          "Systemic Horror",
+          "Medical Debt",
+          "Corporate Cult",
+          "MLM",
+          "Financial Ruin"
+        ],
+        "related_notes": [
+          "ITEM-011 (학자금 대출)",
+          "ITEM-007 (기술적 사기)"
+        ],
+        "quotes": [
+          "Having medical debt tied to one’s home can be a tremendous burden.",
+          "MLMCs are using brainwashing language features... to both recruit members as well as to maintain their loyalty."
+        ],
+        "connections": [
+          "기업형 컬트 호러 템플릿(T-002)의 직접적인 모티브가 됨."
+        ]
+      },
+      {
+        "id": "ITEM-007",
+        "topic": "테크노 호러: 딥페이크와 IoT 해킹",
+        "summary": "기술 발전이 가져온 새로운 공포. 딥페이크를 이용한 정체성 도용 및 금융 사기($25m 피해 사례), 스마트홈 기기 해킹을 통한 사생활 침해와 가스라이팅 등 '안전한 공간'과 '자아'의 경계가 기술로 인해 무너지는 현상을 다룸.",
+        "sources": [
+          "Cybercrime: Lessons learned from a $25m deepfake attack",
+          "Top 10 Terrifying Deepfake Examples",
+          "Smart home hubs leave users vulnerable to hackers",
+          "'Felt so violated:' Milwaukee couple warns hackers..."
+        ],
+        "tags": [
+          "Techno Horror",
+          "Deepfake",
+          "Smart Home",
+          "Identity Theft",
+          "Surveillance"
+        ],
+        "related_notes": [
+          "ITEM-005 (아날로그 호러)",
+          "ITEM-006 (금융 사기)"
+        ],
+        "quotes": [
+          "The employee had been tricked into sending $25 million to criminals... talking to deepfakes created by artificial intelligence.",
+          "Their camera began talking to them, and their thermostat reached upwards of 90 degrees."
+        ],
+        "connections": [
+          "IoT 가스라이팅 호러 템플릿(T-003) 및 디지털 도플갱어 호러 템플릿(T-005)의 근거 자료."
+        ]
+      },
+      {
+        "id": "ITEM-008",
+        "topic": "미국 내 사회적 불안과 공포 인식 (2024-2025)",
+        "summary": "최근 설문 조사에 따르면 미국인들은 범죄나 테러보다 인플레이션, 정부 부패, 의료 비용, 국가의 미래 등 '경제적/정치적 시스템의 붕괴'를 더 두려워함. 이는 호러 영화의 트렌드가 현실 기반의 사회적 공포로 이동하는 배경이 됨.",
+        "sources": [
+          "What Worries the World – December 2025",
+          "Top Public Worries in the U.S.",
+          "Stress in America 2024",
+          "America in 2025: Survey Finds Steady Concerns"
+        ],
+        "tags": [
+          "Social Anxiety",
+          "Inflation",
+          "Political Turmoil",
+          "Public Fear",
+          "System Collapse"
+        ],
+        "related_notes": [
+          "ITEM-006 (시스템적 공포)",
+          "ITEM-012 (호러 영화 트렌드)"
+        ],
+        "quotes": [
+          "Government corruption is a top worry for Americans... The cost of living and the economy are also among the top concerns.",
+          "54% of Americans say they are very worried about government corruption."
+        ],
+        "connections": [
+          "현실 기반의 사회적 공포(Social Horror) 장르의 당위성을 입증함."
+        ]
+      },
+      {
+        "id": "ITEM-009",
+        "topic": "에코 호러(Eco-Horror)와 환경적 재앙",
+        "summary": "인간의 탐욕이나 실수로 인한 생태계 교란과 그 역습. 플로리다의 버마 파이썬 침공(기생충 전파), 오클라호마 피처(Picher)의 독성 유령 도시화 등은 자연이 더 이상 인간에게 우호적이지 않은 공간임을 보여줌.",
+        "sources": [
+          "The Snakes That Ate Florida",
+          "Another Reason to Worry About Burmese Pythons?",
+          "Picher, Oklahoma Is America's Most Toxic Ghost Town",
+          "Inside The Eerie History Of Picher, Oklahoma"
+        ],
+        "tags": [
+          "Eco-Horror",
+          "Invasive Species",
+          "Toxic Ghost Town",
+          "Environmental Disaster",
+          "Parasite"
+        ],
+        "related_notes": [
+          "ITEM-004 (바디 호러)",
+          "ITEM-002 (공간성)"
+        ],
+        "quotes": [
+          "The snakes are responsible for a recent 90 to 99 percent drop in the small mammal population.",
+          "Picher is among a small number of locations... declared uninhabitable due to environmental and health damage caused by mining."
+        ],
+        "connections": [
+          "기생충 감염 서사는 바디 호러와, 독성 도시는 유령 도시(Ghost Town) 설정과 연결됨."
+        ]
+      },
+      {
+        "id": "ITEM-010",
+        "topic": "도시 괴담(Urban Legend)과 현대 민속",
+        "summary": "현대 사회의 불안을 반영하는 구전 이야기. 캔디맨, 슬렌더맨, 검은 눈의 아이들 등은 사회적 금기나 기술적 불안을 상징함. 인터넷을 통해 '크리피파스타(Creepypasta)' 형태로 확산되며 진화함.",
+        "sources": [
+          "Urban legend - Wikipedia",
+          "List of urban legends - Wikipedia",
+          "15 Origins of Urban Legends",
+          "Spine-chilling Korean Horror Stories & Urban Legends"
+        ],
+        "tags": [
+          "Urban Legend",
+          "Creepypasta",
+          "Slender Man",
+          "Modern Folklore",
+          "Social Anxiety"
+        ],
+        "related_notes": [
+          "ITEM-003 (한국 귀신)",
+          "ITEM-005 (아날로그 호러)"
+        ],
+        "quotes": [
+          "Urban legends may confirm moral standards, reflect prejudices, or be a way to make sense of societal anxieties.",
+          "The idea of a killer attacking you through a bathroom mirror is rooted in fact."
+        ],
+        "connections": [
+          "한국의 빨간 마스크, 홍콩 할매 귀신 등도 유사한 사회적 기능을 수행함."
+        ]
+      },
+      {
+        "id": "ITEM-011",
+        "topic": "학자금 대출과 청년 세대의 공포",
+        "summary": "감당할 수 없는 학자금 대출이 개인의 삶을 파괴하고 정신 건강을 위협하는 현상. '평생 갚아야 하는 빚'이라는 설정은 현대의 노예 계약과 같은 공포로 작용하며, 특히 유색 인종에게 더 큰 타격을 줌.",
+        "sources": [
+          "The Psychological Toll of Student Debt",
+          "How Student Debt Harms Black Borrowers' Mental Health",
+          "Student Loan Debt is Creating a Physical and Mental Health Crisis",
+          "Night of the Living Debt: Five Real Life Student Loan Horror Stories"
+        ],
+        "tags": [
+          "Student Debt",
+          "Mental Health",
+          "Financial Horror",
+          "Inequality",
+          "Millennial Anxiety"
+        ],
+        "related_notes": [
+          "ITEM-006 (시스템적 공포)",
+          "ITEM-008 (사회적 불안)"
+        ],
+        "quotes": [
+          "Student debt contributes to poor mental health... suicidal ideation.",
+          "My total student loan debt is listed at $280,000 and it’s definitely impacting my life."
+        ],
+        "connections": [
+          "경제적 파멸을 다루는 '소셜 호러'의 핵심 소재로 활용 가능."
+        ]
+      },
+      {
+        "id": "ITEM-012",
+        "topic": "호러 영화 트렌드와 사회적 반영",
+        "summary": "2020년대 호러 영화는 '트라우마', '가짜 안전', '젠더 폭력', '신체 자율성 상실' 등을 주요 테마로 함. 이는 팬데믹, 정치적 양극화, AI의 부상 등 현실의 불안을 반영한 결과임.",
+        "sources": [
+          "What do 2020s horror movies say about our society's fears?",
+          "What do you think the horror theme of the 2020s is?",
+          "Be Very Afraid: How Horror Movie Trends Reflect Societal Fears",
+          "The Evolution of the Horror Movie"
+        ],
+        "tags": [
+          "Horror Trends",
+          "Trauma",
+          "Societal Fear",
+          "Gender Violence",
+          "Bodily Autonomy"
+        ],
+        "related_notes": [
+          "ITEM-001 (호러 이론)",
+          "ITEM-008 (사회적 불안)"
+        ],
+        "quotes": [
+          "Horror films don’t create fear. They release it.",
+          "So far, I'm getting the message that we're all scared of: False senses of security in our own homes... Loss of bodily autonomy..."
+        ],
+        "connections": [
+          "최신 호러 템플릿 제작 시 반영해야 할 핵심 테마 제공."
+        ]
+      },
+      {
+        "id": "ITEM-013",
+        "topic": "호러 작법 기술 및 템플릿 요소",
+        "summary": "효과적인 호러 창작을 위한 구체적 기법. 감각적 단어(Sensory Words) 사용, 클리셰 비틀기, 5가지 근원적 공포 활용, 분위기(Atmosphere) 조성법 등을 포함함.",
+        "sources": [
+          "Building the Bones: 10 Ways to Structure a Horror Short Story",
+          "How to Write a Horror Novel",
+          "The Fundamental Elements of Horror Writing",
+          "583 Sensory Words to Take Your Writing from Blah to Brilliant"
+        ],
+        "tags": [
+          "Writing Techniques",
+          "Plot Structure",
+          "Sensory Details",
+          "Atmosphere",
+          "Pacing"
+        ],
+        "related_notes": [
+          "ITEM-001 (호러 이론)",
+          "ITEM-014 (단어 리스트)"
+        ],
+        "quotes": [
+          "Show, Don't Tell: Paint a picture for your reader so they can touch what you’re touching.",
+          "The oldest and strongest emotion of mankind is fear."
+        ],
+        "connections": [
+          "모든 호러 템플릿의 'writing_style' 및 'story_elements' 필드 작성의 가이드라인."
+        ]
+      },
+      {
+        "id": "ITEM-014",
+        "topic": "호러 묘사를 위한 어휘 및 표현 리스트",
+        "summary": "공포 분위기를 조성하는 데 유용한 형용사 및 감각적 표현 모음. 어둡고(dark), 으스스하고(spooky), 불쾌한(unsettling) 느낌을 주는 단어들을 체계적으로 분류함.",
+        "sources": [
+          "240+ Dark Words for More Descriptive Writing",
+          "The 13 Spookiest English Words",
+          "WC Sensory Words.docx"
+        ],
+        "tags": [
+          "Vocabulary",
+          "Descriptive Writing",
+          "Horror Words",
+          "Sensory Language"
+        ],
+        "related_notes": [
+          "ITEM-013 (작법 기술)"
+        ],
+        "quotes": [
+          "Words like ghastly, macabre, spine-tingling, blood-curdling..."
+        ],
+        "connections": [
+          "템플릿 내 'sensory_details' 필드에 구체적인 값으로 활용됨."
+        ]
+      },
+      {
+        "id": "ITEM-015",
+        "topic": "미국 인프라 상태와 잠재적 재난",
+        "summary": "미국의 인프라(도로, 교량, 댐, 전력망 등)는 노후화되어 있으며(C등급), 기후 변화와 수요 증가에 취약함. 이는 대규모 재난이나 고립 상황을 다루는 호러의 현실적 배경이 됨.",
+        "sources": [
+          "America's Infrastructure Report Card in 2025",
+          "Infrastructure's upward momentum reflected in report card",
+          "Travel Infrastructure Grades from the 2025 ASCE Report Card"
+        ],
+        "tags": [
+          "Infrastructure",
+          "Disaster",
+          "Aging Assets",
+          "Collapse",
+          "Climate Resilience"
+        ],
+        "related_notes": [
+          "ITEM-009 (환경 재난)"
+        ],
+        "quotes": [
+          "Nine categories... received either a D or D+, translating to “Poor, At Risk” status.",
+          "Without continued investment, aging infrastructure assets... could become a drag on economic growth."
+        ],
+        "connections": [
+          "재난 호러나 고립된 상황을 설정할 때 현실적인 개연성을 부여함."
+        ]
+      }
+    ]
+  }
+}

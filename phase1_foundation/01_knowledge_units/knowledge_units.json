@@ -1,0 +1,1667 @@
+{
+  "generated_at": "2026-01-08",
+  "ku_count": 52,
+  "knowledge_units": [
+    {
+      "ku_id": "KU-001",
+      "source_item": "ITEM-001",
+      "type": "horror_concept",
+      "region": "Global",
+      "genre": ["art_horror", "philosophical_horror"],
+      "primary_fear": "cognitive_dissonance",
+      "secondary_fears": ["unknown", "categorical_violation"],
+      "setting_archetype": "abstract",
+      "antagonist_archetype": "unknown",
+      "core_idea": "Art-Horror is defined by the coexistence of fear and disgust triggered by categorical violations that create cognitive dissonance.",
+      "usage_rules": [
+        "Use when designing monsters or entities that violate natural categories (e.g., living-dead, human-animal hybrids)",
+        "Apply to scenarios where the horrific object is simultaneously repulsive and fascinating",
+        "Foundation for understanding why certain horror elements work philosophically"
+      ],
+      "avoid": [
+        "Do not use for pure jump scares without conceptual depth",
+        "Not applicable to mundane real-world threats without supernatural/categorical elements"
+      ],
+      "template_affinity": [
+        "psychological_horror",
+        "cosmic_horror",
+        "body_horror"
+      ],
+      "sources": [
+        "Noël Carroll, 'The Philosophy of Horror'"
+      ],
+      "tags": ["Philosophy of Horror", "Art-Horror", "Cognitive Dissonance", "Categorical Violation"]
+    },
+    {
+      "ku_id": "KU-002",
+      "source_item": "ITEM-001",
+      "type": "horror_concept",
+      "region": "Global",
+      "genre": ["body_horror", "psychological_horror"],
+      "primary_fear": "ego_death",
+      "secondary_fears": ["mutilation", "disgust"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "body",
+      "core_idea": "The Abject (Kristeva) represents boundary collapse between self and other, manifesting in bodily fluids, decay, and corpses that threaten identity integrity.",
+      "usage_rules": [
+        "Use when depicting bodily boundary violations (blood, vomit, decay)",
+        "Apply to scenarios involving maternal horror or birth imagery",
+        "Foundation for body horror narratives",
+        "Use to create visceral disgust that undermines sense of self"
+      ],
+      "avoid": [
+        "Do not use for sanitized horror without visceral elements",
+        "Not suitable for pure psychological horror without physical manifestation"
+      ],
+      "template_affinity": [
+        "body_horror",
+        "psychological_horror",
+        "medical_horror"
+      ],
+      "sources": [
+        "Julia Kristeva, 'Powers of Horror'"
+      ],
+      "tags": ["Abject", "Kristeva", "Boundary Collapse", "Disgust"]
+    },
+    {
+      "ku_id": "KU-003",
+      "source_item": "ITEM-001",
+      "type": "horror_concept",
+      "region": "Global",
+      "genre": ["psychological_horror", "gothic_horror"],
+      "primary_fear": "ego_death",
+      "secondary_fears": ["unknown", "familiarity_distorted"],
+      "setting_archetype": "domestic",
+      "antagonist_archetype": "doppelganger",
+      "core_idea": "The Uncanny (Freud) is the experience of familiar things becoming strange, triggering primal anxieties about doubles, automatons, and buried trauma.",
+      "usage_rules": [
+        "Use when depicting familiar environments turned hostile",
+        "Apply to doppelganger or evil twin narratives",
+        "Foundation for domestic horror and safe space violation",
+        "Use for repressed trauma returning in distorted form"
+      ],
+      "avoid": [
+        "Do not use for completely alien or unfamiliar threats",
+        "Not suitable for pure shock horror without psychological dimension"
+      ],
+      "template_affinity": [
+        "psychological_horror",
+        "domestic_horror",
+        "doppelganger_horror"
+      ],
+      "sources": [
+        "Sigmund Freud, 'The Uncanny'"
+      ],
+      "tags": ["Uncanny", "Freud", "Familiar Made Strange", "Doppelganger"]
+    },
+    {
+      "ku_id": "KU-004",
+      "source_item": "ITEM-001",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["psychological_horror", "existential_horror"],
+      "primary_fear": "extinction",
+      "secondary_fears": ["mutilation", "loss_of_autonomy", "separation", "ego_death"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Five fundamental fears: Extinction (death), Mutilation (bodily harm), Loss of Autonomy (control), Separation (isolation), and Ego Death (identity loss).",
+      "usage_rules": [
+        "Use as framework to design layered horror experiences",
+        "Select 1-2 primary fears to focus narrative tension",
+        "Combine multiple fears for complex psychological impact",
+        "Use to analyze which fear archetype fits story premise"
+      ],
+      "avoid": [
+        "Do not use all five simultaneously without clear hierarchy",
+        "Avoid generic fear without specifying which type is being targeted"
+      ],
+      "template_affinity": [
+        "psychological_horror",
+        "existential_horror",
+        "body_horror",
+        "isolation_horror"
+      ],
+      "sources": [
+        "Writing Dark Using the Five Basic Types of Fear"
+      ],
+      "tags": ["Fear Framework", "Extinction", "Mutilation", "Autonomy", "Separation", "Ego Death"]
+    },
+    {
+      "ku_id": "KU-005",
+      "source_item": "ITEM-002",
+      "type": "social_fear",
+      "region": "Korea",
+      "genre": ["social_horror", "psychological_horror"],
+      "primary_fear": "separation",
+      "secondary_fears": ["ego_death", "loss_of_autonomy"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "Han (恨) is accumulated resentment and sorrow from unfulfilled life obligations and systemic oppression, serving as emotional foundation of K-horror.",
+      "usage_rules": [
+        "Use when depicting Korean ghosts or spirits with unresolved grievances",
+        "Apply to narratives involving social injustice or oppression",
+        "Foundation for understanding why K-horror focuses on resentment over pure malevolence",
+        "Use to add emotional depth to antagonist motivations in Korean context"
+      ],
+      "avoid": [
+        "Do not confuse with simple anger or revenge",
+        "Not applicable outside Korean or closely related cultural contexts without explanation",
+        "Avoid reducing to one-dimensional emotion"
+      ],
+      "template_affinity": [
+        "social_horror",
+        "revenge_ghost_horror",
+        "systemic_horror"
+      ],
+      "sources": [
+        "A Comparative Study of the Korean and Japanese Horror Genres"
+      ],
+      "tags": ["K-Horror", "Han", "Resentment", "Cultural Specificity"]
+    },
+    {
+      "ku_id": "KU-006",
+      "source_item": "ITEM-002",
+      "type": "social_fear",
+      "region": "Korea",
+      "genre": ["social_horror", "urban_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["separation", "ego_death"],
+      "setting_archetype": "apartment",
+      "antagonist_archetype": "system",
+      "core_idea": "Apartment horror in Korea reflects class anxiety, real estate obsession, and fear of neighbors in compressed modern living spaces.",
+      "usage_rules": [
+        "Use when depicting Korean urban horror settings",
+        "Apply to class conflict and upward mobility anxiety narratives",
+        "Use for noise/privacy violation scenarios (floor noise, thin walls)",
+        "Foundation for real estate-based social horror"
+      ],
+      "avoid": [
+        "Do not treat apartments as generic haunted houses",
+        "Avoid missing the social class dimension specific to Korean context",
+        "Not suitable for rural or historical settings"
+      ],
+      "template_affinity": [
+        "social_horror",
+        "urban_horror",
+        "neighbor_horror"
+      ],
+      "sources": [
+        "Sociological Representations of Apartments in Korean Thrillers",
+        "Two Korean horror films explore apartment noise anxieties"
+      ],
+      "tags": ["K-Horror", "Apartment Horror", "Class Anxiety", "Noise", "Urban"]
+    },
+    {
+      "ku_id": "KU-007",
+      "source_item": "ITEM-002",
+      "type": "social_fear",
+      "region": "Korea",
+      "genre": ["rural_gothic", "historical_horror"],
+      "primary_fear": "separation",
+      "secondary_fears": ["extinction", "unknown"],
+      "setting_archetype": "rural",
+      "antagonist_archetype": "ghost",
+      "core_idea": "Korean rural spaces are palimpsests of historical trauma (colonialism, war, dictatorship) layered with modernity's exclusion, creating haunted landscapes.",
+      "usage_rules": [
+        "Use when setting horror in Korean countryside",
+        "Apply to narratives involving buried historical guilt or colonial trauma",
+        "Use for depicting spaces resistant to modernization",
+        "Foundation for Korean rural gothic templates"
+      ],
+      "avoid": [
+        "Do not romanticize rural as pure/innocent",
+        "Avoid treating as generic 'backwoods horror' without historical depth",
+        "Not applicable to other national contexts without adaptation"
+      ],
+      "template_affinity": [
+        "rural_gothic",
+        "historical_horror",
+        "ghost_horror"
+      ],
+      "sources": [
+        "Shi-Gol: The Rural Palimpsest and Historical Trauma"
+      ],
+      "tags": ["K-Horror", "Rural Gothic", "Palimpsest", "Historical Trauma", "Shi-Gol"]
+    },
+    {
+      "ku_id": "KU-008",
+      "source_item": "ITEM-002",
+      "type": "horror_concept",
+      "region": "Korea",
+      "genre": ["social_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["separation"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "Korean social structure is 'vortex-shaped' (dynamic, unpredictable, individual resentment) vs. Japanese 'box-shaped' (closed, collective, claustrophobic).",
+      "usage_rules": [
+        "Use to differentiate K-horror from J-horror in narrative approach",
+        "Apply when designing antagonist motivations (individual revenge vs collective exclusion)",
+        "Foundation for understanding why K-horror features more dynamic, aggressive ghosts",
+        "Use to justify narrative choices in comparative horror analysis"
+      ],
+      "avoid": [
+        "Do not oversimplify to stereotypes",
+        "Avoid applying rigidly without considering individual story context",
+        "Not a prescription but a pattern observation"
+      ],
+      "template_affinity": [
+        "social_horror",
+        "comparative_horror"
+      ],
+      "sources": [
+        "A Comparative Study of the Korean and Japanese Horror Genres"
+      ],
+      "tags": ["K-Horror", "Social Structure", "Vortex vs Box", "Comparative Analysis"]
+    },
+    {
+      "ku_id": "KU-009",
+      "source_item": "ITEM-003",
+      "type": "horror_theme",
+      "region": "Korea",
+      "genre": ["ghost_horror", "folklore_horror"],
+      "primary_fear": "ego_death",
+      "secondary_fears": ["separation", "extinction"],
+      "setting_archetype": "domestic",
+      "antagonist_archetype": "ghost",
+      "core_idea": "Cheonyeo Gwishin (virgin ghost) embodies patriarchal oppression: women who died before marriage/childbirth, depicted in white hanbok with loose hair.",
+      "usage_rules": [
+        "Use when creating Korean ghost antagonists",
+        "Apply to narratives involving gender oppression and unfulfilled social obligations",
+        "Foundation for feminist reinterpretation of Korean folklore horror",
+        "Use visual motifs: white dress, long black hair, pale face"
+      ],
+      "avoid": [
+        "Do not reduce to generic 'Asian ghost' trope",
+        "Avoid stripping cultural context of patriarchal critique",
+        "Not applicable outside Korean folklore context without explanation"
+      ],
+      "template_affinity": [
+        "ghost_horror",
+        "folklore_horror",
+        "feminist_horror"
+      ],
+      "sources": [
+        "Korean virgin ghost - Wikipedia",
+        "Cho-nyo Gwishin: The Virgin Ghost That Haunts Korea (YouTube)"
+      ],
+      "tags": ["Cheonyeo Gwishin", "Virgin Ghost", "Folklore", "Patriarchy", "Han"]
+    },
+    {
+      "ku_id": "KU-010",
+      "source_item": "ITEM-003",
+      "type": "horror_theme",
+      "region": "Korea",
+      "genre": ["ritual_horror", "folklore_horror"],
+      "primary_fear": "unknown",
+      "secondary_fears": ["ego_death", "loss_of_autonomy"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "ghost",
+      "core_idea": "Korean shamanism (Gut rituals) serves as both exorcism method and horror amplifier through visceral sound, dance, and spiritual negotiation.",
+      "usage_rules": [
+        "Use when depicting Korean supernatural conflict resolution",
+        "Apply to create sensory horror through ritual elements (drums, wailing, trance)",
+        "Foundation for possession and exorcism narratives in K-horror",
+        "Use to add cultural authenticity to Korean horror settings"
+      ],
+      "avoid": [
+        "Do not treat as generic 'magic ritual'",
+        "Avoid orientalizing or exoticizing without narrative purpose",
+        "Not a guarantee of resolution—can fail or backfire in horror context"
+      ],
+      "template_affinity": [
+        "ritual_horror",
+        "possession_horror",
+        "folklore_horror"
+      ],
+      "sources": [
+        "K-Horror Rituals: Shamanism",
+        "Haunted Korea: Ghosts, Curses, and Creatures"
+      ],
+      "tags": ["Shamanism", "Gut", "Exorcism", "Ritual", "K-Horror"]
+    },
+    {
+      "ku_id": "KU-011",
+      "source_item": "ITEM-004",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["body_horror", "medical_horror"],
+      "primary_fear": "mutilation",
+      "secondary_fears": ["loss_of_autonomy", "ego_death"],
+      "setting_archetype": "hospital",
+      "antagonist_archetype": "body",
+      "core_idea": "Body horror depicts uncontrollable bodily transformation, disease, and violation as existential threat to identity and autonomy.",
+      "usage_rules": [
+        "Use when depicting medical procedures gone wrong",
+        "Apply to transformation narratives (mutation, parasite, disease)",
+        "Foundation for biotech/bioweapon horror scenarios",
+        "Use to explore bodily autonomy and consent themes"
+      ],
+      "avoid": [
+        "Do not use for gratuitous gore without thematic purpose",
+        "Avoid when bodily integrity is not central to narrative",
+        "Not suitable for pure psychological horror without physical manifestation"
+      ],
+      "template_affinity": [
+        "body_horror",
+        "medical_horror",
+        "bio_horror",
+        "transformation_horror"
+      ],
+      "sources": [
+        "Contemporary Body Horror"
+      ],
+      "tags": ["Body Horror", "Transformation", "Mutilation", "Biotech"]
+    },
+    {
+      "ku_id": "KU-012",
+      "source_item": "ITEM-004",
+      "type": "social_fear",
+      "region": "Global",
+      "genre": ["body_horror", "medical_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["mutilation", "ego_death"],
+      "setting_archetype": "hospital",
+      "antagonist_archetype": "system",
+      "core_idea": "Modern body horror reflects anxiety about medical systems and biotechnology controlling bodies without consent.",
+      "usage_rules": [
+        "Use when depicting medical institutions as threat",
+        "Apply to scenarios involving involuntary experimentation or treatment",
+        "Foundation for medical dystopia and eugenics horror",
+        "Use to critique power dynamics in healthcare"
+      ],
+      "avoid": [
+        "Do not demonize medical care in general without nuance",
+        "Avoid when supernatural body horror is more appropriate",
+        "Not suitable for traditional monster narratives"
+      ],
+      "template_affinity": [
+        "medical_horror",
+        "systemic_horror",
+        "body_horror"
+      ],
+      "sources": [
+        "Contemporary Body Horror"
+      ],
+      "tags": ["Medical Horror", "Biotech", "Autonomy Loss", "System Control"]
+    },
+    {
+      "ku_id": "KU-013",
+      "source_item": "ITEM-005",
+      "type": "horror_concept",
+      "region": "Global",
+      "genre": ["analog_horror", "found_footage"],
+      "primary_fear": "unknown",
+      "secondary_fears": ["separation", "ego_death"],
+      "setting_archetype": "digital",
+      "antagonist_archetype": "unknown",
+      "core_idea": "Analog horror uses low-fidelity media aesthetics (VHS, analog TV) to create uncanny nostalgia and information ambiguity.",
+      "usage_rules": [
+        "Use when creating found footage or broadcast hijacking narratives",
+        "Apply visual distortion: scan lines, color bleeding, tracking errors",
+        "Foundation for retro-tech horror aesthetics",
+        "Use to evoke 1980s-1990s media anxiety"
+      ],
+      "avoid": [
+        "Do not use if high-definition clarity is narrative requirement",
+        "Avoid if target audience has no VHS nostalgia/familiarity",
+        "Not suitable for contemporary digital horror without retro framing"
+      ],
+      "template_affinity": [
+        "analog_horror",
+        "found_footage",
+        "broadcast_horror"
+      ],
+      "sources": [
+        "Analog horror - Wikipedia"
+      ],
+      "tags": ["Analog Horror", "VHS", "Low-fi", "Found Footage", "Nostalgia"]
+    },
+    {
+      "ku_id": "KU-014",
+      "source_item": "ITEM-005",
+      "type": "horror_concept",
+      "region": "Global",
+      "genre": ["liminal_horror", "existential_horror"],
+      "primary_fear": "separation",
+      "secondary_fears": ["ego_death", "unknown"],
+      "setting_archetype": "abstract",
+      "antagonist_archetype": "unknown",
+      "core_idea": "Liminal spaces are transitional, purpose-free environments (hallways, empty malls) that evoke alienation and existential dread when devoid of people.",
+      "usage_rules": [
+        "Use when depicting empty transitional spaces",
+        "Apply to settings: hallways, waiting rooms, parking garages, empty offices",
+        "Foundation for disorientation and isolation horror",
+        "Use to create uncanny emptiness without explicit threat"
+      ],
+      "avoid": [
+        "Do not add monsters or explicit threats—emptiness IS the horror",
+        "Avoid overcrowded or clearly purposeful spaces",
+        "Not suitable for action-oriented horror"
+      ],
+      "template_affinity": [
+        "liminal_horror",
+        "existential_horror",
+        "isolation_horror"
+      ],
+      "sources": [
+        "Lost in The Backrooms [or How I Learned to Love the Liminal]"
+      ],
+      "tags": ["Liminal Space", "Transitional Space", "Alienation", "Emptiness"]
+    },
+    {
+      "ku_id": "KU-015",
+      "source_item": "ITEM-005",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["liminal_horror", "digital_folklore"],
+      "primary_fear": "separation",
+      "secondary_fears": ["extinction", "ego_death"],
+      "setting_archetype": "abstract",
+      "antagonist_archetype": "unknown",
+      "core_idea": "The Backrooms: infinite yellow-walled office maze symbolizing late capitalist alienation, corporate monotony, and identity erosion.",
+      "usage_rules": [
+        "Use when depicting infinite procedurally-generated nightmare spaces",
+        "Apply to late capitalism critique through spatial horror",
+        "Foundation for internet-native horror mythology",
+        "Use motifs: yellow wallpaper, fluorescent lights, carpet, endless corridors"
+      ],
+      "avoid": [
+        "Do not add excessive lore—ambiguity is core to appeal",
+        "Avoid treating as conventional maze or dungeon",
+        "Not suitable if clear escape or narrative resolution is required"
+      ],
+      "template_affinity": [
+        "liminal_horror",
+        "digital_folklore",
+        "existential_horror"
+      ],
+      "sources": [
+        "The backrooms and liminal spaces: Explorations of a digital urban legend"
+      ],
+      "tags": ["The Backrooms", "Liminal Space", "Late Capitalism", "Digital Folklore"]
+    },
+    {
+      "ku_id": "KU-016",
+      "source_item": "ITEM-006",
+      "type": "social_fear",
+      "region": "US",
+      "genre": ["systemic_horror", "economic_horror"],
+      "primary_fear": "extinction",
+      "secondary_fears": ["loss_of_autonomy", "separation"],
+      "setting_archetype": "hospital",
+      "antagonist_archetype": "system",
+      "core_idea": "Medical debt in US leads to home liens, wage garnishment, and bankruptcy, making illness more terrifying than death itself.",
+      "usage_rules": [
+        "Use when depicting healthcare system as horror antagonist",
+        "Apply to scenarios where survival costs destroy life",
+        "Foundation for economic horror narratives",
+        "Use to critique for-profit healthcare system"
+      ],
+      "avoid": [
+        "Do not universalize to countries with universal healthcare without adaptation",
+        "Avoid treating as individual moral failure rather than systemic issue",
+        "Not suitable for supernatural horror without social grounding"
+      ],
+      "template_affinity": [
+        "systemic_horror",
+        "economic_horror",
+        "medical_horror"
+      ],
+      "sources": [
+        "A giant US hospital chain says it's leading the fight against medical debt",
+        "Thousands in Colorado face unexpected medical bills and wage garnishment"
+      ],
+      "tags": ["Medical Debt", "Healthcare", "Financial Ruin", "US", "Systemic Horror"]
+    },
+    {
+      "ku_id": "KU-017",
+      "source_item": "ITEM-006",
+      "type": "social_fear",
+      "region": "Global",
+      "genre": ["systemic_horror", "cult_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["ego_death", "separation"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "MLM and corporate cults use brainwashing, secrecy, and gaslighting to exploit members financially and psychologically.",
+      "usage_rules": [
+        "Use when depicting charismatic leader manipulation",
+        "Apply to pyramid scheme or corporate cult narratives",
+        "Foundation for economic exploitation horror",
+        "Use motifs: toxic positivity, financial secrecy, isolation from family"
+      ],
+      "avoid": [
+        "Do not treat as supernatural cult—the horror is entirely systemic",
+        "Avoid simplifying to 'stupid victims' narrative",
+        "Not suitable for occult or ritualistic horror unless hybrid"
+      ],
+      "template_affinity": [
+        "cult_horror",
+        "systemic_horror",
+        "psychological_horror"
+      ],
+      "sources": [
+        "Am I a Millionaire Yet? (MLM Brainwashing)",
+        "NXIVM - Wikipedia"
+      ],
+      "tags": ["MLM", "Corporate Cult", "Brainwashing", "Financial Exploitation"]
+    },
+    {
+      "ku_id": "KU-018",
+      "source_item": "ITEM-007",
+      "type": "social_fear",
+      "region": "Global",
+      "genre": ["techno_horror", "identity_horror"],
+      "primary_fear": "ego_death",
+      "secondary_fears": ["extinction", "loss_of_autonomy"],
+      "setting_archetype": "digital",
+      "antagonist_archetype": "technology",
+      "core_idea": "Deepfakes enable identity theft at scale, making voice and face unreliable for trust, exemplified by $25M fraud case.",
+      "usage_rules": [
+        "Use when depicting AI-powered identity fraud",
+        "Apply to scenarios where visual/audio evidence becomes unreliable",
+        "Foundation for digital doppelganger horror",
+        "Use to explore crisis of authentication in digital age"
+      ],
+      "avoid": [
+        "Do not treat as distant future tech—it is current reality",
+        "Avoid focusing on tech details over human impact",
+        "Not suitable for low-tech or historical settings"
+      ],
+      "template_affinity": [
+        "techno_horror",
+        "identity_horror",
+        "doppelganger_horror"
+      ],
+      "sources": [
+        "Cybercrime: Lessons learned from a $25m deepfake attack",
+        "Top 10 Terrifying Deepfake Examples"
+      ],
+      "tags": ["Deepfake", "AI", "Identity Theft", "Techno Horror"]
+    },
+    {
+      "ku_id": "KU-019",
+      "source_item": "ITEM-007",
+      "type": "social_fear",
+      "region": "Global",
+      "genre": ["techno_horror", "domestic_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["separation", "ego_death"],
+      "setting_archetype": "apartment",
+      "antagonist_archetype": "technology",
+      "core_idea": "Smart home IoT hacking enables domestic gaslighting: temperature manipulation, camera surveillance, and psychological torture in safe space.",
+      "usage_rules": [
+        "Use when depicting home technology turned hostile",
+        "Apply to gaslighting narratives where victim questions reality",
+        "Foundation for IoT horror and smart home invasion",
+        "Use to violate domestic safety assumption"
+      ],
+      "avoid": [
+        "Do not require advanced hacking knowledge—focus on psychological impact",
+        "Avoid supernatural explanations when technological ones suffice",
+        "Not suitable for pre-IoT era settings"
+      ],
+      "template_affinity": [
+        "techno_horror",
+        "domestic_horror",
+        "gaslighting_horror"
+      ],
+      "sources": [
+        "Smart home hubs leave users vulnerable to hackers",
+        "'Felt so violated:' Milwaukee couple warns hackers..."
+      ],
+      "tags": ["IoT", "Smart Home", "Hacking", "Gaslighting", "Domestic Horror"]
+    },
+    {
+      "ku_id": "KU-020",
+      "source_item": "ITEM-008",
+      "type": "social_fear",
+      "region": "US",
+      "genre": ["systemic_horror"],
+      "primary_fear": "extinction",
+      "secondary_fears": ["loss_of_autonomy", "separation"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "2024-2025 US public fears economic collapse and government corruption more than crime or terrorism, signaling systemic anxiety dominance.",
+      "usage_rules": [
+        "Use when grounding horror in contemporary US social reality",
+        "Apply to narratives about institutional failure or political collapse",
+        "Foundation for understanding why systemic horror resonates currently",
+        "Use to justify shift from supernatural to social horror"
+      ],
+      "avoid": [
+        "Do not date-lock narratives unnecessarily—these are ongoing trends",
+        "Avoid partisan political messaging",
+        "Not applicable to other time periods without historical research"
+      ],
+      "template_affinity": [
+        "systemic_horror",
+        "political_horror",
+        "economic_horror"
+      ],
+      "sources": [
+        "What Worries the World – December 2025",
+        "America in 2025: Survey Finds Steady Concerns"
+      ],
+      "tags": ["Social Anxiety", "US", "2025", "System Collapse", "Public Fear"]
+    },
+    {
+      "ku_id": "KU-021",
+      "source_item": "ITEM-009",
+      "type": "horror_theme",
+      "region": "US",
+      "genre": ["eco_horror", "body_horror"],
+      "primary_fear": "mutilation",
+      "secondary_fears": ["extinction", "unknown"],
+      "setting_archetype": "rural",
+      "antagonist_archetype": "unknown",
+      "core_idea": "Florida Burmese pythons cause 90-99% small mammal population collapse and spread parasites, exemplifying invasive species as unstoppable threat.",
+      "usage_rules": [
+        "Use when depicting ecological disruption horror",
+        "Apply to invasive species or parasite transmission narratives",
+        "Foundation for nature-strikes-back horror",
+        "Use to show human hubris consequences"
+      ],
+      "avoid": [
+        "Do not anthropomorphize animals as evil",
+        "Avoid monster movie tropes—emphasize systemic ecological threat",
+        "Not suitable for supernatural nature horror without grounding"
+      ],
+      "template_affinity": [
+        "eco_horror",
+        "body_horror",
+        "parasite_horror"
+      ],
+      "sources": [
+        "The Snakes That Ate Florida",
+        "Another Reason to Worry About Burmese Pythons?"
+      ],
+      "tags": ["Eco-Horror", "Invasive Species", "Python", "Parasite", "Florida"]
+    },
+    {
+      "ku_id": "KU-022",
+      "source_item": "ITEM-009",
+      "type": "horror_theme",
+      "region": "US",
+      "genre": ["eco_horror", "post_apocalyptic"],
+      "primary_fear": "extinction",
+      "secondary_fears": ["mutilation", "separation"],
+      "setting_archetype": "rural",
+      "antagonist_archetype": "none",
+      "core_idea": "Picher, Oklahoma: mining-caused toxic ghost town declared uninhabitable, exemplifying irreversible environmental destruction.",
+      "usage_rules": [
+        "Use when depicting toxic or uninhabitable zones",
+        "Apply to corporate greed environmental disaster narratives",
+        "Foundation for toxic wasteland and ghost town horror",
+        "Use to show spaces humans can never reclaim"
+      ],
+      "avoid": [
+        "Do not add supernatural elements unnecessarily—reality is horrific enough",
+        "Avoid placing blame on residents rather than corporate/systemic causes",
+        "Not suitable for reversible or fixable environmental scenarios"
+      ],
+      "template_affinity": [
+        "eco_horror",
+        "ghost_town_horror",
+        "toxic_horror"
+      ],
+      "sources": [
+        "Picher, Oklahoma Is America's Most Toxic Ghost Town",
+        "Inside The Eerie History Of Picher, Oklahoma"
+      ],
+      "tags": ["Eco-Horror", "Toxic Ghost Town", "Mining", "Oklahoma", "Uninhabitable"]
+    },
+    {
+      "ku_id": "KU-023",
+      "source_item": "ITEM-010",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["urban_legend", "folklore_horror"],
+      "primary_fear": "unknown",
+      "secondary_fears": ["separation", "ego_death"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "unknown",
+      "core_idea": "Urban legends function as modern folklore, encoding social anxieties and moral boundaries through easily transmissible oral/digital narratives.",
+      "usage_rules": [
+        "Use when creating contemporary myth-based horror",
+        "Apply to internet creepypasta or viral horror narratives",
+        "Foundation for socially-rooted fear stories",
+        "Use to reflect specific cultural anxieties through monster metaphor"
+      ],
+      "avoid": [
+        "Do not treat as lesser than 'literary' horror",
+        "Avoid removing social function/context",
+        "Not suitable for high-concept literary horror without grounding"
+      ],
+      "template_affinity": [
+        "urban_legend_horror",
+        "creepypasta",
+        "folklore_horror"
+      ],
+      "sources": [
+        "Urban legend - Wikipedia",
+        "15 Origins of Urban Legends"
+      ],
+      "tags": ["Urban Legend", "Modern Folklore", "Social Anxiety", "Oral Tradition"]
+    },
+    {
+      "ku_id": "KU-024",
+      "source_item": "ITEM-010",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["digital_folklore", "internet_horror"],
+      "primary_fear": "unknown",
+      "secondary_fears": ["separation", "ego_death"],
+      "setting_archetype": "digital",
+      "antagonist_archetype": "unknown",
+      "core_idea": "Creepypasta are internet-native horror stories that evolve through collaborative retelling, creating digital folklore (Slender Man, SCP Foundation).",
+      "usage_rules": [
+        "Use when creating internet-born horror entities",
+        "Apply to collaborative or open-source horror mythologies",
+        "Foundation for transmedia horror storytelling",
+        "Use to leverage collective authorship and iteration"
+      ],
+      "avoid": [
+        "Do not enforce single canonical version",
+        "Avoid treating as inferior to published fiction",
+        "Not suitable for tightly controlled intellectual property"
+      ],
+      "template_affinity": [
+        "creepypasta",
+        "digital_folklore",
+        "internet_horror"
+      ],
+      "sources": [
+        "List of urban legends - Wikipedia"
+      ],
+      "tags": ["Creepypasta", "Internet Horror", "Digital Folklore", "Slender Man"]
+    },
+    {
+      "ku_id": "KU-025",
+      "source_item": "ITEM-011",
+      "type": "social_fear",
+      "region": "US",
+      "genre": ["systemic_horror", "economic_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["extinction", "ego_death"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "Student loan debt causes mental health crises and suicidal ideation, functioning as inescapable modern debt bondage.",
+      "usage_rules": [
+        "Use when depicting generational economic horror",
+        "Apply to narratives about education system exploitation",
+        "Foundation for millennial/Gen Z anxiety horror",
+        "Use to explore debt as invisible prison"
+      ],
+      "avoid": [
+        "Do not moralize about individual choices—focus on systemic trap",
+        "Avoid treating as solvable through individual action",
+        "Not universally applicable outside US higher education context"
+      ],
+      "template_affinity": [
+        "systemic_horror",
+        "economic_horror",
+        "psychological_horror"
+      ],
+      "sources": [
+        "The Psychological Toll of Student Debt",
+        "Student Loan Debt is Creating a Physical and Mental Health Crisis"
+      ],
+      "tags": ["Student Debt", "Mental Health", "Economic Horror", "Millennial Anxiety"]
+    },
+    {
+      "ku_id": "KU-026",
+      "source_item": "ITEM-011",
+      "type": "social_fear",
+      "region": "US",
+      "genre": ["systemic_horror"],
+      "primary_fear": "separation",
+      "secondary_fears": ["ego_death"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "Student debt disproportionately harms Black borrowers, compounding racial inequality through financial system.",
+      "usage_rules": [
+        "Use when depicting intersectional economic horror",
+        "Apply to narratives about systemic racism in financial systems",
+        "Foundation for understanding racialized debt burden",
+        "Use to add specificity to economic horror impact"
+      ],
+      "avoid": [
+        "Do not universalize experience across all demographics",
+        "Avoid ignoring racial dimension of debt crisis",
+        "Not suitable for narratives claiming colorblind meritocracy"
+      ],
+      "template_affinity": [
+        "systemic_horror",
+        "social_justice_horror"
+      ],
+      "sources": [
+        "How Student Debt Harms Black Borrowers' Mental Health"
+      ],
+      "tags": ["Student Debt", "Racial Inequality", "Black Borrowers", "Systemic Racism"]
+    },
+    {
+      "ku_id": "KU-027",
+      "source_item": "ITEM-012",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["psychological_horror", "trauma_horror"],
+      "primary_fear": "ego_death",
+      "secondary_fears": ["loss_of_autonomy", "separation"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "2020s horror films focus on trauma, PTSD, and inherited familial/cultural wounds as primary horror source.",
+      "usage_rules": [
+        "Use when depicting horror rooted in past trauma",
+        "Apply to generational curse or inherited trauma narratives",
+        "Foundation for understanding contemporary horror film trends",
+        "Use to add psychological depth to supernatural elements"
+      ],
+      "avoid": [
+        "Do not use trauma as mere plot device without respectful treatment",
+        "Avoid 'trauma porn' exploitation",
+        "Not suitable for pure escapist horror"
+      ],
+      "template_affinity": [
+        "trauma_horror",
+        "psychological_horror",
+        "family_horror"
+      ],
+      "sources": [
+        "What do 2020s horror movies say about our society's fears?"
+      ],
+      "tags": ["2020s Horror", "Trauma", "PTSD", "Film Trends"]
+    },
+    {
+      "ku_id": "KU-028",
+      "source_item": "ITEM-012",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["domestic_horror", "psychological_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["separation", "ego_death"],
+      "setting_archetype": "apartment",
+      "antagonist_archetype": "system",
+      "core_idea": "2020s horror emphasizes 'false security' in homes, showing domestic spaces as sites of violence and betrayal.",
+      "usage_rules": [
+        "Use when violating domestic safety expectations",
+        "Apply to home invasion, domestic abuse, or family horror",
+        "Foundation for pandemic-era spatial anxiety",
+        "Use to subvert 'home as sanctuary' assumption"
+      ],
+      "avoid": [
+        "Do not treat home invasion as simple thriller without psychological dimension",
+        "Avoid reinforcing victim-blaming narratives",
+        "Not suitable for traditional 'haunted house' without social grounding"
+      ],
+      "template_affinity": [
+        "domestic_horror",
+        "home_invasion_horror",
+        "family_horror"
+      ],
+      "sources": [
+        "What do you think the horror theme of the 2020s is?"
+      ],
+      "tags": ["2020s Horror", "False Security", "Home", "Domestic Violence"]
+    },
+    {
+      "ku_id": "KU-029",
+      "source_item": "ITEM-012",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["body_horror", "social_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["mutilation", "ego_death"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "2020s horror films centralize bodily autonomy loss, reflecting reproductive rights, medical consent, and gender violence anxieties.",
+      "usage_rules": [
+        "Use when depicting forced bodily violation or reproductive horror",
+        "Apply to medical consent and bodily agency narratives",
+        "Foundation for feminist body horror",
+        "Use to reflect contemporary political battles over bodily autonomy"
+      ],
+      "avoid": [
+        "Do not use without understanding political context",
+        "Avoid exploiting reproductive trauma without purpose",
+        "Not suitable for narratives that reinforce bodily control"
+      ],
+      "template_affinity": [
+        "body_horror",
+        "feminist_horror",
+        "medical_horror"
+      ],
+      "sources": [
+        "What do 2020s horror movies say about our society's fears?"
+      ],
+      "tags": ["2020s Horror", "Bodily Autonomy", "Reproductive Rights", "Gender Violence"]
+    },
+    {
+      "ku_id": "KU-030",
+      "source_item": "ITEM-013",
+      "type": "writing_technique",
+      "region": "Global",
+      "genre": ["all_horror"],
+      "primary_fear": "none",
+      "secondary_fears": [],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Use sensory language (smell, texture, sound) instead of abstract fear descriptions to create immersive horror atmosphere.",
+      "usage_rules": [
+        "Use concrete sensory details over abstract adjectives (not 'scary' but 'metallic smell of blood')",
+        "Apply to all horror writing to ground reader in physical experience",
+        "Foundation for 'show don't tell' principle in horror",
+        "Use to engage multiple senses: sight, sound, smell, touch, taste"
+      ],
+      "avoid": [
+        "Do not rely on generic fear words (scary, frightening, terrifying)",
+        "Avoid telling reader how to feel",
+        "Not suitable for plot summary or outline—applies to prose execution"
+      ],
+      "template_affinity": [
+        "all_horror_templates"
+      ],
+      "sources": [
+        "583 Sensory Words to Take Your Writing from Blah to Brilliant",
+        "The Fundamental Elements of Horror Writing"
+      ],
+      "tags": ["Writing Technique", "Sensory Details", "Show Don't Tell", "Atmosphere"]
+    },
+    {
+      "ku_id": "KU-031",
+      "source_item": "ITEM-013",
+      "type": "writing_technique",
+      "region": "Global",
+      "genre": ["all_horror"],
+      "primary_fear": "none",
+      "secondary_fears": [],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Subvert horror clichés (dream endings, false scares, incompetent authorities) to maintain reader engagement and credibility.",
+      "usage_rules": [
+        "Use to identify and avoid tired tropes",
+        "Apply when planning narrative to ensure fresh approach",
+        "Foundation for keeping horror impactful",
+        "Use to set reader expectations then violate them productively"
+      ],
+      "avoid": [
+        "Do not subvert for sake of subversion without better alternative",
+        "Avoid meta-commentary that breaks immersion",
+        "Not every cliché needs subversion—some are functional"
+      ],
+      "template_affinity": [
+        "all_horror_templates"
+      ],
+      "sources": [
+        "Building the Bones: 10 Ways to Structure a Horror Short Story"
+      ],
+      "tags": ["Writing Technique", "Cliché Subversion", "Tropes", "Innovation"]
+    },
+    {
+      "ku_id": "KU-032",
+      "source_item": "ITEM-013",
+      "type": "writing_technique",
+      "region": "Global",
+      "genre": ["all_horror"],
+      "primary_fear": "none",
+      "secondary_fears": [],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Structure horror narratives: normal world → inciting incident → rising tension → climax/confrontation → ambiguous/disturbing resolution.",
+      "usage_rules": [
+        "Use when plotting horror story arc",
+        "Apply to establish baseline normalcy before horror intrudes",
+        "Foundation for pacing and tension escalation",
+        "Use to ensure satisfying (not necessarily happy) resolution"
+      ],
+      "avoid": [
+        "Do not rush inciting incident without establishing stakes",
+        "Avoid neat/tidy endings that undermine horror",
+        "Not rigid formula—adapt to narrative needs"
+      ],
+      "template_affinity": [
+        "all_horror_templates"
+      ],
+      "sources": [
+        "Building the Bones: 10 Ways to Structure a Horror Short Story",
+        "How to Write a Horror Novel"
+      ],
+      "tags": ["Writing Technique", "Plot Structure", "Pacing", "Narrative Arc"]
+    },
+    {
+      "ku_id": "KU-033",
+      "source_item": "ITEM-013",
+      "type": "writing_technique",
+      "region": "Global",
+      "genre": ["all_horror"],
+      "primary_fear": "none",
+      "secondary_fears": [],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Use five fundamental fears framework to design layered horror: extinction, mutilation, loss of autonomy, separation, ego death.",
+      "usage_rules": [
+        "Use when designing horror scenario to identify which fear(s) to target",
+        "Apply to ensure horror has psychological grounding",
+        "Foundation for understanding why specific elements frighten",
+        "Use to layer multiple fears for complex response"
+      ],
+      "avoid": [
+        "Do not mechanically check boxes without organic integration",
+        "Avoid targeting all fears simultaneously—creates muddle",
+        "Not replacement for creativity—is analytical tool"
+      ],
+      "template_affinity": [
+        "all_horror_templates"
+      ],
+      "sources": [
+        "Writing Dark Using the Five Basic Types of Fear"
+      ],
+      "tags": ["Writing Technique", "Fear Framework", "Psychology", "Design"]
+    },
+    {
+      "ku_id": "KU-034",
+      "source_item": "ITEM-013",
+      "type": "writing_technique",
+      "region": "Global",
+      "genre": ["all_horror"],
+      "primary_fear": "none",
+      "secondary_fears": [],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Build horror atmosphere through environment, weather, lighting, and sound design before introducing explicit threat.",
+      "usage_rules": [
+        "Use to establish dread before revealing danger",
+        "Apply environmental details: fog, shadows, creaking, silence",
+        "Foundation for anticipatory fear (often more effective than reveal)",
+        "Use to control pacing and reader anxiety"
+      ],
+      "avoid": [
+        "Do not over-describe to point of reader boredom",
+        "Avoid purple prose that distracts from story",
+        "Not substitute for actual narrative stakes"
+      ],
+      "template_affinity": [
+        "all_horror_templates"
+      ],
+      "sources": [
+        "The Fundamental Elements of Horror Writing"
+      ],
+      "tags": ["Writing Technique", "Atmosphere", "Environment", "Mood"]
+    },
+    {
+      "ku_id": "KU-035",
+      "source_item": "ITEM-014",
+      "type": "writing_technique",
+      "region": "Global",
+      "genre": ["all_horror"],
+      "primary_fear": "none",
+      "secondary_fears": [],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Horror-specific vocabulary includes: ghastly, macabre, spine-tingling, blood-curdling, eldritch, uncanny, grotesque, malevolent.",
+      "usage_rules": [
+        "Use to enhance horror atmosphere through word choice",
+        "Apply sparingly to avoid purple prose",
+        "Foundation for vocabulary diversity in horror writing",
+        "Use when generic adjectives fail to convey specific horror tone"
+      ],
+      "avoid": [
+        "Do not overuse archaic terms (eldritch) in contemporary settings without purpose",
+        "Avoid clustering multiple horror adjectives together",
+        "Not replacement for showing through action/sensory detail"
+      ],
+      "template_affinity": [
+        "all_horror_templates"
+      ],
+      "sources": [
+        "240+ Dark Words for More Descriptive Writing",
+        "The 13 Spookiest English Words"
+      ],
+      "tags": ["Vocabulary", "Horror Words", "Descriptive Writing", "Word Choice"]
+    },
+    {
+      "ku_id": "KU-036",
+      "source_item": "ITEM-014",
+      "type": "writing_technique",
+      "region": "Global",
+      "genre": ["all_horror"],
+      "primary_fear": "none",
+      "secondary_fears": [],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Sensory words for horror include visual (pallid, shadowy), auditory (shrill, echoing), tactile (clammy, coarse), olfactory (putrid, acrid).",
+      "usage_rules": [
+        "Use to engage multiple senses in horror descriptions",
+        "Apply specific sensory vocabulary over generic terms",
+        "Foundation for immersive horror prose",
+        "Use to create full sensory environment"
+      ],
+      "avoid": [
+        "Do not rely solely on visual descriptions",
+        "Avoid sensory overload—select details strategically",
+        "Not comprehensive list—supplement with context-appropriate terms"
+      ],
+      "template_affinity": [
+        "all_horror_templates"
+      ],
+      "sources": [
+        "WC Sensory Words.docx",
+        "583 Sensory Words to Take Your Writing from Blah to Brilliant"
+      ],
+      "tags": ["Sensory Language", "Vocabulary", "Descriptive Writing", "Multi-sensory"]
+    },
+    {
+      "ku_id": "KU-037",
+      "source_item": "ITEM-015",
+      "type": "social_fear",
+      "region": "US",
+      "genre": ["disaster_horror", "isolation_horror"],
+      "primary_fear": "extinction",
+      "secondary_fears": ["separation", "loss_of_autonomy"],
+      "setting_archetype": "rural",
+      "antagonist_archetype": "none",
+      "core_idea": "US infrastructure decay (C-grade roads, bridges, dams, power grid) creates realistic disaster and isolation horror scenarios.",
+      "usage_rules": [
+        "Use when setting horror in failing infrastructure contexts",
+        "Apply to bridge collapse, power outage, dam failure scenarios",
+        "Foundation for realistic disaster horror without supernatural elements",
+        "Use to create plausible isolation through infrastructure failure"
+      ],
+      "avoid": [
+        "Do not treat as distant future—decay is current reality",
+        "Avoid placing blame on individuals rather than systemic underinvestment",
+        "Not applicable outside US without researching local infrastructure status"
+      ],
+      "template_affinity": [
+        "disaster_horror",
+        "isolation_horror",
+        "systemic_horror"
+      ],
+      "sources": [
+        "America's Infrastructure Report Card in 2025",
+        "Infrastructure's upward momentum reflected in report card"
+      ],
+      "tags": ["Infrastructure Decay", "Disaster", "US", "Isolation", "System Failure"]
+    },
+    {
+      "ku_id": "KU-038",
+      "source_item": "ITEM-015",
+      "type": "horror_theme",
+      "region": "US",
+      "genre": ["disaster_horror", "climate_horror"],
+      "primary_fear": "extinction",
+      "secondary_fears": ["separation"],
+      "setting_archetype": "rural",
+      "antagonist_archetype": "none",
+      "core_idea": "Climate change stress on aging infrastructure creates compounding disaster scenarios (flood + dam failure, heat + power outage).",
+      "usage_rules": [
+        "Use when depicting climate-related horror",
+        "Apply to cascading failure scenarios",
+        "Foundation for near-future disaster horror",
+        "Use to show intersection of environmental and infrastructural collapse"
+      ],
+      "avoid": [
+        "Do not treat as speculative—these risks are documented",
+        "Avoid climate disaster as simple backdrop without engaging consequences",
+        "Not suitable for historical settings"
+      ],
+      "template_affinity": [
+        "climate_horror",
+        "disaster_horror",
+        "eco_horror"
+      ],
+      "sources": [
+        "America's Infrastructure Report Card in 2025"
+      ],
+      "tags": ["Climate Change", "Infrastructure", "Cascading Failure", "Disaster"]
+    },
+    {
+      "ku_id": "KU-039",
+      "source_item": "ITEM-004",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["body_horror", "eco_horror"],
+      "primary_fear": "mutilation",
+      "secondary_fears": ["loss_of_autonomy", "extinction"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "body",
+      "core_idea": "Parasitic infection as body horror: external organism invading and controlling host body, connecting ecological and bodily violation.",
+      "usage_rules": [
+        "Use when depicting parasites, infection, or biological invasion",
+        "Apply to eco-horror narratives involving zoonotic disease",
+        "Foundation for biological horror at intersection of environment and body",
+        "Use to show nature as threat operating through bodily violation"
+      ],
+      "avoid": [
+        "Do not conflate with zombie tropes without differentiation",
+        "Avoid supernatural explanations when biological ones are more horrifying",
+        "Not suitable for pure supernatural body horror"
+      ],
+      "template_affinity": [
+        "body_horror",
+        "eco_horror",
+        "parasite_horror"
+      ],
+      "sources": [
+        "The Snakes That Ate Florida (Parasite example)"
+      ],
+      "tags": ["Parasite", "Body Horror", "Eco-Horror", "Infection", "Zoonotic"]
+    },
+    {
+      "ku_id": "KU-040",
+      "source_item": "ITEM-005",
+      "type": "horror_concept",
+      "region": "Global",
+      "genre": ["existential_horror", "social_horror"],
+      "primary_fear": "ego_death",
+      "secondary_fears": ["separation"],
+      "setting_archetype": "abstract",
+      "antagonist_archetype": "system",
+      "core_idea": "Late capitalism spatial horror: abandoned malls, empty offices symbolize economic decline and communal identity erosion.",
+      "usage_rules": [
+        "Use when depicting spaces of capitalist decay",
+        "Apply to settings: dead malls, foreclosed suburbs, corporate ghost towns",
+        "Foundation for economic decline as spatial horror",
+        "Use to critique consumption-based identity formation"
+      ],
+      "avoid": [
+        "Do not romanticize or aestheticize poverty",
+        "Avoid nostalgia without critical engagement",
+        "Not suitable for pre-industrial settings"
+      ],
+      "template_affinity": [
+        "liminal_horror",
+        "economic_horror",
+        "social_horror"
+      ],
+      "sources": [
+        "Lost in The Backrooms [or How I Learned to Love the Liminal]"
+      ],
+      "tags": ["Late Capitalism", "Economic Decline", "Dead Mall", "Spatial Horror"]
+    },
+    {
+      "ku_id": "KU-041",
+      "source_item": "ITEM-006",
+      "type": "social_fear",
+      "region": "US",
+      "genre": ["systemic_horror", "medical_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["extinction"],
+      "setting_archetype": "hospital",
+      "antagonist_archetype": "system",
+      "core_idea": "Hospitals using home liens and wage garnishment transform healthcare providers into financial predators.",
+      "usage_rules": [
+        "Use when depicting medical institutions as antagonists",
+        "Apply to scenarios where seeking help causes greater harm",
+        "Foundation for medical system horror",
+        "Use to show institutional violence masked as bureaucracy"
+      ],
+      "avoid": [
+        "Do not universalize beyond US for-profit healthcare context",
+        "Avoid demonizing individual healthcare workers vs system",
+        "Not suitable for supernatural medical horror without systemic grounding"
+      ],
+      "template_affinity": [
+        "medical_horror",
+        "systemic_horror",
+        "economic_horror"
+      ],
+      "sources": [
+        "A giant US hospital chain says it's leading the fight against medical debt",
+        "CFPB Takes Aim at Double Billing"
+      ],
+      "tags": ["Medical Debt", "Hospital", "Home Lien", "Wage Garnishment", "Systemic Horror"]
+    },
+    {
+      "ku_id": "KU-042",
+      "source_item": "ITEM-006",
+      "type": "social_fear",
+      "region": "Global",
+      "genre": ["cult_horror", "systemic_horror"],
+      "primary_fear": "ego_death",
+      "secondary_fears": ["loss_of_autonomy", "separation"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "NXIVM case study: corporate cult using executive coaching facade to implement branding, sexual exploitation, and psychological control.",
+      "usage_rules": [
+        "Use when depicting charismatic leader cult mechanics",
+        "Apply to scenarios involving professional development as exploitation vector",
+        "Foundation for corporate cult horror narratives",
+        "Use motifs: secrecy, inner circles, loyalty tests, isolation"
+      ],
+      "avoid": [
+        "Do not sensationalize victim experiences",
+        "Avoid treating as supernatural cult",
+        "Not suitable for historical religious cult narratives without adaptation"
+      ],
+      "template_affinity": [
+        "cult_horror",
+        "psychological_horror",
+        "systemic_horror"
+      ],
+      "sources": [
+        "NXIVM - Wikipedia"
+      ],
+      "tags": ["NXIVM", "Corporate Cult", "Psychological Control", "Sexual Exploitation"]
+    },
+    {
+      "ku_id": "KU-043",
+      "source_item": "ITEM-007",
+      "type": "social_fear",
+      "region": "Global",
+      "genre": ["techno_horror"],
+      "primary_fear": "ego_death",
+      "secondary_fears": ["loss_of_autonomy"],
+      "setting_archetype": "digital",
+      "antagonist_archetype": "technology",
+      "core_idea": "Technology destroys epistemic trust: when voice/face cannot authenticate identity, social bonds and institutional authority collapse.",
+      "usage_rules": [
+        "Use when depicting crisis of authentication",
+        "Apply to narratives about trust breakdown in digital age",
+        "Foundation for post-truth horror",
+        "Use to explore what happens when evidence becomes unreliable"
+      ],
+      "avoid": [
+        "Do not focus on technology over human impact",
+        "Avoid treating as solvable through technical means alone",
+        "Not suitable for low-tech settings"
+      ],
+      "template_affinity": [
+        "techno_horror",
+        "epistemic_horror",
+        "social_horror"
+      ],
+      "sources": [
+        "Cybercrime: Lessons learned from a $25m deepfake attack"
+      ],
+      "tags": ["Deepfake", "Trust Crisis", "Authentication", "Post-truth"]
+    },
+    {
+      "ku_id": "KU-044",
+      "source_item": "ITEM-008",
+      "type": "social_fear",
+      "region": "US",
+      "genre": ["systemic_horror", "political_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["extinction", "separation"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "54% of Americans fear government corruption more than crime, indicating trust collapse in democratic institutions.",
+      "usage_rules": [
+        "Use when grounding political horror in contemporary anxiety",
+        "Apply to narratives about institutional betrayal",
+        "Foundation for understanding shift from external to internal threats",
+        "Use to justify systemic horror over individual villain narratives"
+      ],
+      "avoid": [
+        "Do not date-lock unnecessarily—trend is ongoing",
+        "Avoid partisan messaging",
+        "Not applicable to countries with different trust baselines"
+      ],
+      "template_affinity": [
+        "political_horror",
+        "systemic_horror"
+      ],
+      "sources": [
+        "Top Public Worries in the U.S."
+      ],
+      "tags": ["Government Corruption", "US", "Trust Crisis", "Institutional Failure"]
+    },
+    {
+      "ku_id": "KU-045",
+      "source_item": "ITEM-008",
+      "type": "social_fear",
+      "region": "US",
+      "genre": ["economic_horror", "systemic_horror"],
+      "primary_fear": "extinction",
+      "secondary_fears": ["separation", "loss_of_autonomy"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "system",
+      "core_idea": "Inflation and cost of living are top US concerns, indicating economic anxiety surpasses traditional fears.",
+      "usage_rules": [
+        "Use when depicting economic precarity as horror",
+        "Apply to narratives about financial survival",
+        "Foundation for class-based horror",
+        "Use to show how economic stress compounds other horrors"
+      ],
+      "avoid": [
+        "Do not treat as abstract—connect to material consequences",
+        "Avoid moralizing about spending habits",
+        "Not static—tied to economic conditions"
+      ],
+      "template_affinity": [
+        "economic_horror",
+        "systemic_horror",
+        "class_horror"
+      ],
+      "sources": [
+        "What Worries the World – December 2025"
+      ],
+      "tags": ["Inflation", "Cost of Living", "Economic Anxiety", "US"]
+    },
+    {
+      "ku_id": "KU-046",
+      "source_item": "ITEM-009",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["eco_horror"],
+      "primary_fear": "extinction",
+      "secondary_fears": ["mutilation", "separation"],
+      "setting_archetype": "rural",
+      "antagonist_archetype": "unknown",
+      "core_idea": "Environmental revenge narrative: human-caused ecological disruption leads to nature striking back as unstoppable force.",
+      "usage_rules": [
+        "Use when depicting ecological consequences as horror",
+        "Apply to climate change, pollution, or habitat destruction narratives",
+        "Foundation for eco-horror as moral reckoning",
+        "Use to show nature as indifferent, not malevolent"
+      ],
+      "avoid": [
+        "Do not anthropomorphize nature as intentionally evil",
+        "Avoid eco-fascist 'humans are virus' messaging",
+        "Not suitable for nature mysticism or noble savage tropes"
+      ],
+      "template_affinity": [
+        "eco_horror",
+        "climate_horror",
+        "disaster_horror"
+      ],
+      "sources": [
+        "The Snakes That Ate Florida",
+        "Picher, Oklahoma Is America's Most Toxic Ghost Town"
+      ],
+      "tags": ["Eco-Horror", "Environmental Revenge", "Ecological Disruption"]
+    },
+    {
+      "ku_id": "KU-047",
+      "source_item": "ITEM-010",
+      "type": "horror_theme",
+      "region": "Korea",
+      "genre": ["urban_legend", "folklore_horror"],
+      "primary_fear": "unknown",
+      "secondary_fears": ["mutilation", "ego_death"],
+      "setting_archetype": "urban",
+      "antagonist_archetype": "ghost",
+      "core_idea": "Korean urban legends (Red Mask, Hong Kong Grandma Ghost) function as modern folklore encoding social anxieties.",
+      "usage_rules": [
+        "Use when creating Korean-specific urban horror",
+        "Apply to contemporary myth-making in Korean context",
+        "Foundation for K-horror urban legend templates",
+        "Use to connect to broader Korean cultural fears"
+      ],
+      "avoid": [
+        "Do not treat as interchangeable with Japanese or Chinese legends",
+        "Avoid removing cultural specificity",
+        "Not applicable without Korean cultural context"
+      ],
+      "template_affinity": [
+        "urban_legend_horror",
+        "K-horror",
+        "folklore_horror"
+      ],
+      "sources": [
+        "Spine-chilling Korean Horror Stories & Urban Legends"
+      ],
+      "tags": ["Korean Urban Legends", "Red Mask", "Modern Folklore", "K-Horror"]
+    },
+    {
+      "ku_id": "KU-048",
+      "source_item": "ITEM-012",
+      "type": "horror_theme",
+      "region": "Global",
+      "genre": ["social_horror", "domestic_horror"],
+      "primary_fear": "loss_of_autonomy",
+      "secondary_fears": ["mutilation", "ego_death"],
+      "setting_archetype": "apartment",
+      "antagonist_archetype": "system",
+      "core_idea": "2020s horror films depict gender violence and domestic abuse as systemic horror, not individual pathology.",
+      "usage_rules": [
+        "Use when depicting intimate partner violence as horror",
+        "Apply to gaslighting, coercive control, and domestic terrorism narratives",
+        "Foundation for feminist horror grounded in real violence",
+        "Use to show pattern rather than isolated incident"
+      ],
+      "avoid": [
+        "Do not use for exploitation or trauma porn",
+        "Avoid 'crazy ex' or 'woman scorned' tropes",
+        "Not suitable for glorifying violence or victim-blaming"
+      ],
+      "template_affinity": [
+        "domestic_horror",
+        "feminist_horror",
+        "social_horror"
+      ],
+      "sources": [
+        "What do 2020s horror movies say about our society's fears?"
+      ],
+      "tags": ["Gender Violence", "Domestic Abuse", "2020s Horror", "Feminist Horror"]
+    },
+    {
+      "ku_id": "KU-049",
+      "source_item": "ITEM-012",
+      "type": "horror_concept",
+      "region": "Global",
+      "genre": ["psychological_horror"],
+      "primary_fear": "ego_death",
+      "secondary_fears": ["separation"],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Horror films function as cultural catharsis: they release existing societal fears rather than creating new ones.",
+      "usage_rules": [
+        "Use to understand horror as diagnostic of cultural moment",
+        "Apply when analyzing why certain horror themes resonate at specific times",
+        "Foundation for socially-grounded horror writing",
+        "Use to identify contemporary anxieties worth exploring"
+      ],
+      "avoid": [
+        "Do not treat horror as causing real-world violence",
+        "Avoid dismissing horror as mere entertainment without meaning",
+        "Not prescriptive—observation about function, not rule"
+      ],
+      "template_affinity": [
+        "all_horror_templates"
+      ],
+      "sources": [
+        "Be Very Afraid: How Horror Movie Trends Reflect Societal Fears"
+      ],
+      "tags": ["Horror Theory", "Cultural Function", "Catharsis", "Societal Fears"]
+    },
+    {
+      "ku_id": "KU-050",
+      "source_item": "ITEM-001",
+      "type": "horror_concept",
+      "region": "Global",
+      "genre": ["cosmic_horror", "existential_horror"],
+      "primary_fear": "unknown",
+      "secondary_fears": ["extinction", "ego_death"],
+      "setting_archetype": "abstract",
+      "antagonist_archetype": "unknown",
+      "core_idea": "Fear of the unknown (Lovecraft): the most primal fear is encountering something incomprehensible and indifferent to human existence.",
+      "usage_rules": [
+        "Use when depicting cosmic or incomprehensible horror",
+        "Apply to scenarios where understanding is impossible or forbidden",
+        "Foundation for cosmic horror and existential dread",
+        "Use when antagonist must remain fundamentally unknowable"
+      ],
+      "avoid": [
+        "Do not over-explain or provide rational explanation",
+        "Avoid anthropomorphizing cosmic entities",
+        "Not suitable for mystery/detective horror that requires resolution"
+      ],
+      "template_affinity": [
+        "cosmic_horror",
+        "existential_horror",
+        "lovecraftian_horror"
+      ],
+      "sources": [
+        "H.P. Lovecraft quote in ITEM-001"
+      ],
+      "tags": ["Fear of Unknown", "Lovecraft", "Cosmic Horror", "Incomprehensible"]
+    },
+    {
+      "ku_id": "KU-051",
+      "source_item": "ITEM-013",
+      "type": "writing_technique",
+      "region": "Global",
+      "genre": ["all_horror"],
+      "primary_fear": "none",
+      "secondary_fears": [],
+      "setting_archetype": "none",
+      "antagonist_archetype": "none",
+      "core_idea": "Avoid resolving horror with 'it was all a dream' or neat explanations; embrace ambiguity and lingering unease.",
+      "usage_rules": [
+        "Use to maintain horror impact beyond story end",
+        "Apply ambiguous or disturbing resolutions over clean closure",
+        "Foundation for psychological lingering effect",
+        "Use to trust reader with unresolved questions"
+      ],
+      "avoid": [
+        "Do not confuse ambiguity with incoherence",
+        "Avoid 'dream ending' cliché specifically",
+        "Not every horror needs ambiguity—some benefit from clear resolution"
+      ],
+      "template_affinity": [
+        "psychological_horror",
+        "cosmic_horror",
+        "existential_horror"
+      ],
+      "sources": [
+        "Building the Bones: 10 Ways to Structure a Horror Short Story"
+      ],
+      "tags": ["Writing Technique", "Ambiguous Ending", "Resolution", "Cliché Avoidance"]
+    },
+    {
+      "ku_id": "KU-052",
+      "source_item": "ITEM-015",
+      "type": "horror_theme",
+      "region": "US",
+      "genre": ["isolation_horror", "disaster_horror"],
+      "primary_fear": "separation",
+      "secondary_fears": ["extinction"],
+      "setting_archetype": "rural",
+      "antagonist_archetype": "none",
+      "core_idea": "Infrastructure failure creates plausible modern isolation: no power, no communication, no escape, grounded in real systemic decay.",
+      "usage_rules": [
+        "Use when isolating characters without supernatural explanation",
+        "Apply to scenarios requiring believable communication breakdown",
+        "Foundation for realistic disaster horror",
+        "Use to create siege/isolation scenarios with systemic cause"
+      ],
+      "avoid": [
+        "Do not treat as distant future—infrastructure risk is current",
+        "Avoid requiring technical knowledge beyond basic plausibility",
+        "Not applicable to well-maintained infrastructure contexts without research"
+      ],
+      "template_affinity": [
+        "isolation_horror",
+        "disaster_horror",
+        "survival_horror"
+      ],
+      "sources": [
+        "America's Infrastructure Report Card in 2025"
+      ],
+      "tags": ["Infrastructure Failure", "Isolation", "Communication Breakdown", "Power Outage"]
+    }
+  ]
+}

@@ -1,0 +1,812 @@
+{
+  "generated_at": "2026-01-08",
+  "canonical_enum_version": "1.0",
+  "total_resolved": 45,
+  "excluded_writing_technique_kus": ["KU-030", "KU-031", "KU-032", "KU-033", "KU-034", "KU-035", "KU-036", "KU-051"],
+  "resolved_keys": [
+    {
+      "ku_id": "KU-001",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "identity_erasure",
+        "antagonist_archetype": "unknown",
+        "threat_mechanism": "erosion",
+        "twist_family": "ambiguity"
+      },
+      "decision_rationale": {
+        "setting": "Art-Horror operates at philosophical level, not specific space",
+        "fear": "Categorical violation threatens sense of self → identity_erasure",
+        "antagonist": "Monsters that violate categories are fundamentally unknowable",
+        "mechanism": "Cognitive dissonance gradually erodes mental categories",
+        "twist": "Art-Horror resists neat explanations → ambiguity"
+      }
+    },
+    {
+      "ku_id": "KU-002",
+      "canonical_key": {
+        "setting_archetype": "body",
+        "primary_fear": "contamination",
+        "antagonist_archetype": "body",
+        "threat_mechanism": "infection",
+        "twist_family": "self_is_monster"
+      },
+      "decision_rationale": {
+        "setting": "Body itself becomes site of horror (bodily fluids, decay)",
+        "fear": "Abject is about being contaminated/polluted by boundary collapse",
+        "antagonist": "Internal bodily threat, not external",
+        "mechanism": "Fluids, decay spread like infection of self/other boundary",
+        "twist": "Self becomes the source of horror through bodily betrayal"
+      }
+    },
+    {
+      "ku_id": "KU-003",
+      "canonical_key": {
+        "setting_archetype": "domestic_space",
+        "primary_fear": "identity_erasure",
+        "antagonist_archetype": "unknown",
+        "threat_mechanism": "impersonation",
+        "twist_family": "inversion"
+      },
+      "decision_rationale": {
+        "setting": "Domestic space turned hostile = home",
+        "fear": "Uncanny threatens identity through doubling/automation",
+        "antagonist": "Familiar-turned-strange is unknowable",
+        "mechanism": "Doppelganger operates through impersonation",
+        "twist": "Familiar becomes unfamiliar = role inversion"
+      }
+    },
+    {
+      "ku_id": "KU-004",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "annihilation",
+        "antagonist_archetype": "unknown",
+        "threat_mechanism": "erosion",
+        "twist_family": "ambiguity"
+      },
+      "decision_rationale": {
+        "setting": "Framework applies to all settings",
+        "fear": "Extinction is listed first in five fears → primary",
+        "antagonist": "Framework is abstract, not specific entity",
+        "mechanism": "Layered fears erode psychological defenses",
+        "twist": "Framework allows for ambiguous applications"
+      }
+    },
+    {
+      "ku_id": "KU-005",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "erosion",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Han operates across all Korean settings",
+        "fear": "Accumulated resentment from being pushed out of society",
+        "antagonist": "Systemic oppression creates han",
+        "mechanism": "Grievances accumulate/erode over time",
+        "twist": "Han is inescapable, generational"
+      }
+    },
+    {
+      "ku_id": "KU-006",
+      "canonical_key": {
+        "setting_archetype": "apartment",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "surveillance",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Apartment is canonical setting type",
+        "fear": "Class anxiety = fear of social displacement",
+        "antagonist": "System of class hierarchy and real estate",
+        "mechanism": "Noise complaints = surveillance of behavior",
+        "twist": "Cannot escape apartment class structure"
+      }
+    },
+    {
+      "ku_id": "KU-007",
+      "canonical_key": {
+        "setting_archetype": "rural",
+        "primary_fear": "isolation",
+        "antagonist_archetype": "ghost",
+        "threat_mechanism": "possession",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Rural countryside is canonical",
+        "fear": "Modernity's exclusion = isolation from progress",
+        "antagonist": "Historical trauma manifests as ghosts",
+        "mechanism": "Past traumas possess the landscape",
+        "twist": "Buried history revealed"
+      }
+    },
+    {
+      "ku_id": "KU-008",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "erosion",
+        "twist_family": "ambiguity"
+      },
+      "decision_rationale": {
+        "setting": "Comparative framework, not specific space",
+        "fear": "Vortex structure creates displacement anxiety",
+        "antagonist": "Social structure as system",
+        "mechanism": "Dynamic resentment erodes social bonds",
+        "twist": "Vortex vs box distinction creates analytical ambiguity"
+      }
+    },
+    {
+      "ku_id": "KU-009",
+      "canonical_key": {
+        "setting_archetype": "domestic_space",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "ghost",
+        "threat_mechanism": "possession",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Traditional domestic space (marriage/childbirth obligations)",
+        "fear": "Patriarchal exclusion = social displacement",
+        "antagonist": "Virgin ghost is traditional antagonist",
+        "mechanism": "Unfulfilled obligations possess victim",
+        "twist": "Patriarchal violence revealed through ghost"
+      }
+    },
+    {
+      "ku_id": "KU-010",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist_archetype": "ghost",
+        "threat_mechanism": "possession",
+        "twist_family": "inversion"
+      },
+      "decision_rationale": {
+        "setting": "Ritual can occur anywhere",
+        "fear": "Spiritual possession = loss of control",
+        "antagonist": "Spirits targeted by ritual",
+        "mechanism": "Direct possession threat",
+        "twist": "Exorcism can backfire, shaman becomes possessed"
+      }
+    },
+    {
+      "ku_id": "KU-011",
+      "canonical_key": {
+        "setting_archetype": "hospital",
+        "primary_fear": "contamination",
+        "antagonist_archetype": "body",
+        "threat_mechanism": "infection",
+        "twist_family": "self_is_monster"
+      },
+      "decision_rationale": {
+        "setting": "Medical procedures occur in hospitals",
+        "fear": "Bodily transformation = contamination of self",
+        "antagonist": "Body betrays from within",
+        "mechanism": "Disease/mutation spreads as infection",
+        "twist": "Body becomes monstrous, self is threat"
+      }
+    },
+    {
+      "ku_id": "KU-012",
+      "canonical_key": {
+        "setting_archetype": "hospital",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "exploitation",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Medical institutions",
+        "fear": "Medical control without consent = autonomy loss",
+        "antagonist": "Healthcare system as antagonist",
+        "mechanism": "Involuntary experimentation = exploitation",
+        "twist": "Medical conspiracy/eugenics revealed"
+      }
+    },
+    {
+      "ku_id": "KU-013",
+      "canonical_key": {
+        "setting_archetype": "digital",
+        "primary_fear": "identity_erasure",
+        "antagonist_archetype": "unknown",
+        "threat_mechanism": "erosion",
+        "twist_family": "ambiguity"
+      },
+      "decision_rationale": {
+        "setting": "Digital media space (VHS, broadcast)",
+        "fear": "Nostalgic dread erodes sense of time/self",
+        "antagonist": "Unknown entities in distorted media",
+        "mechanism": "Visual ambiguity gradually erodes certainty",
+        "twist": "Analog horror resists clear resolution"
+      }
+    },
+    {
+      "ku_id": "KU-014",
+      "canonical_key": {
+        "setting_archetype": "liminal",
+        "primary_fear": "isolation",
+        "antagonist_archetype": "unknown",
+        "threat_mechanism": "confinement",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Liminal spaces are canonical",
+        "fear": "Empty transitional spaces = ultimate isolation",
+        "antagonist": "Space itself, unknowable",
+        "mechanism": "Infinite transition = psychological confinement",
+        "twist": "No exit from liminal state"
+      }
+    },
+    {
+      "ku_id": "KU-015",
+      "canonical_key": {
+        "setting_archetype": "liminal",
+        "primary_fear": "identity_erasure",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "erosion",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Backrooms as liminal space",
+        "fear": "Corporate monotony erases individuality",
+        "antagonist": "Late capitalism as system",
+        "mechanism": "Endless repetition erodes identity",
+        "twist": "No escape from capitalist nightmare"
+      }
+    },
+    {
+      "ku_id": "KU-016",
+      "canonical_key": {
+        "setting_archetype": "hospital",
+        "primary_fear": "annihilation",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "debt",
+        "twist_family": "inversion"
+      },
+      "decision_rationale": {
+        "setting": "Medical debt originates in hospitals",
+        "fear": "Illness more terrifying than death = annihilation",
+        "antagonist": "Healthcare system",
+        "mechanism": "Medical debt is literal threat_mechanism",
+        "twist": "Seeking survival causes destruction = inversion"
+      }
+    },
+    {
+      "ku_id": "KU-017",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist_archetype": "collective",
+        "threat_mechanism": "exploitation",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "MLM/corporate cults operate anywhere",
+        "fear": "Brainwashing = loss of autonomy",
+        "antagonist": "Cult as collective (not just leader)",
+        "mechanism": "Financial/psychological exploitation",
+        "twist": "Pyramid scheme structure revealed"
+      }
+    },
+    {
+      "ku_id": "KU-018",
+      "canonical_key": {
+        "setting_archetype": "digital",
+        "primary_fear": "identity_erasure",
+        "antagonist_archetype": "technology",
+        "threat_mechanism": "impersonation",
+        "twist_family": "self_is_monster"
+      },
+      "decision_rationale": {
+        "setting": "Deepfakes exist in digital space",
+        "fear": "Identity theft = erasure of authentic self",
+        "antagonist": "AI technology",
+        "mechanism": "Deepfake = literal impersonation",
+        "twist": "Cannot distinguish self from fake"
+      }
+    },
+    {
+      "ku_id": "KU-019",
+      "canonical_key": {
+        "setting_archetype": "domestic_space",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist_archetype": "technology",
+        "threat_mechanism": "surveillance",
+        "twist_family": "inversion"
+      },
+      "decision_rationale": {
+        "setting": "Smart home = domestic space",
+        "fear": "IoT control = autonomy loss",
+        "antagonist": "Smart home technology",
+        "mechanism": "Camera/sensor surveillance",
+        "twist": "Home comfort becomes prison = inversion"
+      }
+    },
+    {
+      "ku_id": "KU-020",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "erosion",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "General US social anxiety, no specific space",
+        "fear": "Economic collapse/corruption = displacement fear",
+        "antagonist": "Government/institutions as system",
+        "mechanism": "Trust gradually erodes",
+        "twist": "Institutional corruption revealed"
+      }
+    },
+    {
+      "ku_id": "KU-021",
+      "canonical_key": {
+        "setting_archetype": "rural",
+        "primary_fear": "contamination",
+        "antagonist_archetype": "body",
+        "threat_mechanism": "infection",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Wilderness/swamp = rural",
+        "fear": "Parasite transmission = contamination",
+        "antagonist": "Parasites operate through body",
+        "mechanism": "Zoonotic infection spreads",
+        "twist": "Ecological collapse irreversible"
+      }
+    },
+    {
+      "ku_id": "KU-022",
+      "canonical_key": {
+        "setting_archetype": "rural",
+        "primary_fear": "annihilation",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "exploitation",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Ghost town in rural area",
+        "fear": "Uninhabitable zone = total annihilation",
+        "antagonist": "Corporate mining system",
+        "mechanism": "Corporate exploitation of land/people",
+        "twist": "Environmental damage irreversible"
+      }
+    },
+    {
+      "ku_id": "KU-023",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "collective",
+        "threat_mechanism": "infection",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Urban legends operate anywhere",
+        "fear": "Social anxieties encoded in legends = displacement",
+        "antagonist": "Collective fear made manifest",
+        "mechanism": "Oral transmission = memetic infection",
+        "twist": "Social anxiety root revealed"
+      }
+    },
+    {
+      "ku_id": "KU-024",
+      "canonical_key": {
+        "setting_archetype": "digital",
+        "primary_fear": "identity_erasure",
+        "antagonist_archetype": "collective",
+        "threat_mechanism": "infection",
+        "twist_family": "circularity"
+      },
+      "decision_rationale": {
+        "setting": "Internet/digital folklore",
+        "fear": "Collaborative creation erases individual authorship",
+        "antagonist": "Collective internet consciousness",
+        "mechanism": "Digital contagion spreads virally",
+        "twist": "Story loops back to retellers"
+      }
+    },
+    {
+      "ku_id": "KU-025",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "debt",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Student debt affects all spaces",
+        "fear": "Inescapable debt = autonomy loss",
+        "antagonist": "Education/financial system",
+        "mechanism": "Student loan debt is literal",
+        "twist": "Debt trap inescapable"
+      }
+    },
+    {
+      "ku_id": "KU-026",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "exploitation",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Systemic racism operates everywhere",
+        "fear": "Racialized exclusion = social displacement",
+        "antagonist": "Financial system with racial bias",
+        "mechanism": "Disproportionate burden = exploitation",
+        "twist": "Systemic racism in debt revealed"
+      }
+    },
+    {
+      "ku_id": "KU-027",
+      "canonical_key": {
+        "setting_archetype": "domestic_space",
+        "primary_fear": "identity_erasure",
+        "antagonist_archetype": "unknown",
+        "threat_mechanism": "possession",
+        "twist_family": "circularity"
+      },
+      "decision_rationale": {
+        "setting": "Family trauma in home",
+        "fear": "PTSD erases sense of self",
+        "antagonist": "Past trauma (unknowable nature)",
+        "mechanism": "Trauma possesses present actions",
+        "twist": "Generational trauma cycles"
+      }
+    },
+    {
+      "ku_id": "KU-028",
+      "canonical_key": {
+        "setting_archetype": "domestic_space",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "confinement",
+        "twist_family": "inversion"
+      },
+      "decision_rationale": {
+        "setting": "Home as site of violence",
+        "fear": "Domestic control = autonomy loss",
+        "antagonist": "Domestic abuse as systemic pattern",
+        "mechanism": "Physical/psychological confinement",
+        "twist": "Sanctuary becomes prison"
+      }
+    },
+    {
+      "ku_id": "KU-029",
+      "canonical_key": {
+        "setting_archetype": "hospital",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "exploitation",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Medical/reproductive control in hospitals",
+        "fear": "Bodily autonomy loss is core fear",
+        "antagonist": "Medical/state system",
+        "mechanism": "Forced procedures = exploitation",
+        "twist": "Reproductive rights stripping revealed"
+      }
+    },
+    {
+      "ku_id": "KU-037",
+      "canonical_key": {
+        "setting_archetype": "infrastructure",
+        "primary_fear": "isolation",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "confinement",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Infrastructure is canonical setting type",
+        "fear": "Infrastructure failure creates isolation",
+        "antagonist": "Decayed system infrastructure",
+        "mechanism": "Collapse confines communities",
+        "twist": "Decay irreversible, no escape"
+      }
+    },
+    {
+      "ku_id": "KU-038",
+      "canonical_key": {
+        "setting_archetype": "infrastructure",
+        "primary_fear": "annihilation",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "erosion",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Climate stress on infrastructure",
+        "fear": "Cascading disasters = total annihilation",
+        "antagonist": "Climate + infrastructure as system",
+        "mechanism": "Gradual erosion compounds",
+        "twist": "Cascading failure unstoppable"
+      }
+    },
+    {
+      "ku_id": "KU-039",
+      "canonical_key": {
+        "setting_archetype": "body",
+        "primary_fear": "contamination",
+        "antagonist_archetype": "body",
+        "threat_mechanism": "infection",
+        "twist_family": "self_is_monster"
+      },
+      "decision_rationale": {
+        "setting": "Body is site of parasitic invasion",
+        "fear": "Parasitic contamination",
+        "antagonist": "Organism within body",
+        "mechanism": "Zoonotic infection",
+        "twist": "Host body becomes threat vector"
+      }
+    },
+    {
+      "ku_id": "KU-040",
+      "canonical_key": {
+        "setting_archetype": "liminal",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "erosion",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Dead malls/offices are liminal spaces",
+        "fear": "Economic decline = social displacement",
+        "antagonist": "Capitalism as system",
+        "mechanism": "Economic erosion of community",
+        "twist": "Capitalist collapse revealed"
+      }
+    },
+    {
+      "ku_id": "KU-041",
+      "canonical_key": {
+        "setting_archetype": "hospital",
+        "primary_fear": "annihilation",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "debt",
+        "twist_family": "inversion"
+      },
+      "decision_rationale": {
+        "setting": "Hospital as debt origin",
+        "fear": "Financial ruin = annihilation of life",
+        "antagonist": "Hospital system",
+        "mechanism": "Liens/garnishment = debt mechanism",
+        "twist": "Healer becomes predator"
+      }
+    },
+    {
+      "ku_id": "KU-042",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "identity_erasure",
+        "antagonist_archetype": "collective",
+        "threat_mechanism": "exploitation",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "NXIVM operated across locations",
+        "fear": "Branding/psychological control erases self",
+        "antagonist": "Cult as collective organization",
+        "mechanism": "Sexual/financial exploitation",
+        "twist": "Corporate cult exposed"
+      }
+    },
+    {
+      "ku_id": "KU-043",
+      "canonical_key": {
+        "setting_archetype": "digital",
+        "primary_fear": "identity_erasure",
+        "antagonist_archetype": "technology",
+        "threat_mechanism": "erosion",
+        "twist_family": "ambiguity"
+      },
+      "decision_rationale": {
+        "setting": "Digital epistemic crisis",
+        "fear": "Trust collapse erases reliable identity",
+        "antagonist": "Deepfake technology",
+        "mechanism": "Gradual erosion of epistemic trust",
+        "twist": "Truth becomes unknowable"
+      }
+    },
+    {
+      "ku_id": "KU-044",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "erosion",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Government corruption affects all spaces",
+        "fear": "Institutional betrayal = displacement from protection",
+        "antagonist": "Government system",
+        "mechanism": "Corruption gradually erodes trust",
+        "twist": "Government corruption revealed"
+      }
+    },
+    {
+      "ku_id": "KU-045",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "annihilation",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "erosion",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Economic anxiety pervasive",
+        "fear": "Cost of living = survival threat = annihilation",
+        "antagonist": "Economic system",
+        "mechanism": "Inflation erodes purchasing power",
+        "twist": "Economic trap inescapable"
+      }
+    },
+    {
+      "ku_id": "KU-046",
+      "canonical_key": {
+        "setting_archetype": "rural",
+        "primary_fear": "annihilation",
+        "antagonist_archetype": "unknown",
+        "threat_mechanism": "erosion",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Wilderness/natural environment",
+        "fear": "Environmental collapse = annihilation",
+        "antagonist": "Nature as indifferent unknown force",
+        "mechanism": "Ecological erosion",
+        "twist": "Nature's revenge unstoppable"
+      }
+    },
+    {
+      "ku_id": "KU-047",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "ghost",
+        "threat_mechanism": "infection",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Korean urban legends operate citywide",
+        "fear": "Cultural anxieties = social displacement",
+        "antagonist": "Ghost in modern folklore",
+        "mechanism": "Legend spreads like infection",
+        "twist": "Cultural fear source revealed"
+      }
+    },
+    {
+      "ku_id": "KU-048",
+      "canonical_key": {
+        "setting_archetype": "domestic_space",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "confinement",
+        "twist_family": "revelation"
+      },
+      "decision_rationale": {
+        "setting": "Domestic abuse in home",
+        "fear": "Coercive control = autonomy loss",
+        "antagonist": "Systemic gender violence pattern",
+        "mechanism": "Physical/psychological confinement",
+        "twist": "Systemic pattern revealed"
+      }
+    },
+    {
+      "ku_id": "KU-049",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "social_displacement",
+        "antagonist_archetype": "collective",
+        "threat_mechanism": "erosion",
+        "twist_family": "ambiguity"
+      },
+      "decision_rationale": {
+        "setting": "Cultural function operates meta-level",
+        "fear": "Horror reflects societal displacement fears",
+        "antagonist": "Collective cultural anxiety",
+        "mechanism": "Cultural anxieties erode over time",
+        "twist": "Horror's function remains ambiguous"
+      }
+    },
+    {
+      "ku_id": "KU-050",
+      "canonical_key": {
+        "setting_archetype": "abstract",
+        "primary_fear": "annihilation",
+        "antagonist_archetype": "unknown",
+        "threat_mechanism": "erosion",
+        "twist_family": "ambiguity"
+      },
+      "decision_rationale": {
+        "setting": "Cosmic horror transcends physical space",
+        "fear": "Cosmic indifference = existential annihilation",
+        "antagonist": "Incomprehensible cosmic entities",
+        "mechanism": "Forbidden knowledge erodes sanity",
+        "twist": "Cosmic truth remains unknowable"
+      }
+    },
+    {
+      "ku_id": "KU-052",
+      "canonical_key": {
+        "setting_archetype": "infrastructure",
+        "primary_fear": "isolation",
+        "antagonist_archetype": "system",
+        "threat_mechanism": "confinement",
+        "twist_family": "inevitability"
+      },
+      "decision_rationale": {
+        "setting": "Infrastructure failure setting",
+        "fear": "Communication breakdown = isolation",
+        "antagonist": "Failed infrastructure system",
+        "mechanism": "Infrastructure traps community",
+        "twist": "No escape from failure"
+      }
+    }
+  ],
+  "resolution_summary": {
+    "total_kus_processed": 45,
+    "canonical_dimension_distribution": {
+      "setting_archetype": {
+        "abstract": 15,
+        "domestic_space": 7,
+        "hospital": 6,
+        "digital": 5,
+        "rural": 5,
+        "liminal": 3,
+        "infrastructure": 3,
+        "body": 3,
+        "apartment": 1
+      },
+      "primary_fear": {
+        "social_displacement": 11,
+        "identity_erasure": 9,
+        "loss_of_autonomy": 9,
+        "annihilation": 8,
+        "contamination": 4,
+        "isolation": 4
+      },
+      "antagonist_archetype": {
+        "system": 22,
+        "unknown": 9,
+        "ghost": 5,
+        "collective": 5,
+        "technology": 4,
+        "body": 4
+      },
+      "threat_mechanism": {
+        "erosion": 14,
+        "exploitation": 7,
+        "confinement": 6,
+        "infection": 6,
+        "debt": 4,
+        "possession": 4,
+        "surveillance": 2,
+        "impersonation": 2
+      },
+      "twist_family": {
+        "inevitability": 11,
+        "revelation": 11,
+        "inversion": 7,
+        "ambiguity": 7,
+        "self_is_monster": 4,
+        "circularity": 2
+      }
+    },
+    "key_findings": {
+      "dominant_pattern": "System antagonist (49%) + Social displacement fear (24%) + Erosion mechanism (31%)",
+      "modern_horror_shift": "Traditional ghost horror (11%) vs systemic horror (49%)",
+      "resolution_preference": "Revelation (24%) and Inevitability (24%) dominate over ambiguity (16%)",
+      "spatial_trend": "Abstract settings (33%) indicate conceptual horror over location-specific"
+    }
+  }
+}
