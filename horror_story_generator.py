@@ -10,12 +10,19 @@ Astro + GraphQL 블로그에 최적화된 마크다운 포맷으로 출력합니
 import json
 import logging
 import os
+import random
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 from dotenv import load_dotenv
 import anthropic
+
+# Phase 2A: Template skeleton configuration
+TEMPLATE_SKELETONS_PATH = Path(__file__).parent / "phase1_foundation" / "03_templates" / "template_skeletons_v1.json"
+
+# Phase 2A: In-memory state for back-to-back prevention (process-scoped only, not persisted)
+_last_template_id: Optional[str] = None
 
 
 # 로깅 설정 함수
@@ -161,77 +168,239 @@ def load_prompt_template(template_path: str = "horror_story_prompt_template.json
     return template
 
 
-def build_system_prompt(template: Dict[str, Any]) -> str:
-    """
-    JSON 템플릿으로부터 시스템 프롬프트를 생성합니다.
+# =============================================================================
+# Phase 2A: Template Skeleton Functions
+# =============================================================================
 
-    템플릿의 모든 설정을 분석하여 Claude API에 전달할
-    상세한 시스템 프롬프트를 구성합니다.
+def load_template_skeletons() -> List[Dict[str, Any]]:
+    """
+    Phase 1에서 정의한 템플릿 스켈레톤을 로드합니다.
+
+    Returns:
+        List[Dict[str, Any]]: 15개의 템플릿 스켈레톤 리스트
+
+    Raises:
+        FileNotFoundError: 템플릿 파일이 존재하지 않는 경우
+    """
+    if not TEMPLATE_SKELETONS_PATH.exists():
+        logger.warning(f"템플릿 스켈레톤 파일 없음: {TEMPLATE_SKELETONS_PATH}")
+        return []
+
+    with open(TEMPLATE_SKELETONS_PATH, 'r', encoding='utf-8') as f:
+        skeletons = json.load(f)
+
+    logger.debug(f"템플릿 스켈레톤 {len(skeletons)}개 로드 완료")
+    return skeletons
+
+
+def select_random_template() -> Optional[Dict[str, Any]]:
+    """
+    Phase 2A: 무작위로 템플릿 스켈레톤을 선택합니다.
+
+    - 상태 없음 between process runs (stateless across restarts)
+    - 메모리 없음 (no disk persistence)
+    - 단순 무작위 선택 (simple random choice)
+    - 동일 프로세스 내에서 연속 동일 템플릿 방지 (back-to-back prevention)
+
+    Returns:
+        Optional[Dict[str, Any]]: 선택된 템플릿 스켈레톤, 또는 None (파일 없을 시)
+    """
+    global _last_template_id
+
+    skeletons = load_template_skeletons()
+    if not skeletons:
+        logger.info("사용 가능한 템플릿 없음 - 기본 프롬프트 사용")
+        return None
+
+    # Back-to-back prevention: exclude last used template if possible
+    if _last_template_id and len(skeletons) > 1:
+        candidates = [s for s in skeletons if s.get('template_id') != _last_template_id]
+    else:
+        candidates = skeletons
+
+    selected = random.choice(candidates)
+    _last_template_id = selected.get('template_id')
+
+    logger.info(f"템플릿 선택: {selected.get('template_id')} - {selected.get('template_name')}")
+    return selected
+
+
+def build_system_prompt(
+    template: Optional[Dict[str, Any]] = None,
+    skeleton: Optional[Dict[str, Any]] = None
+) -> str:
+    """
+    시스템 프롬프트를 생성합니다.
+
+    템플릿이 제공되지 않으면 기본 심리 공포 프롬프트를 사용합니다.
+    템플릿이 제공되면 기존 로직을 따릅니다 (하위 호환성).
+    Phase 2A: skeleton이 제공되면 스토리 구조가 추가됩니다.
 
     Args:
-        template (Dict[str, Any]): 프롬프트 템플릿 데이터
+        template (Optional[Dict[str, Any]]): 프롬프트 템플릿 데이터 (legacy format)
+        skeleton (Optional[Dict[str, Any]]): Phase 2A 템플릿 스켈레톤
 
     Returns:
         str: 완성된 시스템 프롬프트 문자열
 
     Example:
-        >>> template = load_prompt_template()
-        >>> system_prompt = build_system_prompt(template)
+        >>> system_prompt = build_system_prompt()  # 기본 프롬프트 사용
+        >>> system_prompt = build_system_prompt(template=old_template)  # 레거시 템플릿 기반
+        >>> system_prompt = build_system_prompt(skeleton=selected_skeleton)  # Phase 2A 스켈레톤 기반
     """
     logger.debug("시스템 프롬프트 생성 시작")
 
-    system_prompt = """당신은 한국의 최고 호러 소설 작가입니다. 독자들을 섬뜩하게 만들고 심리적 공포를 자아내는 이야기를 만드는 전문가입니다.
+    # 템플릿이 없으면 새로운 기본 프롬프트 사용
+    if template is None:
+        system_prompt = """You are a specialist in quiet psychological horror rooted in ordinary daily life.
+Your stories make readers feel that the same thing could happen in their own mundane reality.
 
-다음 가이드라인을 따라 호러 소설을 작성해주세요:
+## Core Principles
+
+### 1. Everyday Psychological Horror
+- Setting: Ordinary spaces (apartment, office, subway, convenience store, etc.)
+- Source of horror: NOT supernatural beings, but system malfunction, abnormal behavior of others, cracks in reality
+- Protagonist: An ordinary person with no special abilities or background
+
+### 2. Horror Intensity: LEVEL 4 (Moderate-High)
+- Anxiety and fear escalate gradually
+- Begin from the moment the reader senses "something is going wrong"
+- Minimize explicit violence; maximize psychological pressure
+- Sustain tension until the very end
+
+### 3. Ending Rules (CRITICAL)
+**Mandatory ending guard constraints:**
+- ❌ FORBIDDEN: "But I survived," "It will be okay now," "It's all over"
+- ❌ FORBIDDEN: Ending with sadness, resignation, giving up, or acceptance
+- ✅ REQUIRED: Imply the threat still exists
+- ✅ REQUIRED: Suggest the protagonist may face the same situation again
+- ✅ REQUIRED: Leave the reader feeling "it's not over yet"
+
+**Ending examples (MUST follow this direction):**
+- "And today, too, I heard that door opening again."
+- "The phone rang again. This time, from my own number."
+- "On my commute, I saw that person again from yesterday."
+- "Since that day, I receive that message every single day."
+
+### 4. Narrative Constraints
+- **First-person POV is MANDATORY**
+- **NO over-explanation**: Do not directly explain the cause of horror
+  - ❌ Wrong: "It was an entity from a dimensional rift"
+  - ✅ Correct: "I don't know what it is, but it's getting closer"
+- Use short, intuitive sentences
+- Let readers infer for themselves
+
+### 5. Structure
+- **Opening**: Ordinary day, subtle wrongness (10%)
+- **Development**: Accumulating anomalies, protagonist's rising anxiety (40%)
+- **Climax**: Peak of horror, protagonist's failed response or helplessness (30%)
+- **Ending**: Unresolved threat, cyclical implication (20%)
+
+### 6. Target Length
+- 3,000–4,000 characters (Korean text)
+- Short story format
+
+## Pre-Ending Checklist
+Before writing the final sentence, verify:
+1. Does it feel like "the threat is resolved"? → If YES, rewrite
+2. Does it feel like "sad but over"? → If YES, rewrite
+3. Does it leave the reader in an anxious state? → If NO, rewrite
+4. Does it suggest the same thing will repeat or continue? → If NO, rewrite
+
+Leave readers with lingering unease that "it's not over yet" even after they close the book.
+
+## OUTPUT LANGUAGE
+**Write the entire story in Korean.**
+Use natural, modern Korean prose suitable for literary horror fiction.
+"""
+        # Phase 2A: 스켈레톤 템플릿이 있으면 구조 추가
+        if skeleton:
+            canonical = skeleton.get("canonical_core", {})
+            story_skel = skeleton.get("story_skeleton", {})
+            template_name = skeleton.get("template_name", "Unknown")
+
+            system_prompt += f"""
+
+## THIS SESSION'S STORY DIRECTION (Template: {template_name})
+
+### Thematic Framework
+- Setting Type: {canonical.get('setting', 'unspecified')}
+- Primary Fear: {canonical.get('primary_fear', 'unspecified')}
+- Antagonist Type: {canonical.get('antagonist', 'unspecified')}
+- Horror Mechanism: {canonical.get('mechanism', 'unspecified')}
+- Twist Pattern: {canonical.get('twist', 'unspecified')}
+
+### Narrative Arc
+- **Act 1 (Setup):** {story_skel.get('act_1', 'Establish normalcy and subtle wrongness')}
+- **Act 2 (Escalation):** {story_skel.get('act_2', 'Build tension through accumulating anomalies')}
+- **Act 3 (Resolution):** {story_skel.get('act_3', 'Deliver unresolved horror with cyclical implication')}
+
+Use this framework to guide the story's direction while maintaining creative freedom in specific details.
+"""
+            logger.debug(f"스켈레톤 템플릿 적용: {template_name}")
+
+        logger.debug("기본 심리 공포 프롬프트 사용")
+        return system_prompt
+
+    # 기존 템플릿 기반 로직 (하위 호환성)
+    logger.debug("템플릿 기반 프롬프트 생성")
+
+    system_prompt = """You are a master horror fiction writer. You specialize in creating stories that unsettle readers and evoke deep psychological fear.
+
+Follow the guidelines below to craft your horror story:
 
 """
 
     # 장르 및 분위기 설정
     config = template.get("story_config", {})
     system_prompt += f"""
-## 기본 설정
-- 장르: {config.get('genre', 'horror')}
-- 분위기: {config.get('atmosphere', 'dark')}
-- 분량: {config.get('length', 'medium')}
-- 대상 독자: {config.get('target_audience', 'adult')}
+## Base Configuration
+- Genre: {config.get('genre', 'horror')}
+- Atmosphere: {config.get('atmosphere', 'dark')}
+- Length: {config.get('length', 'medium')}
+- Target audience: {config.get('target_audience', 'adult')}
 """
 
     # 스토리 요소
     elements = template.get("story_elements", {})
     if elements:
-        system_prompt += "\n## 스토리 구성 요소\n"
-        system_prompt += f"스토리 요소: {json.dumps(elements, ensure_ascii=False, indent=2)}\n"
+        system_prompt += "\n## Story Elements\n"
+        system_prompt += f"Story structure: {json.dumps(elements, ensure_ascii=False, indent=2)}\n"
 
     # 글쓰기 스타일
     style = template.get("writing_style", {})
     if style:
-        system_prompt += "\n## 글쓰기 스타일\n"
-        system_prompt += f"- 시점: {style.get('narrative_perspective', '1인칭')}\n"
-        system_prompt += f"- 시제: {style.get('tense', '과거형')}\n"
-        system_prompt += f"- 톤: {', '.join(style.get('tone', []))}\n"
+        system_prompt += "\n## Writing Style\n"
+        system_prompt += f"- Perspective: {style.get('narrative_perspective', '1인칭')}\n"
+        system_prompt += f"- Tense: {style.get('tense', '과거형')}\n"
+        system_prompt += f"- Tone: {', '.join(style.get('tone', []))}\n"
 
         lang_style = style.get("language_style", {})
         if lang_style:
-            system_prompt += f"- 어휘: {lang_style.get('vocabulary', '풍부하고 감각적')}\n"
-            system_prompt += f"- 한국어 스타일: {lang_style.get('korean_style', '현대 한국어')}\n"
+            system_prompt += f"- Vocabulary: {lang_style.get('vocabulary', '풍부하고 감각적')}\n"
+            system_prompt += f"- Korean style: {lang_style.get('korean_style', '현대 한국어')}\n"
 
     # 추가 요구사항
     requirements = template.get("additional_requirements", {})
     if requirements:
-        system_prompt += "\n## 추가 요구사항\n"
-        system_prompt += f"- 목표 분량: {requirements.get('word_count', 3000)}자\n"
-        system_prompt += f"- 구조: {requirements.get('chapter_structure', '단편')}\n"
+        system_prompt += "\n## Additional Requirements\n"
+        system_prompt += f"- Target word count: {requirements.get('word_count', 3000)} characters\n"
+        system_prompt += f"- Structure: {requirements.get('chapter_structure', '단편')}\n"
 
         if "avoid" in requirements:
-            system_prompt += f"- 피해야 할 요소: {', '.join(requirements['avoid'])}\n"
+            system_prompt += f"- Elements to avoid: {', '.join(requirements['avoid'])}\n"
 
         if "emphasize" in requirements:
-            system_prompt += f"- 강조할 요소: {', '.join(requirements['emphasize'])}\n"
+            system_prompt += f"- Elements to emphasize: {', '.join(requirements['emphasize'])}\n"
 
     system_prompt += """
 
-독자가 마지막 문장까지 긴장감을 놓지 못하게 만들고,
-이야기가 끝난 후에도 오래도록 기억에 남을 섬뜩한 여운을 남겨주세요.
+Keep readers on edge until the very last sentence.
+Leave a haunting aftertaste that lingers long after the story ends.
+
+## OUTPUT LANGUAGE
+**Write the entire story in Korean.**
+Use natural, modern Korean prose suitable for literary horror fiction.
 """
 
     logger.debug("시스템 프롬프트 생성 완료")
@@ -260,18 +429,18 @@ def build_user_prompt(custom_request: Optional[str] = None, template: Optional[D
         return custom_request
 
     # 기본 요청
-    user_prompt = "위의 가이드라인을 따라 독창적이고 섬뜩한 호러 소설을 작성해주세요."
+    user_prompt = "Following the guidelines above, write an original and unsettling horror story."
 
     if template:
         elements = template.get("story_elements", {})
         setting = elements.get("setting", {})
 
         if setting:
-            user_prompt += f"\n\n배경: {setting.get('location', '미정')} - {setting.get('time_period', '현재')}"
+            user_prompt += f"\n\nSetting: {setting.get('location', 'TBD')} - {setting.get('time_period', 'present day')}"
 
         plot = elements.get("plot_structure", {})
         if plot and "act_1" in plot:
-            user_prompt += f"\n도입부: {plot['act_1'].get('hook', '')}"
+            user_prompt += f"\nOpening hook: {plot['act_1'].get('hook', '')}"
 
     logger.debug("기본 프롬프트 생성 완료")
     return user_prompt
@@ -330,14 +499,23 @@ def call_claude_api(
         )
 
         story_text = message.content[0].text
-        usage = {
-            "input_tokens": message.usage.input_tokens,
-            "output_tokens": message.usage.output_tokens,
-            "total_tokens": message.usage.input_tokens + message.usage.output_tokens
-        }
 
-        logger.info(f"소설 생성 완료 - 길이: {len(story_text)}자")
-        logger.info(f"토큰 사용량 - Input: {usage['input_tokens']}, Output: {usage['output_tokens']}, Total: {usage['total_tokens']}")
+        # Phase 1: Defensive usage extraction - handle missing usage gracefully
+        if hasattr(message, 'usage') and message.usage:
+            try:
+                usage = {
+                    "input_tokens": message.usage.input_tokens,
+                    "output_tokens": message.usage.output_tokens,
+                    "total_tokens": message.usage.input_tokens + message.usage.output_tokens
+                }
+                logger.info(f"소설 생성 완료 - 길이: {len(story_text)}자")
+                logger.info(f"토큰 사용량 - Input: {usage['input_tokens']}, Output: {usage['output_tokens']}, Total: {usage['total_tokens']}")
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"토큰 사용량 추출 실패 (usage 구조 이상): {e}")
+                usage = None
+        else:
+            logger.warning("토큰 사용량 정보 없음 (message.usage missing)")
+            usage = None
 
         return {
             "story_text": story_text,
@@ -556,7 +734,7 @@ temperature: {metadata.get('config', {}).get('temperature', 0.8)}
 
 
 def generate_horror_story(
-    template_path: str = "horror_story_prompt_template.json",
+    template_path: Optional[str] = None,
     custom_request: Optional[str] = None,
     save_output: bool = True
 ) -> Dict[str, Any]:
@@ -567,8 +745,8 @@ def generate_horror_story(
     각 단계의 진행 상황을 로그로 기록합니다.
 
     Args:
-        template_path (str): 프롬프트 템플릿 파일 경로
-        custom_request (Optional[str]): 사용자 커스텀 요청. None이면 템플릿 기반 생성
+        template_path (Optional[str]): 프롬프트 템플릿 파일 경로. None이면 기본 심리 공포 프롬프트 사용
+        custom_request (Optional[str]): 사용자 커스텀 요청. None이면 기본 프롬프트 사용
         save_output (bool): 결과를 파일로 저장할지 여부. 기본값 True
 
     Returns:
@@ -579,15 +757,16 @@ def generate_horror_story(
 
     Raises:
         ValueError: 환경 변수 설정 오류
-        FileNotFoundError: 템플릿 파일 없음
+        FileNotFoundError: 템플릿 파일 없음 (template_path 지정 시)
         Exception: API 호출 또는 파일 저장 실패
 
     Example:
-        >>> result = generate_horror_story()
+        >>> result = generate_horror_story()  # 기본 심리 공포 프롬프트 사용
         >>> print(result['story'][:100])
         >>> print(result['file_path'])
 
         >>> result = generate_horror_story(
+        ...     template_path="templates/horror_story_prompt_template.json",
         ...     custom_request="1980년대 시골 마을 배경의 귀신 이야기",
         ...     save_output=True
         ... )
@@ -600,12 +779,24 @@ def generate_horror_story(
     config = load_environment()
     logger.info(f"설정 - Max Tokens: {config['max_tokens']}, Temperature: {config['temperature']}")
 
-    # 2. 프롬프트 템플릿 로드
-    template = load_prompt_template(template_path)
+    # 2. 프롬프트 템플릿 로드 (optional)
+    template = None
+    skeleton = None  # Phase 2A: template skeleton
+
+    if template_path:
+        logger.info(f"템플릿 파일 로드: {template_path}")
+        template = load_prompt_template(template_path)
+    else:
+        # Phase 2A: 템플릿 스켈레톤 무작위 선택
+        skeleton = select_random_template()
+        if skeleton:
+            logger.info(f"Phase 2A 템플릿 사용: {skeleton.get('template_id')} - {skeleton.get('template_name')}")
+        else:
+            logger.info("기본 심리 공포 프롬프트 사용 (템플릿 없음)")
 
     # 3. 프롬프트 빌드
     logger.info("프롬프트 생성 중...")
-    system_prompt = build_system_prompt(template)
+    system_prompt = build_system_prompt(template, skeleton=skeleton)
     user_prompt = build_user_prompt(custom_request, template)
     logger.info("프롬프트 생성 완료")
 
@@ -615,12 +806,22 @@ def generate_horror_story(
     usage = api_result["usage"]
 
     # 5. 결과 구성
+    # Phase 2A: Include skeleton template info in metadata
+    skeleton_info = None
+    if skeleton:
+        skeleton_info = {
+            "template_id": skeleton.get("template_id"),
+            "template_name": skeleton.get("template_name"),
+            "canonical_core": skeleton.get("canonical_core")
+        }
+
     result = {
         "story": story_text,
         "metadata": {
             "generated_at": datetime.now().isoformat(),
             "model": config["model"],
             "template_used": template_path,
+            "skeleton_template": skeleton_info,  # Phase 2A
             "custom_request": custom_request,
             "config": {
                 "max_tokens": config["max_tokens"],

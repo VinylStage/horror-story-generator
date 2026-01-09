@@ -3,15 +3,36 @@
 
 이 파일은 horror_story_generator 모듈을 테스트하기 위한 간단한 실행 스크립트입니다.
 향후 FastAPI 또는 Flask 기반 API 서버로 확장 시 참고용으로 사용됩니다.
+
+Phase 1: 24h background operation support added
 """
 
+import argparse
 import logging
 import os
+import signal
+import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from horror_story_generator import generate_horror_story, customize_template
+
+
+# Phase 1: Graceful shutdown support
+shutdown_requested = False
+
+def signal_handler(signum, frame):
+    """
+    SIGINT / SIGTERM 핸들러 - 현재 생성 완료 후 종료
+    """
+    global shutdown_requested
+    signal_name = "SIGINT" if signum == signal.SIGINT else "SIGTERM"
+    logger.info(f"\n{'=' * 80}")
+    logger.info(f"{signal_name} 수신 - 현재 작업 완료 후 종료합니다")
+    logger.info(f"{'=' * 80}")
+    shutdown_requested = True
 
 
 # 환경 변수 로드
@@ -173,49 +194,175 @@ schema = strawberry.Schema(query=Query, mutation=Mutation)
 """
 
 
+def parse_args():
+    """
+    Phase 1: CLI 인자 파싱
+    """
+    parser = argparse.ArgumentParser(
+        description="호러 소설 생성기 - 24h 연속 실행 지원",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+예시:
+  # 단일 실행 (기존 동작)
+  python main.py
+
+  # 24시간 연속 실행, 30분 간격
+  python main.py --duration-seconds 86400 --interval-seconds 1800
+
+  # 최대 10개 생성, 1시간 간격
+  python main.py --max-stories 10 --interval-seconds 3600
+
+  # 무제한 실행, 10분 간격 (Ctrl+C로 종료)
+  python main.py --interval-seconds 600
+        """
+    )
+    parser.add_argument(
+        "--duration-seconds",
+        type=int,
+        default=None,
+        help="실행 지속 시간(초). 지정하지 않으면 --max-stories 또는 수동 종료까지 실행"
+    )
+    parser.add_argument(
+        "--max-stories",
+        type=int,
+        default=1,
+        help="생성할 최대 소설 개수. 기본값=1 (단일 실행)"
+    )
+    parser.add_argument(
+        "--interval-seconds",
+        type=int,
+        default=0,
+        help="소설 생성 간 대기 시간(초). 기본값=0 (대기 없음)"
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
     """
     메인 실행 함수.
 
-    테스트 케이스를 실행하고 결과를 확인합니다.
+    Phase 1: 24h 연속 실행 지원 추가
+    - CLI 인자: --duration-seconds, --max-stories, --interval-seconds
+    - Graceful shutdown: SIGINT/SIGTERM 처리
+    - 통계 로깅: 생성 개수, 토큰 사용량, 실행 시간
     """
+    global shutdown_requested
+
+    # CLI 인자 파싱
+    args = parse_args()
+
+    # 신호 핸들러 등록
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    # 실행 시작
     logger.info("=" * 80)
-    logger.info("호러 소설 생성기 테스트")
+    logger.info("호러 소설 생성기 시작 (Phase 1: 24h operation support)")
     logger.info("=" * 80)
+    logger.info(f"설정:")
+    logger.info(f"  - 최대 실행 시간: {args.duration_seconds}초 ({args.duration_seconds / 3600:.1f}시간)" if args.duration_seconds else "  - 최대 실행 시간: 무제한")
+    logger.info(f"  - 최대 생성 개수: {args.max_stories}개" if args.max_stories else "  - 최대 생성 개수: 무제한")
+    logger.info(f"  - 생성 간격: {args.interval_seconds}초")
+    logger.info("=" * 80)
+
+    # 통계 추적
+    start_time = time.time()
+    stories_generated = 0
+    total_input_tokens = 0
+    total_output_tokens = 0
+    total_tokens = 0
 
     try:
-        # 테스트 1: 기본 생성
-        logger.info("\n[테스트 1] 기본 호러 소설 생성")
-        result = run_basic_generation()
+        while True:
+            # 종료 조건 체크
+            if shutdown_requested:
+                logger.info("종료 신호 수신 - 루프 종료")
+                break
 
-        # 결과 미리보기
-        if result and "story" in result:
-            preview_length = min(300, len(result["story"]))
-            logger.info("\n생성된 소설 미리보기:")
-            logger.info("-" * 80)
-            logger.info(result["story"][:preview_length] + "...")
-            logger.info("-" * 80)
-            logger.info(f"전체 길이: {result['metadata']['word_count']}자")
-            logger.info(f"저장 위치: {result.get('file_path', 'N/A')}")
+            # 시간 제한 체크
+            if args.duration_seconds:
+                elapsed = time.time() - start_time
+                if elapsed >= args.duration_seconds:
+                    logger.info(f"실행 시간 제한 도달 ({elapsed:.1f}초) - 루프 종료")
+                    break
 
-        # 테스트 2: 커스텀 요청 (주석 처리 - 필요시 활성화)
-        # logger.info("\n[테스트 2] 커스텀 요청으로 생성")
-        # custom_result = run_custom_generation(
-        #     "1980년대 한국 시골 마을을 배경으로, "
-        #     "폐교된 초등학교에서 벌어지는 섬뜩한 사건을 다룬 호러 소설을 써주세요."
-        # )
+            # 생성 개수 제한 체크
+            if args.max_stories and stories_generated >= args.max_stories:
+                logger.info(f"생성 개수 제한 도달 ({stories_generated}개) - 루프 종료")
+                break
 
-        # 테스트 3: 템플릿 커스터마이징 (주석 처리 - 향후 개발용)
-        # logger.info("\n[테스트 3] 템플릿 커스터마이징")
-        # template_result = run_template_customization_test()
+            # 소설 생성
+            iteration_start = time.time()
+            logger.info("\n" + "=" * 80)
+            logger.info(f"[{stories_generated + 1}] 소설 생성 시작")
+            logger.info("=" * 80)
 
+            result = run_basic_generation()
+
+            # 통계 업데이트
+            stories_generated += 1
+            if result and "metadata" in result:
+                usage = result["metadata"].get("usage")
+                if usage:
+                    total_input_tokens += usage.get("input_tokens", 0)
+                    total_output_tokens += usage.get("output_tokens", 0)
+                    total_tokens += usage.get("total_tokens", 0)
+
+            # 결과 요약
+            if result and "story" in result:
+                logger.info(f"✓ 생성 완료 - 길이: {result['metadata']['word_count']}자")
+                logger.info(f"✓ 저장 위치: {result.get('file_path', 'N/A')}")
+                if result["metadata"].get("usage"):
+                    usage = result["metadata"]["usage"]
+                    logger.info(f"✓ 토큰 사용: Input={usage['input_tokens']}, Output={usage['output_tokens']}, Total={usage['total_tokens']}")
+                else:
+                    logger.warning("⚠ 토큰 사용량 정보 없음")
+
+            iteration_duration = time.time() - iteration_start
+            logger.info(f"✓ 소요 시간: {iteration_duration:.1f}초")
+
+            # 종료 조건 재확인 (현재 생성 완료 후)
+            if shutdown_requested:
+                logger.info("종료 신호 수신 - 현재 생성 완료, 루프 종료")
+                break
+
+            # 다음 생성까지 대기 (마지막 생성이 아닌 경우)
+            if args.max_stories is None or stories_generated < args.max_stories:
+                if args.interval_seconds > 0:
+                    logger.info(f"다음 생성까지 {args.interval_seconds}초 대기 중...")
+                    # 대기 중에도 종료 신호 확인 (1초 단위)
+                    for _ in range(args.interval_seconds):
+                        if shutdown_requested:
+                            logger.info("대기 중 종료 신호 수신 - 루프 종료")
+                            break
+                        time.sleep(1)
+                    if shutdown_requested:
+                        break
+
+    except KeyboardInterrupt:
+        logger.info("\nKeyboardInterrupt 수신 - 종료 처리")
     except Exception as e:
-        logger.error(f"테스트 실행 중 오류 발생: {str(e)}", exc_info=True)
+        logger.error(f"실행 중 오류 발생: {str(e)}", exc_info=True)
         raise
+    finally:
+        # 최종 통계 출력
+        end_time = time.time()
+        total_duration = end_time - start_time
 
-    logger.info("\n" + "=" * 80)
-    logger.info("테스트 완료")
-    logger.info("=" * 80)
+        logger.info("\n" + "=" * 80)
+        logger.info("실행 완료 - 최종 통계")
+        logger.info("=" * 80)
+        logger.info(f"총 실행 시간: {total_duration:.1f}초 ({total_duration / 3600:.2f}시간)")
+        logger.info(f"생성된 소설: {stories_generated}개")
+        if stories_generated > 0:
+            logger.info(f"평균 생성 시간: {total_duration / stories_generated:.1f}초/개")
+        logger.info(f"총 토큰 사용량:")
+        logger.info(f"  - Input tokens: {total_input_tokens:,}")
+        logger.info(f"  - Output tokens: {total_output_tokens:,}")
+        logger.info(f"  - Total tokens: {total_tokens:,}")
+        if stories_generated > 0:
+            logger.info(f"평균 토큰 사용량: {total_tokens / stories_generated:.0f} tokens/story")
+        logger.info("=" * 80)
 
 
 if __name__ == "__main__":
