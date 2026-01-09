@@ -215,7 +215,9 @@ def load_template_skeletons() -> List[Dict[str, Any]]:
     return skeletons
 
 
-def select_random_template() -> Optional[Dict[str, Any]]:
+def select_random_template(
+    exclude_template_ids: Optional[set] = None
+) -> Optional[Dict[str, Any]]:
     """
     Phase 2A: 무작위로 템플릿 스켈레톤을 선택합니다.
 
@@ -223,6 +225,10 @@ def select_random_template() -> Optional[Dict[str, Any]]:
     - 메모리 없음 (no disk persistence)
     - 단순 무작위 선택 (simple random choice)
     - 동일 프로세스 내에서 연속 동일 템플릿 방지 (back-to-back prevention)
+
+    Args:
+        exclude_template_ids: Phase 2C - Optional set of template IDs to exclude
+                              (used for forced template change on Attempt 2)
 
     Returns:
         Optional[Dict[str, Any]]: 선택된 템플릿 스켈레톤, 또는 None (파일 없을 시)
@@ -234,11 +240,19 @@ def select_random_template() -> Optional[Dict[str, Any]]:
         logger.info("사용 가능한 템플릿 없음 - 기본 프롬프트 사용")
         return None
 
+    # Start with all templates
+    candidates = skeletons
+
     # Back-to-back prevention: exclude last used template if possible
-    if _last_template_id and len(skeletons) > 1:
-        candidates = [s for s in skeletons if s.get('template_id') != _last_template_id]
-    else:
-        candidates = skeletons
+    if _last_template_id and len(candidates) > 1:
+        candidates = [s for s in candidates if s.get('template_id') != _last_template_id]
+
+    # Phase 2C: Additional exclusion for forced template change
+    if exclude_template_ids and len(candidates) > 1:
+        filtered = [s for s in candidates if s.get('template_id') not in exclude_template_ids]
+        if filtered:  # Only apply if we still have candidates
+            candidates = filtered
+            logger.info(f"[Phase2C][CONTROL] 템플릿 강제 제외: {exclude_template_ids}")
 
     selected = random.choice(candidates)
     _last_template_id = selected.get('template_id')
@@ -437,6 +451,74 @@ def add_to_generation_memory(
 
     _generation_memory.append(record)
     logger.info(f"[Phase2B][OBSERVE] 생성 메모리에 추가: {story_id} (총 {len(_generation_memory)}개)")
+
+
+# =============================================================================
+# Phase 2C: Dedup Control Functions (HIGH-only)
+# =============================================================================
+
+def load_past_stories_into_memory(records: List[Any]) -> int:
+    """
+    Phase 2C: 과거 스토리를 in-memory 생성 메모리에 로드합니다.
+
+    SQLite registry에서 로드한 레코드를 Phase 2B 메모리 구조로 변환합니다.
+    이는 Phase 2B(in-memory)와 Phase 2C(persistent)를 연결합니다.
+
+    Args:
+        records: StoryRegistryRecord 리스트 (from story_registry.load_recent_accepted)
+
+    Returns:
+        int: 로드된 레코드 수
+    """
+    global _generation_memory
+
+    loaded = 0
+    for record in records:
+        # StoryRegistryRecord → GenerationRecord 변환
+        gen_record = GenerationRecord(
+            story_id=record.id,
+            template_id=record.template_id,
+            title=record.title or "Unknown",
+            semantic_summary=record.semantic_summary,
+            canonical_keys={},  # DB에는 canonical_keys 미저장 (Phase 2C 범위 외)
+            generated_at=record.created_at
+        )
+        _generation_memory.append(gen_record)
+        loaded += 1
+
+    logger.info(f"[Phase2C][CONTROL] 과거 스토리 {loaded}개를 in-memory에 로드")
+    return loaded
+
+
+def get_similarity_signal(observation: Optional[Dict[str, Any]]) -> str:
+    """
+    Phase 2C: 유사도 관측 결과에서 신호 수준을 추출합니다.
+
+    Args:
+        observation: observe_similarity() 반환값
+
+    Returns:
+        str: "LOW", "MEDIUM", or "HIGH" (관측 없으면 "LOW")
+    """
+    if observation is None:
+        return "LOW"
+    return observation.get("signal", "LOW")
+
+
+def should_accept_story(signal: str) -> bool:
+    """
+    Phase 2C: 스토리 수락 여부를 결정합니다.
+
+    정책: HIGH만 거부, LOW/MEDIUM은 수락
+
+    Args:
+        signal: 유사도 신호 ("LOW", "MEDIUM", "HIGH")
+
+    Returns:
+        bool: True if should accept, False if should reject/retry
+    """
+    # MEDIUM is NOT blocked - only HIGH triggers retry
+    return signal != "HIGH"
 
 
 def build_system_prompt(
@@ -1107,6 +1189,204 @@ def generate_horror_story(
     logger.info("=" * 80)
 
     return result
+
+
+# =============================================================================
+# Phase 2C: Controlled Generation with HIGH-only Dedup
+# =============================================================================
+
+def generate_with_dedup_control(
+    registry: Any,  # StoryRegistry instance
+    max_attempts: int = 3,
+    save_output: bool = True
+) -> Optional[Dict[str, Any]]:
+    """
+    Phase 2C: HIGH-only 중복 제어가 적용된 스토리 생성.
+
+    정책:
+    - LOW/MEDIUM 신호: 즉시 수락
+    - HIGH 신호: 최대 2회 재생성 시도
+      - Attempt 1: 일반 재생성 (같은 템플릿 선택 규칙)
+      - Attempt 2: 강제 템플릿 변경 후 재생성
+      - 모두 실패 시: SKIP (파일 저장 안함, registry에 기록)
+
+    Args:
+        registry: StoryRegistry 인스턴스 (persistent storage)
+        max_attempts: 최대 시도 횟수 (기본 3: 초기 + 2회 재생성)
+        save_output: 파일 저장 여부
+
+    Returns:
+        Optional[Dict]: 수락된 스토리 결과, SKIP 시 None
+    """
+    from horror_story_generator import (
+        load_environment, select_random_template, build_system_prompt,
+        build_user_prompt, call_claude_api, extract_title_from_story,
+        generate_semantic_summary, observe_similarity, add_to_generation_memory,
+        save_story, get_similarity_signal, should_accept_story
+    )
+
+    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("[Phase2C][CONTROL] 중복 제어 생성 시작")
+    logger.info("[Phase2C][CONTROL] 정책: HIGH만 거부, LOW/MEDIUM 수락")
+    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+    config = load_environment()
+    used_template_ids: set = set()
+
+    for attempt in range(max_attempts):
+        logger.info(f"[Phase2C][CONTROL] Attempt {attempt}/{max_attempts - 1}")
+
+        # Template selection
+        if attempt == 0:
+            # Normal selection
+            skeleton = select_random_template()
+        elif attempt == 1:
+            # Still normal selection (same rules)
+            skeleton = select_random_template()
+        else:
+            # Attempt 2: Forced template change
+            skeleton = select_random_template(exclude_template_ids=used_template_ids)
+
+        template_id = skeleton.get("template_id") if skeleton else None
+        template_name = skeleton.get("template_name") if skeleton else None
+        if template_id:
+            used_template_ids.add(template_id)
+
+        logger.info(f"[Phase2C][CONTROL]   템플릿: {template_id} - {template_name}")
+
+        # Build prompts
+        system_prompt = build_system_prompt(template=None, skeleton=skeleton)
+        user_prompt = build_user_prompt(custom_request=None, template=None)
+
+        # Call API
+        api_result = call_claude_api(system_prompt, user_prompt, config)
+        story_text = api_result["story_text"]
+        usage = api_result["usage"]
+
+        # Extract metadata
+        title = extract_title_from_story(story_text)
+        story_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        canonical_keys = {}
+        if skeleton and skeleton.get("canonical_core"):
+            canonical_keys = skeleton.get("canonical_core", {})
+
+        # Phase 2B: Generate summary and observe similarity
+        semantic_summary = generate_semantic_summary(story_text, title, config)
+        similarity_observation = observe_similarity(
+            current_summary=semantic_summary,
+            current_title=title,
+            canonical_keys=canonical_keys
+        )
+
+        # Phase 2C: Determine signal and decision
+        signal = get_similarity_signal(similarity_observation)
+        logger.info(f"[Phase2C][CONTROL]   신호: {signal}")
+
+        if should_accept_story(signal):
+            # ACCEPT
+            logger.info(f"[Phase2C][CONTROL]   결정: ACCEPT")
+
+            # Add to in-memory
+            add_to_generation_memory(
+                story_id=story_id,
+                template_id=template_id,
+                title=title,
+                semantic_summary=semantic_summary,
+                canonical_keys=canonical_keys
+            )
+
+            # Build result
+            skeleton_info = None
+            if skeleton:
+                skeleton_info = {
+                    "template_id": template_id,
+                    "template_name": template_name,
+                    "canonical_core": skeleton.get("canonical_core")
+                }
+
+            result = {
+                "story": story_text,
+                "metadata": {
+                    "generated_at": datetime.now().isoformat(),
+                    "model": config["model"],
+                    "template_used": None,
+                    "skeleton_template": skeleton_info,
+                    "custom_request": None,
+                    "config": {
+                        "max_tokens": config["max_tokens"],
+                        "temperature": config["temperature"]
+                    },
+                    "word_count": len(story_text),
+                    "usage": usage,
+                    "phase2c_attempt": attempt,
+                    "phase2c_signal": signal,
+                    "phase2c_decision": "accepted"
+                }
+            }
+
+            if similarity_observation:
+                result["metadata"]["similarity_observation"] = similarity_observation
+
+            # Save story
+            if save_output:
+                file_path = save_story(
+                    story_text,
+                    config["output_dir"],
+                    result["metadata"],
+                    None  # template
+                )
+                result["file_path"] = file_path
+                logger.info(f"[Phase2C][CONTROL] 저장 완료: {file_path}")
+
+            # Persist to registry
+            registry.add_story(
+                story_id=story_id,
+                title=title,
+                template_id=template_id,
+                template_name=template_name,
+                semantic_summary=semantic_summary,
+                accepted=True,
+                decision_reason="accepted"
+            )
+
+            # Record similarity edge if available
+            if similarity_observation:
+                registry.add_similarity_edge(
+                    story_id=story_id,
+                    compared_story_id=similarity_observation.get("closest_story_id", ""),
+                    similarity_score=similarity_observation.get("text_similarity", 0.0),
+                    signal=signal
+                )
+
+            logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            return result
+
+        else:
+            # HIGH - need to retry
+            logger.info(f"[Phase2C][CONTROL]   결정: RETRY (HIGH 감지)")
+            if attempt < max_attempts - 1:
+                logger.info(f"[Phase2C][CONTROL]   다음 시도로 진행...")
+            continue
+
+    # All attempts exhausted - SKIP
+    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("[Phase2C][CONTROL] 모든 시도 실패 - SKIP")
+    logger.info("[Phase2C][CONTROL] 파일 저장 안함, 루프 계속")
+    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+    # Record skip in registry
+    registry.add_story(
+        story_id=story_id,
+        title=title,
+        template_id=template_id,
+        template_name=template_name,
+        semantic_summary=semantic_summary,
+        accepted=False,
+        decision_reason="skipped_high_dup_after_2_attempts"
+    )
+
+    return None
 
 
 def customize_template(

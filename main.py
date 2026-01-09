@@ -5,9 +5,11 @@
 향후 FastAPI 또는 Flask 기반 API 서버로 확장 시 참고용으로 사용됩니다.
 
 Phase 1: 24h background operation support added
+Phase 2C: SQLite story registry + HIGH-only dedup control
 """
 
 import argparse
+import json
 import logging
 import os
 import signal
@@ -17,7 +19,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
-from horror_story_generator import generate_horror_story, customize_template
+from horror_story_generator import (
+    generate_horror_story, customize_template,
+    generate_with_dedup_control, load_past_stories_into_memory
+)
+from story_registry import init_registry, get_registry, close_registry
 
 
 # Phase 1: Graceful shutdown support
@@ -197,23 +203,24 @@ schema = strawberry.Schema(query=Query, mutation=Mutation)
 def parse_args():
     """
     Phase 1: CLI 인자 파싱
+    Phase 2C: 중복 제어 옵션 추가
     """
     parser = argparse.ArgumentParser(
-        description="호러 소설 생성기 - 24h 연속 실행 지원",
+        description="호러 소설 생성기 - 24h 연속 실행 지원 + Phase 2C 중복 제어",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 예시:
-  # 단일 실행 (기존 동작)
+  # 단일 실행 (기존 동작, 중복 제어 없음)
   python main.py
 
-  # 24시간 연속 실행, 30분 간격
-  python main.py --duration-seconds 86400 --interval-seconds 1800
+  # Phase 2C 중복 제어 활성화
+  python main.py --enable-dedup --max-stories 10
 
-  # 최대 10개 생성, 1시간 간격
-  python main.py --max-stories 10 --interval-seconds 3600
+  # 24시간 연속 실행, 30분 간격, 중복 제어
+  python main.py --enable-dedup --duration-seconds 86400 --interval-seconds 1800
 
-  # 무제한 실행, 10분 간격 (Ctrl+C로 종료)
-  python main.py --interval-seconds 600
+  # 연구 스텁 실행 (테스트용)
+  python main.py --run-research-stub
         """
     )
     parser.add_argument(
@@ -234,7 +241,63 @@ def parse_args():
         default=0,
         help="소설 생성 간 대기 시간(초). 기본값=0 (대기 없음)"
     )
+    # Phase 2C: Dedup control
+    parser.add_argument(
+        "--enable-dedup",
+        action="store_true",
+        default=False,
+        help="Phase 2C: HIGH-only 중복 제어 활성화. SQLite registry 사용."
+    )
+    parser.add_argument(
+        "--db-path",
+        type=str,
+        default=None,
+        help="Phase 2C: SQLite registry 경로. 기본값=./data/story_registry.db"
+    )
+    parser.add_argument(
+        "--load-history",
+        type=int,
+        default=200,
+        help="Phase 2C: 시작 시 로드할 과거 스토리 수. 기본값=200"
+    )
+    # Phase 2C: Research stub
+    parser.add_argument(
+        "--run-research-stub",
+        action="store_true",
+        default=False,
+        help="Phase 2C: 연구 카드 스텁 생성 (테스트용)"
+    )
     return parser.parse_args()
+
+
+def run_research_stub() -> None:
+    """
+    Phase 2C: 연구 카드 스텁 생성 (테스트용).
+
+    실제 웹 요청 없이 플레이스홀더 카드를 생성합니다.
+    ./data/research_cards.jsonl에 추가합니다.
+    """
+    research_dir = Path("./data")
+    research_dir.mkdir(parents=True, exist_ok=True)
+
+    research_file = research_dir / "research_cards.jsonl"
+
+    stub_card = {
+        "card_id": f"STUB-{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        "title": "[STUB] Placeholder Research Card",
+        "summary": "This is a stub card for testing the research pipeline. No real web request was made.",
+        "tags": ["stub", "test", "placeholder"],
+        "source": "local_stub",
+        "created_at": datetime.now().isoformat(),
+        "used_count": 0,
+        "last_used_at": None
+    }
+
+    with open(research_file, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(stub_card, ensure_ascii=False) + '\n')
+
+    logger.info(f"[Phase2C] 연구 카드 스텁 생성 완료: {stub_card['card_id']}")
+    logger.info(f"[Phase2C] 저장 위치: {research_file}")
 
 
 def main() -> None:
@@ -245,29 +308,55 @@ def main() -> None:
     - CLI 인자: --duration-seconds, --max-stories, --interval-seconds
     - Graceful shutdown: SIGINT/SIGTERM 처리
     - 통계 로깅: 생성 개수, 토큰 사용량, 실행 시간
+
+    Phase 2C: HIGH-only 중복 제어 추가
+    - --enable-dedup: SQLite registry 사용
+    - --db-path: 커스텀 DB 경로
+    - --load-history: 시작 시 로드할 과거 스토리 수
     """
     global shutdown_requested
 
     # CLI 인자 파싱
     args = parse_args()
 
+    # Phase 2C: 연구 스텁 명령 처리
+    if args.run_research_stub:
+        run_research_stub()
+        return
+
     # 신호 핸들러 등록
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
+    # Phase 2C: Story Registry 초기화
+    registry = None
+    if args.enable_dedup:
+        logger.info("[Phase2C][CONTROL] 중복 제어 모드 활성화")
+        registry = init_registry(db_path=args.db_path)
+
+        # 과거 스토리 로드
+        past_stories = registry.load_recent_accepted(limit=args.load_history)
+        if past_stories:
+            load_past_stories_into_memory(past_stories)
+
+        counts = registry.get_total_count()
+        logger.info(f"[Phase2C][CONTROL] Registry 상태: 수락={counts['accepted']}, 스킵={counts['skipped']}")
+
     # 실행 시작
     logger.info("=" * 80)
-    logger.info("호러 소설 생성기 시작 (Phase 1: 24h operation support)")
+    logger.info("호러 소설 생성기 시작 (Phase 1: 24h + Phase 2C: Dedup Control)")
     logger.info("=" * 80)
     logger.info(f"설정:")
     logger.info(f"  - 최대 실행 시간: {args.duration_seconds}초 ({args.duration_seconds / 3600:.1f}시간)" if args.duration_seconds else "  - 최대 실행 시간: 무제한")
     logger.info(f"  - 최대 생성 개수: {args.max_stories}개" if args.max_stories else "  - 최대 생성 개수: 무제한")
     logger.info(f"  - 생성 간격: {args.interval_seconds}초")
+    logger.info(f"  - 중복 제어: {'활성화 (HIGH만 거부)' if args.enable_dedup else '비활성화'}")
     logger.info("=" * 80)
 
     # 통계 추적
     start_time = time.time()
     stories_generated = 0
+    stories_skipped = 0  # Phase 2C
     total_input_tokens = 0
     total_output_tokens = 0
     total_tokens = 0
@@ -297,7 +386,18 @@ def main() -> None:
             logger.info(f"[{stories_generated + 1}] 소설 생성 시작")
             logger.info("=" * 80)
 
-            result = run_basic_generation()
+            # Phase 2C: 중복 제어 모드에 따른 생성
+            if args.enable_dedup and registry:
+                result = generate_with_dedup_control(registry=registry)
+                if result is None:
+                    # SKIP - story was too similar after all attempts
+                    stories_skipped += 1
+                    logger.info(f"⚠ SKIP (HIGH 유사도) - 스킵 누적: {stories_skipped}개")
+                    iteration_duration = time.time() - iteration_start
+                    logger.info(f"✓ 소요 시간: {iteration_duration:.1f}초")
+                    continue  # Move to next iteration without counting as generated
+            else:
+                result = run_basic_generation()
 
             # 통계 업데이트
             stories_generated += 1
@@ -317,6 +417,10 @@ def main() -> None:
                     logger.info(f"✓ 토큰 사용: Input={usage['input_tokens']}, Output={usage['output_tokens']}, Total={usage['total_tokens']}")
                 else:
                     logger.warning("⚠ 토큰 사용량 정보 없음")
+
+                # Phase 2C: Show dedup decision if available
+                if result["metadata"].get("phase2c_signal"):
+                    logger.info(f"✓ Phase2C: 신호={result['metadata']['phase2c_signal']}, 시도={result['metadata']['phase2c_attempt']}")
 
             iteration_duration = time.time() - iteration_start
             logger.info(f"✓ 소요 시간: {iteration_duration:.1f}초")
@@ -354,6 +458,8 @@ def main() -> None:
         logger.info("=" * 80)
         logger.info(f"총 실행 시간: {total_duration:.1f}초 ({total_duration / 3600:.2f}시간)")
         logger.info(f"생성된 소설: {stories_generated}개")
+        if args.enable_dedup:
+            logger.info(f"스킵된 소설: {stories_skipped}개 (HIGH 유사도)")
         if stories_generated > 0:
             logger.info(f"평균 생성 시간: {total_duration / stories_generated:.1f}초/개")
         logger.info(f"총 토큰 사용량:")
@@ -363,6 +469,11 @@ def main() -> None:
         if stories_generated > 0:
             logger.info(f"평균 토큰 사용량: {total_tokens / stories_generated:.0f} tokens/story")
         logger.info("=" * 80)
+
+        # Phase 2C: Registry 정리
+        if registry:
+            close_registry()
+            logger.info("[Phase2C][CONTROL] Registry 연결 종료")
 
 
 if __name__ == "__main__":
