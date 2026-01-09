@@ -26,6 +26,63 @@ TEMPLATE_SKELETONS_PATH = Path(__file__).parent / "phase1_foundation" / "03_temp
 _last_template_id: Optional[str] = None
 
 # =============================================================================
+# Daily Log Rotation Configuration (Phase 3B)
+# =============================================================================
+# Process start time is captured once and reused for all daily logs
+_PROCESS_START_TIME: Optional[str] = None
+
+
+class DailyRotatingFileHandler(logging.FileHandler):
+    """
+    Phase 3B: Daily rotating file handler.
+
+    Creates one log file per calendar day with format:
+    logs/horror_story_YYYYMMDD_<START_HHMMSS>.log
+
+    START_HHMMSS is fixed at process start, only YYYYMMDD changes.
+    """
+
+    def __init__(self, log_dir: str = "logs", encoding: str = "utf-8"):
+        global _PROCESS_START_TIME
+
+        self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(exist_ok=True)
+
+        # Capture process start time once
+        if _PROCESS_START_TIME is None:
+            _PROCESS_START_TIME = datetime.now().strftime("%H%M%S")
+
+        self._start_hhmmss = _PROCESS_START_TIME
+        self._current_date: Optional[str] = None
+        self._encoding = encoding
+
+        # Initialize with current date's log file
+        initial_path = self._get_current_log_path()
+        super().__init__(initial_path, mode='a', encoding=encoding)
+        self._current_date = datetime.now().strftime("%Y%m%d")
+
+    def _get_current_log_path(self) -> str:
+        """Get log file path for current date."""
+        date_str = datetime.now().strftime("%Y%m%d")
+        return str(self.log_dir / f"horror_story_{date_str}_{self._start_hhmmss}.log")
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a record, rotating to new file if date changed."""
+        current_date = datetime.now().strftime("%Y%m%d")
+
+        # Check if we need to rotate (date changed)
+        if self._current_date != current_date:
+            # Close current file
+            self.close()
+
+            # Update to new file
+            self.baseFilename = self._get_current_log_path()
+            self._current_date = current_date
+            self.stream = self._open()
+
+        super().emit(record)
+
+# =============================================================================
 # Phase 2B: Generation Memory (In-Process Only, Observation Only)
 # =============================================================================
 # This memory exists ONLY for similarity observation.
@@ -52,7 +109,10 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
     """
     로깅을 설정하고 logger 인스턴스를 반환합니다.
 
-    실행할 때마다 별도의 타임스탬프 기반 로그 파일을 logs/ 디렉토리에 생성합니다.
+    Phase 3B: 일별 로그 파일 로테이션 적용.
+    프로세스 시작 시간을 유지하면서 날짜가 바뀌면 새 파일로 전환.
+
+    Format: logs/horror_story_YYYYMMDD_<START_HHMMSS>.log
 
     Args:
         log_level (str): 로깅 레벨 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
@@ -60,14 +120,6 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
     Returns:
         logging.Logger: 설정된 logger 인스턴스
     """
-    # logs 디렉토리 생성
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-
-    # 타임스탬프 기반 로그 파일명
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = log_dir / f"horror_story_{timestamp}.log"
-
     # 로깅 레벨 설정
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
 
@@ -91,12 +143,14 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # 파일 핸들러
-    file_handler = logging.FileHandler(log_filename, encoding='utf-8')
+    # Phase 3B: 일별 로테이션 파일 핸들러 사용
+    file_handler = DailyRotatingFileHandler(log_dir="logs", encoding='utf-8')
     file_handler.setLevel(numeric_level)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
+    # Log the current log file path
+    log_filename = file_handler.baseFilename
     logger.info(f"로깅 시작 - 레벨: {log_level}, 로그 파일: {log_filename}")
 
     return logger
@@ -215,20 +269,116 @@ def load_template_skeletons() -> List[Dict[str, Any]]:
     return skeletons
 
 
+# =============================================================================
+# Phase 3B-B1: Pre-generation Weighted Template Selection
+# =============================================================================
+# Soft control for "Systemic Inevitability" cluster before generation.
+# Does NOT alter Phase 2C post-generation dedup control.
+# =============================================================================
+
+# Cluster definition: antagonist=system AND twist=inevitability
+# Templates matching this pattern (from template_skeletons_v1.json):
+SYSTEMIC_INEVITABILITY_CLUSTER = frozenset({
+    "T-SYS-001",  # Systemic Erosion
+    "T-APT-001",  # Apartment Social Surveillance
+    "T-INF-001",  # Infrastructure Isolation
+    "T-ECO-001",  # Economic Annihilation
+})
+
+# Phase 3B configuration
+PHASE3B_LOOKBACK_WINDOW = 10  # Last N accepted stories
+PHASE3B_WEIGHT_PENALTIES = {
+    # occurrence_threshold: weight_multiplier
+    4: 0.50,   # ≥4 → -50% weight
+    6: 0.20,   # ≥6 → -80% weight
+    8: 0.05,   # ≥8 → -95% weight (never 0)
+}
+
+
+def count_cluster_occurrences_in_registry(
+    registry: Any,
+    lookback: int = PHASE3B_LOOKBACK_WINDOW
+) -> int:
+    """
+    Phase 3B-B1: Count Systemic Inevitability cluster occurrences in recent registry.
+
+    Args:
+        registry: StoryRegistry instance (from story_registry.py)
+        lookback: Number of recent accepted stories to check
+
+    Returns:
+        int: Count of stories using cluster templates
+    """
+    if registry is None:
+        return 0
+
+    try:
+        recent = registry.load_recent_accepted(limit=lookback)
+    except Exception as e:
+        logger.warning(f"[Phase3B][PRE] Registry 조회 실패: {e}")
+        return 0
+
+    count = sum(
+        1 for r in recent
+        if r.template_id in SYSTEMIC_INEVITABILITY_CLUSTER
+    )
+
+    return count
+
+
+def compute_template_weights(
+    skeletons: List[Dict[str, Any]],
+    cluster_count: int
+) -> List[float]:
+    """
+    Phase 3B-B1: Compute selection weights for templates.
+
+    Applies penalty to Systemic Inevitability cluster based on recent usage.
+    Never reduces weight to 0 (soft control, not hard block).
+
+    Args:
+        skeletons: List of template dictionaries
+        cluster_count: Number of cluster templates in recent registry
+
+    Returns:
+        List[float]: Weight for each template (same order as input)
+    """
+    # Determine penalty multiplier based on count thresholds
+    penalty_multiplier = 1.0
+    for threshold in sorted(PHASE3B_WEIGHT_PENALTIES.keys()):
+        if cluster_count >= threshold:
+            penalty_multiplier = PHASE3B_WEIGHT_PENALTIES[threshold]
+
+    weights = []
+    for skeleton in skeletons:
+        template_id = skeleton.get("template_id", "")
+        if template_id in SYSTEMIC_INEVITABILITY_CLUSTER:
+            weights.append(penalty_multiplier)
+        else:
+            weights.append(1.0)
+
+    return weights
+
+
 def select_random_template(
-    exclude_template_ids: Optional[set] = None
+    exclude_template_ids: Optional[set] = None,
+    registry: Any = None
 ) -> Optional[Dict[str, Any]]:
     """
-    Phase 2A: 무작위로 템플릿 스켈레톤을 선택합니다.
+    Phase 2A + Phase 3B: 템플릿 스켈레톤을 선택합니다.
 
+    Phase 2A 기능:
     - 상태 없음 between process runs (stateless across restarts)
-    - 메모리 없음 (no disk persistence)
-    - 단순 무작위 선택 (simple random choice)
     - 동일 프로세스 내에서 연속 동일 템플릿 방지 (back-to-back prevention)
+
+    Phase 3B-B1 기능 (registry 제공시):
+    - Systemic Inevitability 클러스터 가중치 페널티 적용
+    - 최근 10개 스토리에서 클러스터 사용 빈도 기반 soft control
 
     Args:
         exclude_template_ids: Phase 2C - Optional set of template IDs to exclude
                               (used for forced template change on Attempt 2)
+        registry: Phase 3B - Optional StoryRegistry for weighted selection
 
     Returns:
         Optional[Dict[str, Any]]: 선택된 템플릿 스켈레톤, 또는 None (파일 없을 시)
@@ -254,10 +404,32 @@ def select_random_template(
             candidates = filtered
             logger.info(f"[Phase2C][CONTROL] 템플릿 강제 제외: {exclude_template_ids}")
 
-    selected = random.choice(candidates)
+    # Phase 3B-B1: Weighted selection based on registry history
+    if registry is not None:
+        cluster_count = count_cluster_occurrences_in_registry(registry)
+        logger.info(f"[Phase3B][PRE] Systemic cluster count (last {PHASE3B_LOOKBACK_WINDOW}): {cluster_count}")
+
+        if cluster_count >= 4:
+            # Compute weights for candidates
+            weights = compute_template_weights(candidates, cluster_count)
+
+            # Log penalty application
+            penalty_pct = int((1 - min(weights)) * 100)
+            if penalty_pct > 0:
+                logger.info(f"[Phase3B][PRE] Applying weight penalty: -{penalty_pct}%")
+
+            # Use weighted random selection
+            selected = random.choices(candidates, weights=weights, k=1)[0]
+        else:
+            # No penalty needed, use uniform selection
+            selected = random.choice(candidates)
+    else:
+        # No registry, use uniform selection (Phase 2A behavior)
+        selected = random.choice(candidates)
+
     _last_template_id = selected.get('template_id')
 
-    logger.info(f"템플릿 선택: {selected.get('template_id')} - {selected.get('template_name')}")
+    logger.info(f"[Phase3B][PRE] Selected template: {selected.get('template_id')} - {selected.get('template_name')}")
     return selected
 
 
@@ -1236,16 +1408,16 @@ def generate_with_dedup_control(
     for attempt in range(max_attempts):
         logger.info(f"[Phase2C][CONTROL] Attempt {attempt}/{max_attempts - 1}")
 
-        # Template selection
+        # Template selection (Phase 3B: pass registry for weighted selection)
         if attempt == 0:
-            # Normal selection
-            skeleton = select_random_template()
+            # Normal selection with Phase 3B weighting
+            skeleton = select_random_template(registry=registry)
         elif attempt == 1:
             # Still normal selection (same rules)
-            skeleton = select_random_template()
+            skeleton = select_random_template(registry=registry)
         else:
             # Attempt 2: Forced template change
-            skeleton = select_random_template(exclude_template_ids=used_template_ids)
+            skeleton = select_random_template(exclude_template_ids=used_template_ids, registry=registry)
 
         template_id = skeleton.get("template_id") if skeleton else None
         template_name = skeleton.get("template_name") if skeleton else None
