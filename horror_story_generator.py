@@ -12,6 +12,7 @@ import logging
 import os
 import random
 import re
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
@@ -23,6 +24,27 @@ TEMPLATE_SKELETONS_PATH = Path(__file__).parent / "phase1_foundation" / "03_temp
 
 # Phase 2A: In-memory state for back-to-back prevention (process-scoped only, not persisted)
 _last_template_id: Optional[str] = None
+
+# =============================================================================
+# Phase 2B: Generation Memory (In-Process Only, Observation Only)
+# =============================================================================
+# This memory exists ONLY for similarity observation.
+# It does NOT prevent, block, or alter generation in any way.
+# It resets on process restart. No disk persistence.
+# =============================================================================
+
+@dataclass
+class GenerationRecord:
+    """Phase 2B: Single generation record for similarity observation."""
+    story_id: str
+    template_id: Optional[str]
+    title: str
+    semantic_summary: str  # 1-3 sentence summary for comparison
+    canonical_keys: Dict[str, str]  # setting, primary_fear, etc.
+    generated_at: str
+
+# Phase 2B: In-memory generation registry (process-scoped only, not persisted)
+_generation_memory: List['GenerationRecord'] = []
 
 
 # 로깅 설정 함수
@@ -223,6 +245,198 @@ def select_random_template() -> Optional[Dict[str, Any]]:
 
     logger.info(f"템플릿 선택: {selected.get('template_id')} - {selected.get('template_name')}")
     return selected
+
+
+# =============================================================================
+# Phase 2B: Generation Memory Functions (Observation Only)
+# =============================================================================
+
+def generate_semantic_summary(
+    story_text: str,
+    title: str,
+    config: Dict[str, Any]
+) -> str:
+    """
+    Phase 2B: 스토리의 의미적 요약을 생성합니다 (관측용).
+
+    LLM을 사용하여 1-3문장의 짧은 요약을 생성합니다.
+    이 요약은 유사도 관측에만 사용되며, 생성에 영향을 주지 않습니다.
+
+    Args:
+        story_text: 생성된 스토리 전문
+        title: 스토리 제목
+        config: API 설정
+
+    Returns:
+        str: 1-3문장 요약
+    """
+    logger.info("[Phase2B][OBSERVE] 의미적 요약 생성 시작")
+
+    try:
+        client = anthropic.Anthropic(api_key=config["api_key"])
+
+        # Use a fast, cheap call for summarization
+        message = client.messages.create(
+            model=config["model"],
+            max_tokens=200,
+            temperature=0.0,  # Deterministic for consistency
+            system="You are a story summarizer. Generate a 1-3 sentence summary focusing on: setting, protagonist situation, type of horror, and ending pattern. Be concise and factual.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Summarize this horror story in 1-3 sentences (Korean):\n\nTitle: {title}\n\n{story_text[:2000]}"  # Limit input
+                }
+            ]
+        )
+
+        summary = message.content[0].text.strip()
+        logger.info(f"[Phase2B][OBSERVE] 의미적 요약 생성 완료: {summary[:100]}...")
+        return summary
+
+    except Exception as e:
+        logger.warning(f"[Phase2B][OBSERVE] 요약 생성 실패, 폴백 사용: {e}")
+        # Fallback: use first 200 chars of story
+        return story_text[:200].strip()
+
+
+def compute_text_similarity(text1: str, text2: str) -> float:
+    """
+    Phase 2B: 두 텍스트 간의 간단한 유사도를 계산합니다.
+
+    외부 라이브러리 없이 단어 집합 기반 Jaccard 유사도를 사용합니다.
+    이는 관측용이며, 생성 결정에 사용되지 않습니다.
+
+    Args:
+        text1: 첫 번째 텍스트
+        text2: 두 번째 텍스트
+
+    Returns:
+        float: 0.0 ~ 1.0 사이의 유사도 점수
+    """
+    # Simple word-based Jaccard similarity (no external deps)
+    words1 = set(re.findall(r'\w+', text1.lower()))
+    words2 = set(re.findall(r'\w+', text2.lower()))
+
+    if not words1 or not words2:
+        return 0.0
+
+    intersection = len(words1 & words2)
+    union = len(words1 | words2)
+
+    return intersection / union if union > 0 else 0.0
+
+
+def observe_similarity(
+    current_summary: str,
+    current_title: str,
+    canonical_keys: Dict[str, str]
+) -> Optional[Dict[str, Any]]:
+    """
+    Phase 2B: 현재 스토리와 기존 스토리들의 유사도를 관측합니다.
+
+    ⚠️ 이 함수는 관측만 수행합니다.
+    ⚠️ 생성을 차단하거나 변경하지 않습니다.
+    ⚠️ 결과는 로그에만 기록됩니다.
+
+    Args:
+        current_summary: 현재 스토리의 의미적 요약
+        current_title: 현재 스토리 제목
+        canonical_keys: 현재 스토리의 정규화 키 (setting, primary_fear, etc.)
+
+    Returns:
+        Optional[Dict]: 유사도 관측 결과 (가장 유사한 스토리 정보)
+    """
+    global _generation_memory
+
+    if not _generation_memory:
+        logger.info("[Phase2B][OBSERVE] 첫 번째 생성 - 비교 대상 없음")
+        return None
+
+    logger.info(f"[Phase2B][OBSERVE] 유사도 관측 시작 (기존 {len(_generation_memory)}개 스토리와 비교)")
+
+    highest_similarity = 0.0
+    most_similar_record: Optional[GenerationRecord] = None
+    canonical_match_count = 0
+
+    for record in _generation_memory:
+        # Text similarity
+        sim = compute_text_similarity(current_summary, record.semantic_summary)
+
+        # Canonical key matching (bonus signal)
+        key_matches = sum(
+            1 for k, v in canonical_keys.items()
+            if record.canonical_keys.get(k) == v
+        )
+
+        if sim > highest_similarity:
+            highest_similarity = sim
+            most_similar_record = record
+            canonical_match_count = key_matches
+
+    # Determine signal level (for observation only)
+    if highest_similarity >= 0.5:
+        signal = "HIGH"
+    elif highest_similarity >= 0.3:
+        signal = "MEDIUM"
+    else:
+        signal = "LOW"
+
+    # Log observation (THIS IS THE KEY OUTPUT - observation only)
+    if most_similar_record:
+        logger.info(f"[Phase2B][OBSERVE] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        logger.info(f"[Phase2B][OBSERVE] 유사도 관측 결과:")
+        logger.info(f"[Phase2B][OBSERVE]   현재: \"{current_title}\"")
+        logger.info(f"[Phase2B][OBSERVE]   가장 유사: \"{most_similar_record.title}\" (ID: {most_similar_record.story_id})")
+        logger.info(f"[Phase2B][OBSERVE]   텍스트 유사도: {highest_similarity:.2%}")
+        logger.info(f"[Phase2B][OBSERVE]   정규화 키 일치: {canonical_match_count}/5")
+        logger.info(f"[Phase2B][OBSERVE]   신호 수준: {signal}")
+        logger.info(f"[Phase2B][OBSERVE] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        logger.info(f"[Phase2B][OBSERVE] ⚠️ 이 관측은 생성에 영향을 주지 않습니다")
+
+        return {
+            "closest_story_id": most_similar_record.story_id,
+            "closest_title": most_similar_record.title,
+            "text_similarity": round(highest_similarity, 3),
+            "canonical_matches": canonical_match_count,
+            "signal": signal
+        }
+
+    return None
+
+
+def add_to_generation_memory(
+    story_id: str,
+    template_id: Optional[str],
+    title: str,
+    semantic_summary: str,
+    canonical_keys: Dict[str, str]
+) -> None:
+    """
+    Phase 2B: 생성된 스토리를 메모리에 추가합니다.
+
+    이 메모리는 프로세스 종료 시 삭제됩니다.
+    디스크에 저장되지 않습니다.
+
+    Args:
+        story_id: 스토리 고유 ID
+        template_id: 사용된 템플릿 ID
+        title: 스토리 제목
+        semantic_summary: 의미적 요약
+        canonical_keys: 정규화 키들
+    """
+    global _generation_memory
+
+    record = GenerationRecord(
+        story_id=story_id,
+        template_id=template_id,
+        title=title,
+        semantic_summary=semantic_summary,
+        canonical_keys=canonical_keys,
+        generated_at=datetime.now().isoformat()
+    )
+
+    _generation_memory.append(record)
+    logger.info(f"[Phase2B][OBSERVE] 생성 메모리에 추가: {story_id} (총 {len(_generation_memory)}개)")
 
 
 def build_system_prompt(
@@ -831,6 +1045,51 @@ def generate_horror_story(
             "usage": usage
         }
     }
+
+    # ==========================================================================
+    # Phase 2B: Generation Memory & Similarity Observation (AFTER generation)
+    # ==========================================================================
+    # ⚠️ This section OBSERVES ONLY - it does NOT prevent or alter generation
+    # ⚠️ Memory resets on process restart - no disk persistence
+    # ==========================================================================
+
+    # Extract title for observation
+    title = extract_title_from_story(story_text)
+
+    # Generate story ID (timestamp-based, consistent with file naming)
+    story_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Extract canonical keys from skeleton (if available)
+    canonical_keys = {}
+    if skeleton and skeleton.get("canonical_core"):
+        canonical_keys = skeleton.get("canonical_core", {})
+
+    # Generate semantic summary (AFTER generation, for observation only)
+    semantic_summary = generate_semantic_summary(story_text, title, config)
+
+    # Observe similarity against previous generations (LOGGING ONLY)
+    similarity_observation = observe_similarity(
+        current_summary=semantic_summary,
+        current_title=title,
+        canonical_keys=canonical_keys
+    )
+
+    # Add to generation memory (in-process only, resets on restart)
+    add_to_generation_memory(
+        story_id=story_id,
+        template_id=skeleton.get("template_id") if skeleton else None,
+        title=title,
+        semantic_summary=semantic_summary,
+        canonical_keys=canonical_keys
+    )
+
+    # Optionally include observation in metadata (non-intrusive)
+    if similarity_observation:
+        result["metadata"]["similarity_observation"] = similarity_observation
+
+    # ==========================================================================
+    # End Phase 2B
+    # ==========================================================================
 
     # 6. 파일 저장
     if save_output:
