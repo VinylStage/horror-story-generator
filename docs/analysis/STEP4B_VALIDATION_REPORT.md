@@ -206,6 +206,47 @@ uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 
 ---
 
+## Actual Generation Tests (Added 2026-01-12 01:41 KST)
+
+### Story Generation Test ✅ PASS
+
+```
+python main.py --max-stories 1
+```
+
+| Metric | Value |
+|--------|-------|
+| Template | T-ECO-001 - Economic Annihilation |
+| Model | claude-sonnet-4-5-20250929 |
+| Story Length | 3,041 characters |
+| Total Tokens | 4,098 |
+| Generation Time | 67.8 seconds |
+| Output File | `generated_stories/horror_story_20260112_014041.md` |
+| Title | 잔액 (Balance) |
+
+**Story Theme:** A man's bank balance mysteriously decreases through unexplained "system adjustments" - a horror exploration of economic anxiety.
+
+---
+
+### Research Generation Test ✅ PASS
+
+```
+python -m src.research.executor run "현대 한국 오피스텔의 고립과 공포" --tags horror korean urban
+```
+
+| Metric | Value |
+|--------|-------|
+| Model | qwen3:30b |
+| Card ID | RC-20260112-014153 |
+| Title | Concrete Cell: The Office Apartment Trap |
+| Quality | good |
+| Generation Time | 20 seconds |
+| Output File | `data/research/2026/01/RC-20260112-014153.json` |
+
+**Research Topic:** Modern Korean office apartments that trap residents in economic precarity and social isolation.
+
+---
+
 ## Conclusion
 
 STEP 4-B refactoring validation is **COMPLETE**:
@@ -215,5 +256,7 @@ STEP 4-B refactoring validation is **COMPLETE**:
 - ✅ CLI entry points work correctly
 - ✅ API server starts and responds
 - ✅ Core documentation updated
+- ✅ **Actual story generation works** (Claude API)
+- ✅ **Actual research generation works** (Ollama)
 
-The codebase is structurally sound and ready for use. Actual API integration testing can be performed when Claude API and Ollama are available.
+The codebase is fully functional after STEP 4-B refactoring. Both story and research generation pipelines work correctly with real API calls.
