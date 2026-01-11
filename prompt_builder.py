@@ -4,7 +4,8 @@ Prompt Builder - System and User Prompt Construction
 This module handles the construction of prompts for the horror story generator.
 Extracted from horror_story_generator.py for modularity.
 
-Future: This will be the integration point for Deep Research context injection.
+Phase B+: Supports both Research Context and Story Seed injection.
+Both are READ-ONLY inspirational contexts - they guide but never block generation.
 """
 
 import json
@@ -59,10 +60,71 @@ def _format_research_context(context: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _format_seed_context(context: Dict[str, Any]) -> str:
+    """
+    Format story seed context for system prompt injection.
+
+    Phase B+: Story Seeds provide thematic inspiration derived from Research Cards.
+
+    Args:
+        context: Seed context dict with themes, atmosphere, hooks, cultural elements
+
+    Returns:
+        Formatted string section for system prompt
+    """
+    if not context:
+        return ""
+
+    lines = [
+        "",
+        "## Story Seed (thematic inspiration)",
+        "",
+    ]
+
+    themes = context.get("key_themes", [])
+    if themes:
+        lines.append("**Core themes to explore:**")
+        for theme in themes:
+            lines.append(f"- {theme}")
+        lines.append("")
+
+    atmosphere = context.get("atmosphere_tags", [])
+    if atmosphere:
+        lines.append("**Atmosphere:**")
+        lines.append(f"{', '.join(atmosphere)}")
+        lines.append("")
+
+    hooks = context.get("suggested_hooks", [])
+    if hooks:
+        lines.append("**Possible story hooks:**")
+        for hook in hooks:
+            lines.append(f"- {hook}")
+        lines.append("")
+
+    cultural = context.get("cultural_elements", [])
+    if cultural:
+        lines.append("**Cultural elements:**")
+        for elem in cultural:
+            lines.append(f"- {elem}")
+        lines.append("")
+
+    # Source reference
+    seed_id = context.get("seed_id")
+    if seed_id:
+        lines.append(f"*Seed source: {seed_id}*")
+        lines.append("")
+
+    lines.append("*These are seeds to inspire your writing. "
+                 "Develop them naturally into your horror narrative.*")
+
+    return "\n".join(lines)
+
+
 def build_system_prompt(
     template: Optional[Dict[str, Any]] = None,
     skeleton: Optional[Dict[str, Any]] = None,
-    research_context: Optional[Dict[str, Any]] = None
+    research_context: Optional[Dict[str, Any]] = None,
+    seed_context: Optional[Dict[str, Any]] = None
 ) -> str:
     """
     시스템 프롬프트를 생성합니다.
@@ -71,11 +133,13 @@ def build_system_prompt(
     템플릿이 제공되면 기존 로직을 따릅니다 (하위 호환성).
     Phase 2A: skeleton이 제공되면 스토리 구조가 추가됩니다.
     Phase A: research_context가 제공되면 연구 컨텍스트가 추가됩니다.
+    Phase B+: seed_context가 제공되면 스토리 시드 컨텍스트가 추가됩니다.
 
     Args:
         template (Optional[Dict[str, Any]]): 프롬프트 템플릿 데이터 (legacy format)
         skeleton (Optional[Dict[str, Any]]): Phase 2A 템플릿 스켈레톤
         research_context (Optional[Dict[str, Any]]): Research context for injection
+        seed_context (Optional[Dict[str, Any]]): Story seed context for injection
 
     Returns:
         str: 완성된 시스템 프롬프트 문자열
@@ -85,6 +149,7 @@ def build_system_prompt(
         >>> system_prompt = build_system_prompt(template=old_template)  # 레거시 템플릿 기반
         >>> system_prompt = build_system_prompt(skeleton=selected_skeleton)  # Phase 2A 스켈레톤 기반
         >>> system_prompt = build_system_prompt(skeleton=skel, research_context=ctx)  # with research
+        >>> system_prompt = build_system_prompt(skeleton=skel, seed_context=seed)  # with seed
     """
     logger.debug("시스템 프롬프트 생성 시작")
 
@@ -181,6 +246,11 @@ Use this framework to guide the story's direction while maintaining creative fre
         if research_context:
             system_prompt += _format_research_context(research_context)
             logger.debug(f"[ResearchInject] Context injected: {len(research_context.get('key_concepts', []))} concepts")
+
+        # Phase B+: Story seed context injection
+        if seed_context:
+            system_prompt += _format_seed_context(seed_context)
+            logger.debug(f"[SeedInject] Context injected: {len(seed_context.get('key_themes', []))} themes")
 
         logger.debug("기본 심리 공포 프롬프트 사용")
         return system_prompt
