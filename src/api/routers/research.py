@@ -5,6 +5,7 @@ Endpoints:
 - POST /research/run - Execute research generation
 - POST /research/validate - Validate a research card
 - GET /research/list - List research cards
+- POST /research/dedup - Check semantic duplicates via FAISS
 """
 
 from typing import Optional
@@ -17,6 +18,9 @@ from ..schemas.research import (
     ResearchValidateResponse,
     ResearchListResponse,
     ResearchCardSummary,
+    ResearchDedupCheckRequest,
+    ResearchDedupCheckResponse,
+    SimilarCard,
 )
 from ..services import research_service
 
@@ -91,5 +95,35 @@ async def list_research(
         total=result.get("total", 0),
         limit=result.get("limit", limit),
         offset=result.get("offset", offset),
+        message=result.get("message"),
+    )
+
+
+@router.post("/dedup", response_model=ResearchDedupCheckResponse)
+async def check_research_dedup(request: ResearchDedupCheckRequest):
+    """
+    Check semantic duplicates for a research card using FAISS embeddings.
+
+    Uses nomic-embed-text model via Ollama for semantic similarity.
+    Returns similarity against existing indexed research cards.
+    """
+    result = await research_service.check_semantic_dedup(card_id=request.card_id)
+
+    similar_cards = [
+        SimilarCard(
+            card_id=c["card_id"],
+            similarity_score=c["similarity_score"],
+            title=c.get("title"),
+        )
+        for c in result.get("similar_cards", [])
+    ]
+
+    return ResearchDedupCheckResponse(
+        card_id=result.get("card_id", request.card_id),
+        signal=result.get("signal", "LOW"),
+        similarity_score=result.get("similarity_score", 0.0),
+        nearest_card_id=result.get("nearest_card_id"),
+        similar_cards=similar_cards,
+        index_size=result.get("index_size", 0),
         message=result.get("message"),
     )

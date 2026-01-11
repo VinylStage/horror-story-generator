@@ -333,3 +333,96 @@ def parse_list_output(
 
     # Apply pagination
     return cards[offset:offset + limit]
+
+
+async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
+    """
+    Check semantic duplicates for a research card using FAISS embeddings.
+
+    Args:
+        card_id: Card ID to check
+
+    Returns:
+        Dedup result dict with signal, similarity_score, similar_cards
+    """
+    import json as json_module
+    from src.dedup.research.dedup import check_duplicate, get_similar_cards
+    from src.dedup.research.index import get_index
+
+    # Parse card ID to find file path
+    parts = card_id.split("-")
+    if len(parts) >= 2:
+        date_str = parts[1]
+        year = date_str[:4]
+        month = date_str[4:6]
+        card_path = Path(f"data/research/{year}/{month}/{card_id}.json")
+    else:
+        return {
+            "card_id": card_id,
+            "signal": "LOW",
+            "similarity_score": 0.0,
+            "nearest_card_id": None,
+            "similar_cards": [],
+            "index_size": 0,
+            "message": "Invalid card ID format",
+        }
+
+    if not card_path.exists():
+        return {
+            "card_id": card_id,
+            "signal": "LOW",
+            "similarity_score": 0.0,
+            "nearest_card_id": None,
+            "similar_cards": [],
+            "index_size": 0,
+            "message": f"Card not found: {card_path}",
+        }
+
+    try:
+        # Load card data
+        with open(card_path, "r", encoding="utf-8") as f:
+            card_data = json_module.load(f)
+
+        # Get FAISS index
+        index = get_index()
+
+        # Check for duplicates
+        result = check_duplicate(card_data, index=index)
+
+        # Get similar cards for more detail
+        similar = get_similar_cards(card_data, k=5, index=index)
+
+        # Filter out self from similar cards
+        similar_cards = [
+            {
+                "card_id": sim_id,
+                "similarity_score": round(sim_score, 4),
+                "title": None,  # Would need to load each card to get title
+            }
+            for sim_id, sim_score in similar
+            if sim_id != card_id
+        ][:5]
+
+        return {
+            "card_id": card_id,
+            "signal": result.signal.value,
+            "similarity_score": round(result.similarity_score, 4),
+            "nearest_card_id": result.nearest_card_id if result.nearest_card_id != card_id else (
+                similar_cards[0]["card_id"] if similar_cards else None
+            ),
+            "similar_cards": similar_cards,
+            "index_size": index.size,
+            "message": None,
+        }
+
+    except Exception as e:
+        logger.error(f"[ResearchAPI] Semantic dedup error: {e}")
+        return {
+            "card_id": card_id,
+            "signal": "LOW",
+            "similarity_score": 0.0,
+            "nearest_card_id": None,
+            "similar_cards": [],
+            "index_size": 0,
+            "message": f"Dedup error: {str(e)}",
+        }

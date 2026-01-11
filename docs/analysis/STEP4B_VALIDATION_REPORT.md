@@ -291,6 +291,46 @@ All intentional duplicate cards were correctly detected with HIGH similarity sig
 
 ---
 
+## API Server Test (Added 2026-01-12 02:15 KST)
+
+### Research API Endpoints ✅ PASS
+
+| Endpoint | Method | Test Result |
+|----------|--------|-------------|
+| `/research/list` | GET | ✅ Lists 19+ cards |
+| `/research/run` | POST | ✅ Generated RC-20260112-020939 |
+| `/jobs/research/trigger` | POST | ✅ Job triggered, completed |
+| `/jobs/{id}/monitor` | POST | ✅ Status updates correctly |
+| `/jobs/{id}/dedup_check` | POST | ✅ Returns canonical dedup |
+| `/research/dedup` | POST | ✅ **NEW** FAISS semantic dedup |
+
+### Semantic Dedup API Test
+
+**Request:**
+```bash
+POST /research/dedup
+{"card_id": "RC-20260112-015248"}
+```
+
+**Response:**
+```json
+{
+  "card_id": "RC-20260112-015248",
+  "signal": "HIGH",
+  "similarity_score": 0.9019,
+  "nearest_card_id": "RC-20260112-014153",
+  "similar_cards": [
+    {"card_id": "RC-20260112-014153", "similarity_score": 0.9019},
+    {"card_id": "RC-20260112-015216", "similarity_score": 0.8934}
+  ],
+  "index_size": 19
+}
+```
+
+The new `/research/dedup` endpoint correctly uses FAISS embeddings via `nomic-embed-text` model for semantic similarity detection.
+
+---
+
 ## Conclusion
 
 STEP 4-B refactoring validation is **COMPLETE**:
@@ -304,5 +344,7 @@ STEP 4-B refactoring validation is **COMPLETE**:
 - ✅ **Actual research generation works** (Ollama)
 - ✅ **Story dedup system works** (SQLite + in-memory)
 - ✅ **Research dedup system works** (FAISS + nomic-embed-text)
+- ✅ **Research API endpoints work** (run, list, validate, trigger)
+- ✅ **Research semantic dedup API works** (NEW: /research/dedup)
 
-The codebase is fully functional after STEP 4-B refactoring. Both story and research generation pipelines work correctly with real API calls.
+The codebase is fully functional after STEP 4-B refactoring. Both story and research generation pipelines work correctly with real API calls via both CLI and API server.

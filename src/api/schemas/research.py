@@ -57,3 +57,29 @@ class ResearchListResponse(BaseModel):
     limit: int = Field(..., description="Requested limit")
     offset: int = Field(..., description="Requested offset")
     message: Optional[str] = Field(default=None, description="Status message")
+
+
+class ResearchDedupCheckRequest(BaseModel):
+    """Request to check research card for semantic duplicates."""
+
+    card_id: str = Field(..., description="Card ID to check for duplicates")
+
+
+class SimilarCard(BaseModel):
+    """Summary of a similar research card."""
+
+    card_id: str
+    similarity_score: float
+    title: Optional[str] = None
+
+
+class ResearchDedupCheckResponse(BaseModel):
+    """Response from research semantic dedup check."""
+
+    card_id: str = Field(..., description="Checked card ID")
+    signal: str = Field(..., description="Dedup signal: LOW, MEDIUM, or HIGH")
+    similarity_score: float = Field(..., description="Highest similarity score (0.0-1.0)")
+    nearest_card_id: Optional[str] = Field(default=None, description="Most similar card ID")
+    similar_cards: List[SimilarCard] = Field(default=[], description="List of similar cards")
+    index_size: int = Field(default=0, description="Number of cards in FAISS index")
+    message: Optional[str] = Field(default=None, description="Status message")

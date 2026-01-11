@@ -28,7 +28,16 @@ Trigger API는 비동기 작업 실행을 위한 API 레이어입니다. CLI를 
 | POST | /jobs/{job_id}/cancel | 실행 중인 작업 취소 (SIGTERM) |
 | POST | /jobs/monitor | 모든 실행 중 작업 모니터링 |
 | POST | /jobs/{job_id}/monitor | 단일 작업 모니터링 |
-| POST | /jobs/{job_id}/dedup_check | 리서치 작업 중복 검사 |
+| POST | /jobs/{job_id}/dedup_check | 리서치 작업 중복 검사 (canonical) |
+
+### Research 엔드포인트
+
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | /research/run | 연구 생성 (동기) |
+| POST | /research/validate | 연구 카드 검증 |
+| GET | /research/list | 연구 카드 목록 |
+| POST | /research/dedup | 시맨틱 중복 검사 (FAISS) |
 
 ## 시퀀스 다이어그램 (Sequence Diagram)
 
@@ -154,7 +163,7 @@ curl -X POST http://localhost:8000/jobs/abc-123-def/monitor
 curl -X POST http://localhost:8000/jobs/abc-123-def/cancel
 ```
 
-### 중복 검사 (리서치 작업)
+### 중복 검사 (Canonical - 작업 기반)
 
 ```bash
 curl -X POST http://localhost:8000/jobs/abc-123-def/dedup_check
@@ -168,6 +177,30 @@ curl -X POST http://localhost:8000/jobs/abc-123-def/dedup_check
   "similarity_score": 0.15
 }
 ```
+
+### 시맨틱 중복 검사 (FAISS - 연구 카드)
+
+```bash
+curl -X POST http://localhost:8000/research/dedup \
+  -H "Content-Type: application/json" \
+  -d '{"card_id": "RC-20260112-015248"}'
+
+# 응답
+{
+  "card_id": "RC-20260112-015248",
+  "signal": "HIGH",
+  "similarity_score": 0.9019,
+  "nearest_card_id": "RC-20260112-014153",
+  "similar_cards": [
+    {"card_id": "RC-20260112-014153", "similarity_score": 0.9019},
+    {"card_id": "RC-20260112-015216", "similarity_score": 0.8934}
+  ],
+  "index_size": 19,
+  "message": null
+}
+```
+
+**참고:** 시맨틱 중복 검사는 `nomic-embed-text` 모델을 사용하여 768차원 임베딩 벡터로 유사도를 측정합니다.
 
 ## 에러 처리 (Error Handling)
 
