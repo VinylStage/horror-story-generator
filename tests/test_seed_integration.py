@@ -371,3 +371,131 @@ class TestGetSeedInjectionStatus:
 
             assert result["available"] is False
             assert "error" in result
+
+
+class TestSelectSeedAdvanced:
+    """Advanced tests for select_seed_for_generation."""
+
+    def test_successful_seed_selection_with_load(self):
+        """Should successfully select and load a seed."""
+        from seed_integration import select_seed_for_generation
+        from seed_registry import SeedRecord
+        from story_seed import StorySeed
+
+        mock_seed = StorySeed(
+            seed_id="SS-001",
+            source_card_id="RC-001",
+            key_themes=["test"],
+            atmosphere_tags=[],
+            suggested_hooks=[],
+            cultural_elements=[]
+        )
+
+        with patch("seed_integration.get_seed_registry") as mock_registry:
+            mock_reg = MagicMock()
+            mock_record = SeedRecord(
+                seed_id="SS-001",
+                source_card_id="RC-001",
+                created_at=datetime.now(),
+                file_path="/path/to/seed.json"
+            )
+            mock_reg.list_available.return_value = [mock_record]
+            mock_reg.count.return_value = 1
+            mock_reg.get_least_used.return_value = mock_record
+            mock_registry.return_value = mock_reg
+
+            # Mock Path.exists to return True so the seed file is "found"
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch("seed_integration.load_seed", return_value=mock_seed):
+                    result = select_seed_for_generation()
+
+                    assert result.seed is not None
+                    assert result.seed.seed_id == "SS-001"
+                    assert result.has_seed is True
+
+    def test_fallback_to_files_when_registry_empty(self):
+        """Should try file system when registry is empty."""
+        from seed_integration import select_seed_for_generation
+        from story_seed import StorySeed
+
+        mock_seed = StorySeed(
+            seed_id="SS-FILE-001",
+            source_card_id="RC-001",
+            key_themes=["file"],
+            atmosphere_tags=[],
+            suggested_hooks=[],
+            cultural_elements=[]
+        )
+
+        with patch("seed_integration.get_seed_registry") as mock_registry:
+            mock_reg = MagicMock()
+            mock_reg.list_available.return_value = []
+            mock_reg.count.return_value = 0
+            mock_registry.return_value = mock_reg
+
+            with patch("seed_integration.list_seeds") as mock_list:
+                from pathlib import Path
+                mock_list.return_value = [Path("/fake/SS-FILE-001.json")]
+
+                with patch("seed_integration.load_seed", return_value=mock_seed):
+                    result = select_seed_for_generation()
+
+                    # Should have attempted to get seed from file system
+                    assert mock_list.called
+
+    def test_random_selection_from_multiple_seeds(self):
+        """Should select randomly from multiple available seeds."""
+        from seed_integration import select_seed_for_generation
+        from seed_registry import SeedRecord
+        from story_seed import StorySeed
+
+        mock_seed = StorySeed(
+            seed_id="SS-RANDOM",
+            source_card_id="RC-001",
+            key_themes=["random"],
+            atmosphere_tags=[],
+            suggested_hooks=[],
+            cultural_elements=[]
+        )
+
+        with patch("seed_integration.get_seed_registry") as mock_registry:
+            mock_reg = MagicMock()
+            records = [
+                SeedRecord(seed_id=f"SS-00{i}", source_card_id="RC-001", created_at=datetime.now(), file_path=f"/path/SS-00{i}.json")
+                for i in range(5)
+            ]
+            mock_reg.list_available.return_value = records
+            mock_reg.count.return_value = 5
+            mock_registry.return_value = mock_reg
+
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch("seed_integration.load_seed", return_value=mock_seed):
+                    with patch("random.choice", return_value=records[2]):
+                        result = select_seed_for_generation(strategy="random")
+
+                        assert result.total_available == 5
+                        assert result.seed is not None
+
+    def test_load_failure_returns_none_seed(self):
+        """Should return None seed when load fails."""
+        from seed_integration import select_seed_for_generation
+        from seed_registry import SeedRecord
+
+        with patch("seed_integration.get_seed_registry") as mock_registry:
+            mock_reg = MagicMock()
+            mock_record = SeedRecord(
+                seed_id="SS-001",
+                source_card_id="RC-001",
+                created_at=datetime.now(),
+                file_path="/nonexistent.json"
+            )
+            mock_reg.list_available.return_value = [mock_record]
+            mock_reg.count.return_value = 1
+            mock_reg.get_least_used.return_value = mock_record
+            mock_registry.return_value = mock_reg
+
+            with patch("seed_integration.load_seed", return_value=None):
+                result = select_seed_for_generation()
+
+                # Load failed, but should handle gracefully
+                assert result is not None

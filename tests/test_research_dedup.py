@@ -295,6 +295,385 @@ class TestIsFaissAvailable:
         assert isinstance(result, bool)
 
 
+class TestCheckDuplicate:
+    """Tests for check_duplicate function."""
+
+    def test_check_with_empty_index(self):
+        """Should return LOW signal for empty index."""
+        from research_dedup.dedup import check_duplicate, DedupSignal
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()  # Empty index
+        card_data = {"input": {"topic": "Test"}, "output": {"title": "Title"}}
+
+        result = check_duplicate(card_data, index=index)
+
+        assert result.signal == DedupSignal.LOW
+        assert result.similarity_score == 0.0
+        assert result.nearest_card_id is None
+
+    def test_check_with_empty_text(self):
+        """Should return LOW signal for empty card text."""
+        from research_dedup.dedup import check_duplicate, DedupSignal
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        index.add("RC-001", [0.1] * 4096)
+
+        card_data = {}  # Empty card
+
+        result = check_duplicate(card_data, index=index)
+
+        assert result.signal == DedupSignal.LOW
+
+    def test_check_with_embedding_failure(self):
+        """Should return LOW signal when embedding fails."""
+        from research_dedup.dedup import check_duplicate, DedupSignal
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        index.add("RC-001", [0.1] * 4096)
+
+        card_data = {"input": {"topic": "Test"}}
+
+        with patch("research_dedup.dedup.get_embedding", return_value=None):
+            result = check_duplicate(card_data, index=index)
+
+            assert result.signal == DedupSignal.LOW
+
+    def test_check_finds_similar_card(self):
+        """Should find similar card."""
+        from research_dedup.dedup import check_duplicate, DedupSignal
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        embedding = [0.1] * 4096
+        index.add("RC-001", embedding)
+
+        card_data = {"input": {"topic": "Test"}}
+
+        with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+            result = check_duplicate(card_data, index=index)
+
+            assert result.nearest_card_id == "RC-001"
+            assert result.similarity_score > 0.0
+
+    def test_check_excludes_self(self):
+        """Should exclude self when card_id in metadata."""
+        from research_dedup.dedup import check_duplicate
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        embedding = [0.1] * 4096
+        index.add("RC-001", embedding)
+        index.add("RC-002", [0.2] * 4096)
+
+        card_data = {
+            "input": {"topic": "Test"},
+            "metadata": {"card_id": "RC-001"}  # Exclude self
+        }
+
+        with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+            result = check_duplicate(card_data, index=index)
+
+            # Should find RC-002, not RC-001 (self)
+            if result.nearest_card_id:
+                assert result.nearest_card_id == "RC-002"
+
+    def test_check_no_nearest_found(self):
+        """Should handle case when no nearest found."""
+        from research_dedup.dedup import check_duplicate, DedupSignal
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        index.add("RC-001", [0.1] * 4096)
+
+        card_data = {"input": {"topic": "Test"}, "metadata": {"card_id": "RC-001"}}
+
+        with patch("research_dedup.dedup.get_embedding", return_value=[0.1] * 4096):
+            # Mock get_nearest to return None
+            with patch.object(index, "get_nearest", return_value=None):
+                result = check_duplicate(card_data, index=index)
+
+                assert result.signal == DedupSignal.LOW
+
+
+class TestAddCardToIndex:
+    """Tests for add_card_to_index function."""
+
+    def test_add_card_success(self):
+        """Should add card to index."""
+        from research_dedup.dedup import add_card_to_index
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        card_data = {"input": {"topic": "Test"}, "output": {"title": "Title"}}
+        embedding = [0.1] * 4096
+
+        with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+            result = add_card_to_index(card_data, "RC-001", index=index, save=False)
+
+            assert result is True
+            assert index.contains("RC-001")
+
+    def test_add_card_already_exists(self):
+        """Should skip if card already indexed."""
+        from research_dedup.dedup import add_card_to_index
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        index.add("RC-001", [0.1] * 4096)
+
+        card_data = {"input": {"topic": "Test"}}
+
+        # Should return True without calling get_embedding
+        with patch("research_dedup.dedup.get_embedding") as mock_embed:
+            result = add_card_to_index(card_data, "RC-001", index=index)
+
+            assert result is True
+            mock_embed.assert_not_called()
+
+    def test_add_card_empty_text(self):
+        """Should fail for empty card text."""
+        from research_dedup.dedup import add_card_to_index
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        card_data = {}  # Empty card
+
+        result = add_card_to_index(card_data, "RC-001", index=index)
+
+        assert result is False
+
+    def test_add_card_embedding_failure(self):
+        """Should fail when embedding generation fails."""
+        from research_dedup.dedup import add_card_to_index
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        card_data = {"input": {"topic": "Test"}}
+
+        with patch("research_dedup.dedup.get_embedding", return_value=None):
+            result = add_card_to_index(card_data, "RC-001", index=index)
+
+            assert result is False
+
+    def test_add_card_with_save(self):
+        """Should save index after adding."""
+        from research_dedup.dedup import add_card_to_index
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_path = Path(tmpdir) / "test.faiss"
+            metadata_path = Path(tmpdir) / "metadata.json"
+
+            index = FaissIndex(index_path=index_path, metadata_path=metadata_path)
+            card_data = {"input": {"topic": "Test"}}
+            embedding = [0.1] * 4096
+
+            with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+                result = add_card_to_index(card_data, "RC-001", index=index, save=True)
+
+                assert result is True
+                assert index_path.exists()
+
+
+class TestBatchIndexCards:
+    """Tests for batch_index_cards function."""
+
+    def test_batch_index_success(self):
+        """Should index multiple cards."""
+        from research_dedup.dedup import batch_index_cards
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_path = Path(tmpdir) / "test.faiss"
+            metadata_path = Path(tmpdir) / "metadata.json"
+
+            index = FaissIndex(index_path=index_path, metadata_path=metadata_path)
+            cards = [
+                {"input": {"topic": "Test 1"}, "metadata": {"card_id": "RC-001"}},
+                {"input": {"topic": "Test 2"}, "metadata": {"card_id": "RC-002"}},
+                {"input": {"topic": "Test 3"}, "metadata": {"card_id": "RC-003"}},
+            ]
+
+            with patch("research_dedup.dedup.get_embedding", return_value=[0.1] * 4096):
+                added = batch_index_cards(cards, index=index)
+
+                assert added == 3
+                assert index.size == 3
+
+    def test_batch_index_missing_card_id(self):
+        """Should skip cards without card_id."""
+        from research_dedup.dedup import batch_index_cards
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        cards = [
+            {"input": {"topic": "Test 1"}, "metadata": {"card_id": "RC-001"}},
+            {"input": {"topic": "Test 2"}, "metadata": {}},  # Missing card_id
+            {"input": {"topic": "Test 3"}},  # No metadata
+        ]
+
+        with patch("research_dedup.dedup.get_embedding", return_value=[0.1] * 4096):
+            added = batch_index_cards(cards, index=index)
+
+            assert added == 1  # Only one with valid card_id
+
+    def test_batch_index_empty_list(self):
+        """Should handle empty list."""
+        from research_dedup.dedup import batch_index_cards
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        added = batch_index_cards([], index=index)
+
+        assert added == 0
+
+
+class TestGetSimilarCards:
+    """Tests for get_similar_cards function."""
+
+    def test_get_similar_empty_index(self):
+        """Should return empty list for empty index."""
+        from research_dedup.dedup import get_similar_cards
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        card_data = {"input": {"topic": "Test"}}
+
+        result = get_similar_cards(card_data, index=index)
+
+        assert result == []
+
+    def test_get_similar_empty_text(self):
+        """Should return empty list for empty card text."""
+        from research_dedup.dedup import get_similar_cards
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        index.add("RC-001", [0.1] * 4096)
+
+        card_data = {}  # Empty
+
+        result = get_similar_cards(card_data, index=index)
+
+        assert result == []
+
+    def test_get_similar_embedding_failure(self):
+        """Should return empty list when embedding fails."""
+        from research_dedup.dedup import get_similar_cards
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        index.add("RC-001", [0.1] * 4096)
+
+        card_data = {"input": {"topic": "Test"}}
+
+        with patch("research_dedup.dedup.get_embedding", return_value=None):
+            result = get_similar_cards(card_data, index=index)
+
+            assert result == []
+
+    def test_get_similar_returns_results(self):
+        """Should return similar cards."""
+        from research_dedup.dedup import get_similar_cards
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        # Use distinct embeddings where RC-001 will be clearly most similar
+        index.add("RC-001", [1.0] + [0.0] * 4095)
+        index.add("RC-002", [0.0, 1.0] + [0.0] * 4094)
+
+        card_data = {"input": {"topic": "Test"}}
+
+        # Query with same embedding as RC-001
+        with patch("research_dedup.dedup.get_embedding", return_value=[1.0] + [0.0] * 4095):
+            result = get_similar_cards(card_data, k=5, index=index)
+
+            assert len(result) > 0
+            assert result[0][0] == "RC-001"  # Most similar
+
+    def test_get_similar_excludes_self(self):
+        """Should exclude self from results."""
+        from research_dedup.dedup import get_similar_cards
+        from research_dedup.index import FaissIndex, is_faiss_available
+
+        if not is_faiss_available():
+            pytest.skip("FAISS not available")
+
+        index = FaissIndex()
+        embedding = [0.1] * 4096
+        index.add("RC-001", embedding)
+        index.add("RC-002", [0.2] * 4096)
+
+        card_data = {
+            "input": {"topic": "Test"},
+            "metadata": {"card_id": "RC-001"}
+        }
+
+        with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+            result = get_similar_cards(card_data, k=5, index=index)
+
+            # RC-001 should be excluded
+            card_ids = [r[0] for r in result]
+            assert "RC-001" not in card_ids
+
+
 class TestModuleExports:
     """Tests for module exports."""
 

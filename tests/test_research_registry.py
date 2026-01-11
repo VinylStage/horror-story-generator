@@ -236,3 +236,132 @@ class TestGetRegistry:
         registry2 = get_registry()
 
         assert registry1 is registry2
+
+
+class TestResearchRegistryErrors:
+    """Tests for error handling in ResearchRegistry."""
+
+    @pytest.fixture
+    def temp_registry(self):
+        """Create a temporary registry for testing."""
+        from research_registry import ResearchRegistry
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "test_registry.sqlite"
+            registry = ResearchRegistry(db_path=db_path)
+            yield registry
+
+    def test_register_error_handling(self, temp_registry):
+        """Should handle register errors gracefully."""
+        from unittest.mock import patch, MagicMock
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.register("RC-001", "Topic")
+
+            assert result is False
+
+    def test_update_status_error_handling(self, temp_registry):
+        """Should handle update_status errors gracefully."""
+        from unittest.mock import patch
+
+        temp_registry.register("RC-001", "Topic")
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.update_status("RC-001", "completed")
+
+            assert result is False
+
+    def test_update_dedup_info_error_handling(self, temp_registry):
+        """Should handle update_dedup_info errors gracefully."""
+        from unittest.mock import patch
+
+        temp_registry.register("RC-001", "Topic")
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.update_dedup_info("RC-001", 0.5, "LOW")
+
+            assert result is False
+
+    def test_get_error_handling(self, temp_registry):
+        """Should handle get errors gracefully."""
+        from unittest.mock import patch
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.get("RC-001")
+
+            assert result is None
+
+    def test_list_all_error_handling(self, temp_registry):
+        """Should handle list_all errors gracefully."""
+        from unittest.mock import patch
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.list_all()
+
+            assert result == []
+
+    def test_list_high_similarity_error_handling(self, temp_registry):
+        """Should handle list_high_similarity errors gracefully."""
+        from unittest.mock import patch
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.list_high_similarity()
+
+            assert result == []
+
+    def test_list_not_indexed_error_handling(self, temp_registry):
+        """Should handle list_not_indexed errors gracefully."""
+        from unittest.mock import patch
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.list_not_indexed()
+
+            assert result == []
+
+    def test_count_error_handling(self, temp_registry):
+        """Should handle count errors gracefully."""
+        from unittest.mock import patch
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.count()
+
+            assert result == 0
+
+    def test_delete_error_handling(self, temp_registry):
+        """Should handle delete errors gracefully."""
+        from unittest.mock import patch
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.delete("RC-001")
+
+            assert result is False
+
+    def test_get_stats_error_handling(self, temp_registry):
+        """Should handle get_stats errors gracefully."""
+        from unittest.mock import patch
+
+        with patch.object(temp_registry, "_get_connection") as mock_conn:
+            mock_conn.side_effect = Exception("DB error")
+
+            result = temp_registry.get_stats()
+
+            assert result == {}
+
