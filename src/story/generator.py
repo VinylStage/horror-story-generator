@@ -30,12 +30,24 @@ from .template_loader import (
 # Prompt builder module (extracted for modularity)
 from .prompt_builder import build_system_prompt, build_user_prompt
 
-# Phase A: Research integration module (will be moved to src/research)
+# Research context module - unified pipeline
 try:
-    from src.research.integration import select_research_for_template, get_research_context_for_prompt
+    from src.infra.research_context import (
+        select_research_for_template,
+        build_research_context,
+        format_research_for_prompt,
+        format_research_for_metadata,
+        DedupLevel,
+    )
     RESEARCH_INTEGRATION_AVAILABLE = True
 except ImportError:
     RESEARCH_INTEGRATION_AVAILABLE = False
+
+# Config flags (can be overridden by environment)
+AUTO_INJECT_RESEARCH = os.getenv("AUTO_INJECT_RESEARCH", "true").lower() == "true"
+RESEARCH_INJECT_TOP_K = int(os.getenv("RESEARCH_INJECT_TOP_K", "1"))
+RESEARCH_INJECT_REQUIRE = os.getenv("RESEARCH_INJECT_REQUIRE", "false").lower() == "true"
+RESEARCH_INJECT_EXCLUDE_DUP_LEVEL = os.getenv("RESEARCH_INJECT_EXCLUDE_DUP_LEVEL", "HIGH")
 
 
 # 초기 로거 생성 (환경 변수 로드 전 기본값)
@@ -392,18 +404,41 @@ def generate_horror_story(
         else:
             logger.info("기본 심리 공포 프롬프트 사용 (템플릿 없음)")
 
-    # Phase A: Research context selection (if skeleton available)
+    # Research context selection (unified pipeline)
     research_context = None
-    if skeleton and RESEARCH_INTEGRATION_AVAILABLE:
+    research_selection = None
+    research_metadata = {"research_used": [], "research_injection_mode": "none"}
+
+    if skeleton and RESEARCH_INTEGRATION_AVAILABLE and AUTO_INJECT_RESEARCH:
         try:
-            research_selection = select_research_for_template(skeleton)
+            # Get exclude level from config
+            exclude_level = DedupLevel.HIGH
+            if RESEARCH_INJECT_EXCLUDE_DUP_LEVEL == "MEDIUM":
+                exclude_level = DedupLevel.MEDIUM
+
+            research_selection = select_research_for_template(
+                skeleton,
+                max_cards=RESEARCH_INJECT_TOP_K,
+                exclude_level=exclude_level
+            )
+
             if research_selection.has_matches:
-                research_context = get_research_context_for_prompt(research_selection)
+                research_context = build_research_context(research_selection)
+                research_metadata = format_research_for_metadata(research_selection, injection_mode="auto")
                 logger.info(f"[ResearchInject] {research_selection.reason}")
+                logger.info(f"[ResearchInject] Cards used: {research_selection.card_ids}")
             else:
                 logger.info("[ResearchInject] No matching research cards")
+                research_metadata["research_selection_reason"] = research_selection.reason
+
+                # If require is set, fail
+                if RESEARCH_INJECT_REQUIRE:
+                    raise ValueError("RESEARCH_INJECT_REQUIRE=true but no usable research cards")
+
         except Exception as e:
             logger.warning(f"[ResearchInject] Research selection failed: {e}")
+            if RESEARCH_INJECT_REQUIRE:
+                raise
 
     # 3. 프롬프트 빌드
     logger.info("프롬프트 생성 중...")
@@ -439,7 +474,9 @@ def generate_horror_story(
                 "temperature": config["temperature"]
             },
             "word_count": len(story_text),
-            "usage": usage
+            "usage": usage,
+            # Research traceability (unified pipeline)
+            **research_metadata
         }
     }
 
@@ -562,13 +599,25 @@ def generate_with_dedup_control(
 
         logger.info(f"[Phase2C][CONTROL]   템플릿: {template_id} - {template_name}")
 
-        # Phase A: Research context selection
+        # Research context selection (unified pipeline)
         research_context = None
-        if skeleton and RESEARCH_INTEGRATION_AVAILABLE:
+        research_selection = None
+        research_metadata = {"research_used": [], "research_injection_mode": "none"}
+
+        if skeleton and RESEARCH_INTEGRATION_AVAILABLE and AUTO_INJECT_RESEARCH:
             try:
-                research_selection = select_research_for_template(skeleton)
+                exclude_level = DedupLevel.HIGH
+                if RESEARCH_INJECT_EXCLUDE_DUP_LEVEL == "MEDIUM":
+                    exclude_level = DedupLevel.MEDIUM
+
+                research_selection = select_research_for_template(
+                    skeleton,
+                    max_cards=RESEARCH_INJECT_TOP_K,
+                    exclude_level=exclude_level
+                )
                 if research_selection.has_matches:
-                    research_context = get_research_context_for_prompt(research_selection)
+                    research_context = build_research_context(research_selection)
+                    research_metadata = format_research_for_metadata(research_selection, injection_mode="auto")
                     logger.info(f"[ResearchInject] {research_selection.reason}")
                 else:
                     logger.info("[ResearchInject] No matching research cards")
@@ -644,7 +693,9 @@ def generate_with_dedup_control(
                     "usage": usage,
                     "phase2c_attempt": attempt,
                     "phase2c_signal": signal,
-                    "phase2c_decision": "accepted"
+                    "phase2c_decision": "accepted",
+                    # Research traceability (unified pipeline)
+                    **research_metadata
                 }
             }
 
