@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 # Extracted modules
 from src.infra.logging_config import setup_logging, DailyRotatingFileHandler
 from api_client import call_claude_api, generate_semantic_summary
-from similarity import (
+from src.dedup.similarity import (
     GenerationRecord, observe_similarity, add_to_generation_memory,
     load_past_stories_into_memory, get_similarity_signal, should_accept_story
 )

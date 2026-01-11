@@ -295,7 +295,7 @@ def cmd_dedup(args: argparse.Namespace) -> int:
     logger.info(f"[Dedup] Checking card: {card_id}")
 
     try:
-        from research_dedup import check_duplicate, DedupResult
+        from src.dedup.research import check_duplicate, DedupResult
         result = check_duplicate(card_data, model=args.model)
 
         print(f"Card: {card_id}")
@@ -335,8 +335,8 @@ def cmd_index(args: argparse.Namespace) -> int:
     logger = logging.getLogger(__name__)
 
     try:
-        from research_dedup import add_card_to_index, get_dedup_signal
-        from research_dedup.index import get_index, is_faiss_available
+        from src.dedup.research import add_card_to_index, get_dedup_signal
+        from src.dedup.research.index import get_index, is_faiss_available
 
         if not is_faiss_available():
             print("Error: FAISS not available", file=sys.stderr)

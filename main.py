@@ -24,7 +24,7 @@ from horror_story_generator import (
     generate_with_dedup_control
 )
 from src.infra.logging_config import setup_logging
-from similarity import load_past_stories_into_memory
+from src.dedup.similarity import load_past_stories_into_memory
 from src.registry.story_registry import init_registry, get_registry, close_registry
 
 
