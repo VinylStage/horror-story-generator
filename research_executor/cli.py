@@ -265,6 +265,274 @@ def cmd_list(args: argparse.Namespace) -> int:
     return EXIT_SUCCESS
 
 
+def cmd_dedup(args: argparse.Namespace) -> int:
+    """
+    Check deduplication status for a research card.
+
+    Phase B+: Uses FAISS for semantic similarity checking.
+
+    Args:
+        args: Parsed arguments
+
+    Returns:
+        Exit code
+    """
+    logger = logging.getLogger(__name__)
+    card_path = Path(args.card)
+
+    if not card_path.exists():
+        print(f"Error: Card not found: {card_path}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+
+    try:
+        with open(card_path, "r", encoding="utf-8") as f:
+            card_data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+
+    card_id = card_data.get("card_id", card_path.stem)
+    logger.info(f"[Dedup] Checking card: {card_id}")
+
+    try:
+        from research_dedup import check_duplicate, DedupResult
+        result = check_duplicate(card_data, model=args.model)
+
+        print(f"Card: {card_id}")
+        print()
+        print("Deduplication Check:")
+        print(f"  similarity_score: {result.similarity_score:.4f}")
+        print(f"  nearest_card_id: {result.nearest_card_id or 'None'}")
+        print(f"  signal: {result.signal.value}")
+        print(f"  is_duplicate: {result.is_duplicate}")
+
+        if result.is_duplicate:
+            logger.warning(f"[Dedup] HIGH similarity detected: {result.similarity_score:.4f}")
+
+        return EXIT_SUCCESS
+
+    except ImportError:
+        print("Error: research_dedup module not available", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+    except Exception as e:
+        logger.error(f"[Dedup] Check failed: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+
+
+def cmd_index(args: argparse.Namespace) -> int:
+    """
+    Add research card(s) to FAISS index or rebuild index.
+
+    Phase B+: Manages vector index for deduplication.
+
+    Args:
+        args: Parsed arguments
+
+    Returns:
+        Exit code
+    """
+    logger = logging.getLogger(__name__)
+
+    try:
+        from research_dedup import add_card_to_index, get_dedup_signal
+        from research_dedup.index import get_index, is_faiss_available
+
+        if not is_faiss_available():
+            print("Error: FAISS not available", file=sys.stderr)
+            return EXIT_INVALID_INPUT
+
+        index = get_index()
+
+        if args.rebuild:
+            # Rebuild index from all cards
+            logger.info("[Index] Rebuilding index from all cards...")
+
+            from data_paths import find_all_research_cards
+            card_paths = find_all_research_cards()
+
+            if not card_paths:
+                print("No research cards found to index")
+                return EXIT_SUCCESS
+
+            added = 0
+            for card_path in card_paths:
+                try:
+                    with open(card_path, "r", encoding="utf-8") as f:
+                        card_data = json.load(f)
+
+                    card_id = card_data.get("card_id", card_path.stem)
+
+                    if add_card_to_index(card_data, card_id, index=index, save=False):
+                        added += 1
+                        print(f"  Indexed: {card_id}")
+
+                except Exception as e:
+                    logger.warning(f"[Index] Failed to index {card_path}: {e}")
+
+            index.save()
+            print(f"\nRebuilt index with {added} cards (total: {index.size})")
+
+        elif args.card:
+            # Index single card
+            card_path = Path(args.card)
+
+            if not card_path.exists():
+                print(f"Error: Card not found: {card_path}", file=sys.stderr)
+                return EXIT_INVALID_INPUT
+
+            with open(card_path, "r", encoding="utf-8") as f:
+                card_data = json.load(f)
+
+            card_id = card_data.get("card_id", card_path.stem)
+
+            if add_card_to_index(card_data, card_id, index=index):
+                print(f"Indexed: {card_id} (total: {index.size})")
+            else:
+                print(f"Failed to index: {card_id}")
+                return EXIT_INVALID_INPUT
+
+        else:
+            # Show index status
+            print(f"Index Status:")
+            print(f"  Total vectors: {index.size}")
+            print(f"  FAISS available: {is_faiss_available()}")
+
+        return EXIT_SUCCESS
+
+    except ImportError as e:
+        print(f"Error: Required module not available: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+    except Exception as e:
+        logger.error(f"[Index] Operation failed: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+
+
+def cmd_seed_gen(args: argparse.Namespace) -> int:
+    """
+    Generate Story Seed from a research card.
+
+    Phase B+: Distills research card into story seed.
+
+    Args:
+        args: Parsed arguments
+
+    Returns:
+        Exit code
+    """
+    logger = logging.getLogger(__name__)
+    card_path = Path(args.card)
+
+    if not card_path.exists():
+        print(f"Error: Card not found: {card_path}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+
+    try:
+        with open(card_path, "r", encoding="utf-8") as f:
+            card_data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+
+    card_id = card_data.get("card_id", card_path.stem)
+    logger.info(f"[SeedGen] Generating seed from: {card_id}")
+
+    try:
+        from story_seed import generate_and_save_seed
+        from seed_registry import get_seed_registry
+
+        print(f"Generating seed from: {card_id}")
+        print("This may take a moment...")
+        print()
+
+        seed = generate_and_save_seed(card_data, card_id, model=args.model)
+
+        if seed:
+            # Register in seed registry
+            registry = get_seed_registry()
+            from data_paths import get_seeds_root
+            seed_path = get_seeds_root() / f"{seed.seed_id}.json"
+            registry.register(seed.seed_id, card_id, str(seed_path))
+
+            print(f"Seed ID: {seed.seed_id}")
+            print(f"Source: {seed.source_card_id}")
+            print(f"Key Themes: {', '.join(seed.key_themes)}")
+            print(f"Atmosphere: {', '.join(seed.atmosphere_tags)}")
+            print(f"Hooks: {len(seed.suggested_hooks)}")
+            print(f"Cultural Elements: {len(seed.cultural_elements)}")
+            return EXIT_SUCCESS
+        else:
+            print("Failed to generate seed")
+            return EXIT_INVALID_INPUT
+
+    except ImportError as e:
+        print(f"Error: Required module not available: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+    except Exception as e:
+        logger.error(f"[SeedGen] Generation failed: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+
+
+def cmd_seed_list(args: argparse.Namespace) -> int:
+    """
+    List available Story Seeds.
+
+    Phase B+: Shows registered seeds and their usage.
+
+    Args:
+        args: Parsed arguments
+
+    Returns:
+        Exit code
+    """
+    try:
+        from seed_registry import get_seed_registry
+        from story_seed import list_seeds
+
+        registry = get_seed_registry()
+        stats = registry.get_stats()
+
+        print("Story Seeds Status:")
+        print(f"  Total: {stats.get('total', 0)}")
+        print(f"  Available: {stats.get('available', 0)}")
+        print(f"  Total Uses: {stats.get('total_uses', 0)}")
+        print(f"  Never Used: {stats.get('never_used', 0)}")
+        print()
+
+        # List seeds
+        seeds = registry.list_all(limit=args.limit)
+
+        if not seeds:
+            # Try filesystem fallback
+            seed_files = list_seeds()
+            if seed_files:
+                print(f"Seed Files (not in registry): {len(seed_files)}")
+                for sf in seed_files[:args.limit]:
+                    print(f"  {sf.stem}")
+            else:
+                print("No seeds found")
+            return EXIT_SUCCESS
+
+        print(f"Recent Seeds (showing {len(seeds)}):")
+        print()
+
+        for record in seeds:
+            used_str = f"used {record.times_used}x" if record.times_used else "never used"
+            avail_str = "✓" if record.is_available else "✗"
+            print(f"  {avail_str} {record.seed_id}  from {record.source_card_id}  ({used_str})")
+
+        return EXIT_SUCCESS
+
+    except ImportError as e:
+        print(f"Error: Required module not available: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+
+
 def cmd_validate(args: argparse.Namespace) -> int:
     """
     Validate an existing research card.
@@ -386,6 +654,51 @@ def create_parser() -> argparse.ArgumentParser:
         help="Path to research card JSON file"
     )
 
+    # Phase B+: dedup command
+    dedup_parser = subparsers.add_parser("dedup", help="Check deduplication for a research card")
+    dedup_parser.add_argument(
+        "card",
+        help="Path to research card JSON file"
+    )
+    dedup_parser.add_argument(
+        "-m", "--model",
+        default=DEFAULT_MODEL,
+        help=f"Ollama model for embeddings (default: {DEFAULT_MODEL})"
+    )
+
+    # Phase B+: index command
+    index_parser = subparsers.add_parser("index", help="Manage FAISS vector index")
+    index_parser.add_argument(
+        "-c", "--card",
+        help="Path to research card to index"
+    )
+    index_parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Rebuild entire index from all cards"
+    )
+
+    # Phase B+: seed-gen command
+    seed_gen_parser = subparsers.add_parser("seed-gen", help="Generate Story Seed from research card")
+    seed_gen_parser.add_argument(
+        "card",
+        help="Path to research card JSON file"
+    )
+    seed_gen_parser.add_argument(
+        "-m", "--model",
+        default=DEFAULT_MODEL,
+        help=f"Ollama model to use (default: {DEFAULT_MODEL})"
+    )
+
+    # Phase B+: seed-list command
+    seed_list_parser = subparsers.add_parser("seed-list", help="List available Story Seeds")
+    seed_list_parser.add_argument(
+        "-n", "--limit",
+        type=int,
+        default=20,
+        help="Maximum number of seeds to show (default: 20)"
+    )
+
     return parser
 
 
@@ -412,6 +725,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         return cmd_list(args)
     elif args.command == "validate":
         return cmd_validate(args)
+    elif args.command == "dedup":
+        return cmd_dedup(args)
+    elif args.command == "index":
+        return cmd_index(args)
+    elif args.command == "seed-gen":
+        return cmd_seed_gen(args)
+    elif args.command == "seed-list":
+        return cmd_seed_list(args)
     else:
         parser.print_help()
         return EXIT_SUCCESS
