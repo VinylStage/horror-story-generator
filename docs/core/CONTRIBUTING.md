@@ -17,38 +17,49 @@
 ## 프로젝트 구조
 
 ```
-n8n-test/
-├── horror_story_generator.py      # 핵심 모듈: 호러 소설 생성 로직
-├── main.py                        # 테스트 실행 스크립트
-├── horror_story_prompt_template.json  # 프롬프트 템플릿 설정
-├── .env                           # 환경 변수 (API 키 등)
-├── .env.example                   # 환경 변수 예시
-├── requirements.txt               # Python 패키지 의존성
-├── generated_stories/             # 생성된 소설 저장 디렉토리
-│   ├── horror_story_*.md          # 마크다운 형식 소설
-│   └── horror_story_*_metadata.json  # 메타데이터
-├── logs/                          # 실행 로그 디렉토리
-│   └── horror_story_*.log         # 타임스탬프 기반 로그 파일
-└── CONTRIBUTING.md                # 이 문서
+horror-story-generator/
+├── main.py                        # 스토리 생성 CLI 진입점
+├── src/                           # 메인 소스 패키지
+│   ├── infra/                     # 인프라 모듈
+│   │   ├── data_paths.py          # 경로 관리
+│   │   ├── job_manager.py         # 작업 관리
+│   │   └── logging_config.py      # 로깅 설정
+│   ├── registry/                  # 데이터 저장소
+│   │   └── story_registry.py      # 스토리 중복 레지스트리
+│   ├── dedup/                     # 중복 검사 로직
+│   │   ├── similarity.py          # 스토리 유사도 (인메모리)
+│   │   └── research/              # 연구 중복 검사 (FAISS)
+│   ├── story/                     # 스토리 생성 파이프라인
+│   │   ├── generator.py           # 핵심 생성 오케스트레이션
+│   │   ├── api_client.py          # Claude API 클라이언트
+│   │   └── prompt_builder.py      # 프롬프트 생성
+│   ├── research/                  # 연구 생성
+│   │   ├── executor/              # CLI 실행기
+│   │   └── integration/           # 스토리-연구 연동
+│   └── api/                       # FastAPI 서버
+├── assets/                        # 템플릿 및 리소스
+│   └── templates/                 # 15개 템플릿 스켈레톤
+├── data/                          # 런타임 데이터
+├── generated_stories/             # 생성된 소설
+├── logs/                          # 실행 로그
+└── docs/                          # 문서
 ```
 
-### 주요 파일 설명
+### 주요 모듈 설명
 
-- **`horror_story_generator.py`**: 소설 생성의 모든 로직이 포함된 핵심 모듈
-  - 환경 변수 로드
-  - 프롬프트 템플릿 처리
+- **`src/story/generator.py`**: 소설 생성의 핵심 모듈
+  - 템플릿 선택 및 프롬프트 빌드
   - Claude API 호출
-  - 마크다운 파일 생성 (Astro + GraphQL 블로그 포맷)
+  - 중복 검사 및 재생성 로직
 
-- **`main.py`**: 테스트 및 실행 스크립트
-  - 기본 생성 테스트
-  - 커스텀 요청 테스트
-  - 향후 API 개발 참고 코드 포함
+- **`main.py`**: CLI 진입점
+  - `--enable-dedup`: 중복 검사 활성화
+  - `--max-stories N`: N개 스토리 생성
+  - `--duration-seconds`: 지속 시간 설정
 
-- **`horror_story_prompt_template.json`**: 소설 생성 설정
-  - 장르, 분위기, 스토리 구조
-  - 캐릭터, 플롯 요소
-  - 글쓰기 스타일
+- **`assets/templates/`**: 템플릿 스켈레톤
+  - 15개의 호러 템플릿 정의
+  - canonical_core로 고유 정체성 부여
 
 ---
 
@@ -58,7 +69,7 @@ n8n-test/
 
 ```bash
 git clone <repository-url>
-cd n8n-test
+cd horror-story-generator
 ```
 
 ### 2. Python 가상환경 설정

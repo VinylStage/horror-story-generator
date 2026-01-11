@@ -1,7 +1,8 @@
 # Development Roadmap
 
-**Status:** Draft
+**Status:** Active
 **Last Updated:** 2026-01-12
+**Version:** Post STEP 4-B
 
 ---
 
@@ -20,13 +21,13 @@ The system currently supports:
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Story Generation (Claude API) | Implemented | main.py CLI |
-| Template System (15 templates) | Implemented | phase1_foundation/03_templates/ |
-| Knowledge Units (52 KUs) | Implemented | phase1_foundation/01_knowledge_units/ |
-| Story Deduplication (SQLite) | Implemented | story_registry.py |
-| Research Generation (Ollama) | Implemented | research_executor/ |
-| Research Deduplication (FAISS) | Implemented | research_integration/ |
-| Trigger API | Implemented | research_api/ |
-| Job Monitoring | Implemented | job_monitor.py |
+| Template System (15 templates) | Implemented | assets/templates/ |
+| Knowledge Units (52 KUs) | Implemented | assets/knowledge_units/ |
+| Story Deduplication (SQLite) | Implemented | src/registry/story_registry.py |
+| Research Generation (Ollama) | Implemented | src/research/executor/ |
+| Research Deduplication (FAISS) | Implemented | src/dedup/research/ |
+| Trigger API | Implemented | src/api/ |
+| Job Monitoring | Implemented | src/infra/job_monitor.py |
 | Graceful Shutdown | Implemented | SIGINT/SIGTERM handling |
 
 ---
@@ -277,4 +278,4 @@ To propose a new feature:
 
 ---
 
-**Note:** This is a draft document based on analysis of existing code and documentation. Priorities and scope may change based on user feedback.
+**Note:** All documentation reflects the current `src/` package structure (Post STEP 4-B). Priorities and scope may change based on user feedback.

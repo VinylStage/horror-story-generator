@@ -243,6 +243,6 @@ Selection Algorithm (Phase 2):
 
 ## References
 
-- Canonical Enum: `docs/canonical_enum.md`
-- System Architecture: `docs/system_architecture.md`
-- Templates: `phase1_foundation/03_templates/template_skeletons_v1.json`
+- Canonical Enum: `docs/technical/canonical_enum.md`
+- System Architecture: `docs/core/ARCHITECTURE.md`
+- Templates: `assets/templates/template_skeletons_v1.json`

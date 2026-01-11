@@ -271,22 +271,26 @@ n8n 워크플로우와의 통합을 위한 권장 패턴:
 
 ```
 horror-story-generator/
-├── job_manager.py        # 작업 CRUD 모듈
-├── job_monitor.py        # PID 모니터링 모듈
-├── jobs/                 # 작업 JSON 저장소
+├── src/
+│   ├── infra/
+│   │   ├── job_manager.py    # 작업 CRUD 모듈
+│   │   └── job_monitor.py    # PID 모니터링 모듈
+│   └── api/
+│       ├── main.py           # FastAPI 앱
+│       ├── routers/
+│       │   ├── jobs.py       # 작업 API 엔드포인트
+│       │   └── research.py   # 연구 API 엔드포인트
+│       └── schemas/
+│           ├── jobs.py       # 작업 Pydantic 스키마
+│           └── research.py   # 연구 Pydantic 스키마
+├── jobs/                     # 작업 JSON 저장소
 │   └── {job_id}.json
-├── logs/                 # 작업 로그 파일
-│   ├── story_{job_id}.log
-│   └── research_{job_id}.log
-└── research_api/
-    ├── routers/
-    │   └── jobs.py       # API 엔드포인트
-    └── schemas/
-        └── jobs.py       # Pydantic 스키마
+└── logs/                     # 작업 로그 파일
+    ├── story_{job_id}.log
+    └── research_{job_id}.log
 ```
 
 ## 관련 문서
 
-- [PHASE_B_PLUS.md](PHASE_B_PLUS.md) - Phase B+ 전체 개요
-- [system_architecture.md](system_architecture.md) - 시스템 아키텍처
-- [n8n_environment_setup.md](n8n_environment_setup.md) - n8n 환경 설정
+- [../core/ARCHITECTURE.md](../core/ARCHITECTURE.md) - 시스템 아키텍처
+- [RESEARCH_DEDUP_SETUP.md](RESEARCH_DEDUP_SETUP.md) - 연구 중복 검사 설정

@@ -1,7 +1,8 @@
 # System Architecture
 
-**Status:** Draft
+**Status:** Active
 **Last Updated:** 2026-01-12
+**Version:** Post STEP 4-B
 
 ---
 
@@ -23,8 +24,8 @@ All pipelines share common infrastructure for deduplication, storage, and monito
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                              Entry Points                                │
 ├─────────────────────┬──────────────────────┬────────────────────────────┤
-│  python main.py     │  python -m research  │  uvicorn research_api...   │
-│  (Story CLI)        │  _executor run       │  (Trigger API)             │
+│  python main.py     │  python -m src.      │  uvicorn src.api.main:app  │
+│  (Story CLI)        │  research.executor   │  (Trigger API)             │
 └─────────┬───────────┴──────────┬───────────┴──────────────┬─────────────┘
           │                      │                          │
           ▼                      ▼                          ▼
@@ -64,37 +65,35 @@ All pipelines share common infrastructure for deduplication, storage, and monito
 
 ```
 1. Template Selection
-   └─> template_manager.py loads from phase1_foundation/03_templates/
+   └─> src/story/template_loader.py loads from assets/templates/
 
-2. Knowledge Unit Selection
-   └─> ku_selector.py selects from phase1_foundation/01_knowledge_units/
+2. Research Context (optional)
+   └─> src/research/integration/ selects matching research cards
 
 3. Prompt Construction
-   └─> prompt_builder.py combines template + KUs into system/user prompts
+   └─> src/story/prompt_builder.py combines template + research context
 
 4. API Call
-   └─> api_client.py calls Claude API (claude-sonnet-4-5)
+   └─> src/story/api_client.py calls Claude API (claude-sonnet-4-5)
 
 5. Deduplication Check (if enabled)
-   └─> story_registry.py computes canonical fingerprint similarity
+   └─> src/registry/story_registry.py computes canonical fingerprint similarity
    └─> HIGH signal triggers regeneration (max 2 retries)
 
 6. Storage
-   └─> story_saver.py saves to generated_stories/ or data/stories/
-   └─> story_registry.py records in SQLite
+   └─> src/story/generator.py saves to generated_stories/
+   └─> src/registry/story_registry.py records in SQLite
 ```
 
 ### Key Modules
 
 | Module | File | Responsibility |
 |--------|------|----------------|
-| Generator | `horror_story_generator.py` | Orchestrates generation pipeline |
-| Template Manager | `template_manager.py` | Loads/selects templates |
-| KU Selector | `ku_selector.py` | Selects compatible Knowledge Units |
-| Prompt Builder | `prompt_builder.py` | Constructs LLM prompts |
-| API Client | `api_client.py` | Claude API communication |
-| Story Saver | `story_saver.py` | File persistence |
-| Story Registry | `story_registry.py` | Deduplication database |
+| Generator | `src/story/generator.py` | Orchestrates generation pipeline |
+| Template Loader | `src/story/template_loader.py` | Loads/selects templates |
+| Prompt Builder | `src/story/prompt_builder.py` | Constructs LLM prompts |
+| API Client | `src/story/api_client.py` | Claude API communication |
+| Story Registry | `src/registry/story_registry.py` | Deduplication database |
 
 ### Deduplication Control
 
@@ -133,22 +132,23 @@ canonical_core = {
    └─> CLI receives topic and tags
 
 2. Prompt Construction
-   └─> research_generator.py builds research prompt
+   └─> src/research/executor/prompt_template.py builds research prompt
 
 3. LLM Generation
-   └─> ollama_client.py calls local Ollama (qwen3:30b)
+   └─> src/research/executor/executor.py calls local Ollama (qwen3:30b)
 
 4. Validation
-   └─> validator.py parses JSON, checks required fields
+   └─> src/research/executor/validator.py parses JSON, checks required fields
 
 5. FAISS Indexing
-   └─> faiss_index.py creates embedding, adds to index
+   └─> src/dedup/research/embedder.py creates embedding (nomic-embed-text)
+   └─> src/dedup/research/index.py adds to FAISS index
 
 6. Deduplication Check
-   └─> research_dedup_manager.py computes vector similarity
+   └─> src/dedup/research/dedup.py computes vector similarity
 
 7. Storage
-   └─> Research card saved to data/research/
+   └─> Research card saved to data/research/YYYY/MM/
 ```
 
 ### Research Card Schema
@@ -189,12 +189,13 @@ canonical_core = {
 
 | Module | File | Responsibility |
 |--------|------|----------------|
-| CLI | `research_executor/cli.py` | Command-line interface |
-| Generator | `research_executor/research_generator.py` | Prompt + generation |
-| Ollama Client | `research_executor/ollama_client.py` | Ollama API communication |
-| Validator | `research_executor/validator.py` | Output parsing/validation |
-| FAISS Index | `research_integration/faiss_index.py` | Vector storage |
-| Dedup Manager | `research_integration/research_dedup_manager.py` | Similarity checking |
+| CLI | `src/research/executor/cli.py` | Command-line interface |
+| Executor | `src/research/executor/executor.py` | Ollama API + generation |
+| Validator | `src/research/executor/validator.py` | Output parsing/validation |
+| Output Writer | `src/research/executor/output_writer.py` | File persistence |
+| Embedder | `src/dedup/research/embedder.py` | Ollama embedding (nomic-embed-text) |
+| FAISS Index | `src/dedup/research/index.py` | Vector storage |
+| Dedup | `src/dedup/research/dedup.py` | Similarity checking |
 
 ---
 
@@ -241,10 +242,10 @@ queued → running → succeeded
 
 | Module | File | Responsibility |
 |--------|------|----------------|
-| Router | `research_api/routers/jobs.py` | HTTP endpoints |
-| Schemas | `research_api/schemas/jobs.py` | Pydantic models |
-| Job Manager | `job_manager.py` | Job CRUD operations |
-| Job Monitor | `job_monitor.py` | PID polling, status updates |
+| Router | `src/api/routers/jobs.py` | HTTP endpoints |
+| Schemas | `src/api/schemas/jobs.py` | Pydantic models |
+| Job Manager | `src/infra/job_manager.py` | Job CRUD operations |
+| Job Monitor | `src/infra/job_monitor.py` | PID polling, status updates |
 
 ### Job Storage
 
@@ -272,7 +273,7 @@ jobs/
 
 ### Knowledge Units (52 total)
 
-Located in `phase1_foundation/01_knowledge_units/`
+Located in `assets/knowledge_units/`
 
 | Category | Count | Description |
 |----------|-------|-------------|
@@ -283,7 +284,7 @@ Located in `phase1_foundation/01_knowledge_units/`
 
 ### Templates (15 total)
 
-Located in `phase1_foundation/03_templates/`
+Located in `assets/templates/`
 
 Each template defines:
 - `canonical_core` - Unique identity fingerprint
@@ -361,7 +362,7 @@ The story generator supports graceful shutdown via SIGINT/SIGTERM:
 
 ## Design Decisions
 
-Key architectural decisions are documented in `docs/decision_log.md`:
+Key architectural decisions are documented in `docs/technical/decision_log.md`:
 
 - **D-001**: CLI as source of truth for business logic
 - **D-002**: Hybrid KU selection (category + canonical matching)
@@ -387,4 +388,4 @@ Key architectural decisions are documented in `docs/decision_log.md`:
 
 ---
 
-**Note:** This is a draft document consolidating information from multiple sources. See `docs/DOCUMENT_MAP.md` for source references.
+**Note:** All documentation reflects the current `src/` package structure (Post STEP 4-B).

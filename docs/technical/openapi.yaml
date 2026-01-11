@@ -19,7 +19,7 @@ info:
     ## Usage
     ```bash
     # Start server
-    poetry run uvicorn research_api.main:app --host 127.0.0.1 --port 8000
+    uvicorn src.api.main:app --host 127.0.0.1 --port 8000
     ```
 
     ## Note

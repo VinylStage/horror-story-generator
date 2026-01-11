@@ -1,7 +1,8 @@
 # API Reference
 
-**Status:** Draft
+**Status:** Active
 **Last Updated:** 2026-01-12
+**Version:** Post STEP 4-B
 **Base URL:** `http://localhost:8000`
 
 ---
@@ -14,7 +15,7 @@ The Trigger API provides non-blocking job execution for story and research gener
 
 > **CLI = Source of Truth**
 
-The API triggers CLI commands via subprocess. All business logic resides in the CLI tools (`main.py`, `research_executor`).
+The API triggers CLI commands via subprocess. All business logic resides in the CLI tools (`main.py`, `src.research.executor`).
 
 ---
 
@@ -22,7 +23,7 @@ The API triggers CLI commands via subprocess. All business logic resides in the 
 
 ```bash
 # Start server
-uvicorn research_api.main:app --host 0.0.0.0 --port 8000
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
 # Trigger story generation
 curl -X POST http://localhost:8000/jobs/story/trigger \
@@ -318,15 +319,27 @@ Only available for research jobs with completed artifacts.
 | Type | Description |
 |------|-------------|
 | `story_generation` | Story generation via `main.py` |
-| `research` | Research generation via `research_executor` |
+| `research` | Research generation via `src.research.executor` |
 
 ### Dedup Signal Values
+
+**Story Dedup (Canonical Matching):**
 
 | Signal | Score Range | Meaning |
 |--------|-------------|---------|
 | `LOW` | < 0.3 | Sufficiently unique |
 | `MEDIUM` | 0.3 - 0.6 | Some overlap |
 | `HIGH` | > 0.6 | Significant similarity |
+
+**Research Dedup (Semantic Embedding via FAISS):**
+
+| Signal | Score Range | Meaning |
+|--------|-------------|---------|
+| `LOW` | < 0.70 | Unique content |
+| `MEDIUM` | 0.70 - 0.85 | Some overlap |
+| `HIGH` | ≥ 0.85 | High similarity (potential duplicate) |
+
+Research embeddings use `nomic-embed-text` model via Ollama (768 dimensions).
 
 ---
 
@@ -399,7 +412,7 @@ python main.py \
 ### Research Generation
 
 ```bash
-python -m research_executor run {topic} \
+python -m src.research.executor run {topic} \
   --tags {tag1} {tag2} \
   --model {model} \
   --timeout {timeout}
@@ -434,4 +447,4 @@ Currently, no rate limiting is implemented. For production use, consider:
 
 ---
 
-**Note:** This is a draft document. See `docs/DOCUMENT_MAP.md` for documentation status.
+**Note:** All documentation reflects the current `src/` package structure (Post STEP 4-B).
