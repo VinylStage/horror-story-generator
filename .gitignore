@@ -503,3 +503,4 @@ templates/*
 !templates/sample.json
 !templates/.empty
 !logs/.empty
+data/
