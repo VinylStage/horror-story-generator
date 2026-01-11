@@ -16,7 +16,9 @@ from ..schemas.research import (
     ResearchValidateRequest,
     ResearchValidateResponse,
     ResearchListResponse,
+    ResearchCardSummary,
 )
+from ..services import research_service
 
 router = APIRouter()
 
@@ -27,13 +29,19 @@ async def run_research(request: ResearchRunRequest):
     Execute research generation via Ollama.
 
     This endpoint triggers research_executor CLI via subprocess.
-    Stub response for skeleton implementation.
     """
-    # TODO: STEP 3 - Connect to research_executor CLI
+    result = await research_service.execute_research(
+        topic=request.topic,
+        tags=request.tags,
+        model=request.model,
+        timeout=request.timeout,
+    )
+
     return ResearchRunResponse(
-        card_id="RC-00000000-000000",
-        status="stub",
-        message="Stub response - CLI integration pending",
+        card_id=result.get("card_id", ""),
+        status=result.get("status", "error"),
+        message=result.get("message"),
+        output_path=result.get("output_path"),
     )
 
 
@@ -41,15 +49,14 @@ async def run_research(request: ResearchRunRequest):
 async def validate_research(request: ResearchValidateRequest):
     """
     Validate an existing research card.
-
-    Stub response for skeleton implementation.
     """
-    # TODO: STEP 3 - Connect to research_executor validate command
+    result = await research_service.validate_card(card_id=request.card_id)
+
     return ResearchValidateResponse(
-        card_id=request.card_id,
-        is_valid=True,
-        quality_score="stub",
-        message="Stub response - validation pending",
+        card_id=result.get("card_id", ""),
+        is_valid=result.get("is_valid", False),
+        quality_score=result.get("quality_score", "unknown"),
+        message=result.get("message"),
     )
 
 
@@ -61,14 +68,28 @@ async def list_research(
 ):
     """
     List research cards with optional filtering.
-
-    Stub response for skeleton implementation.
     """
-    # TODO: STEP 3 - Connect to research_executor list command
-    return ResearchListResponse(
-        cards=[],
-        total=0,
+    result = await research_service.list_cards(
         limit=limit,
         offset=offset,
-        message="Stub response - list pending",
+        quality=quality,
+    )
+
+    cards = [
+        ResearchCardSummary(
+            card_id=c["card_id"],
+            title=c["title"],
+            topic=c.get("topic", ""),
+            quality_score=c["quality_score"],
+            created_at=c["created_at"],
+        )
+        for c in result.get("cards", [])
+    ]
+
+    return ResearchListResponse(
+        cards=cards,
+        total=result.get("total", 0),
+        limit=result.get("limit", limit),
+        offset=result.get("offset", offset),
+        message=result.get("message"),
     )
