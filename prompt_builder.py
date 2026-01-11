@@ -14,9 +14,55 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 
+def _format_research_context(context: Dict[str, Any]) -> str:
+    """
+    Format research context for system prompt injection.
+
+    Args:
+        context: Research context dict with key_concepts and horror_applications
+
+    Returns:
+        Formatted string section for system prompt
+    """
+    if not context:
+        return ""
+
+    lines = [
+        "",
+        "## Research Context (from prior analysis)",
+        "",
+    ]
+
+    concepts = context.get("key_concepts", [])
+    if concepts:
+        lines.append("**Relevant concepts to consider:**")
+        for concept in concepts:
+            lines.append(f"- {concept}")
+        lines.append("")
+
+    applications = context.get("horror_applications", [])
+    if applications:
+        lines.append("**Horror application ideas:**")
+        for app in applications:
+            lines.append(f"- {app}")
+        lines.append("")
+
+    # Add source cards reference
+    source_cards = context.get("source_cards", [])
+    if source_cards:
+        lines.append(f"*Research sources: {', '.join(source_cards)}*")
+        lines.append("")
+
+    lines.append("*These are suggestions to inspire your writing. "
+                 "You may incorporate, adapt, or disregard as creatively appropriate.*")
+
+    return "\n".join(lines)
+
+
 def build_system_prompt(
     template: Optional[Dict[str, Any]] = None,
-    skeleton: Optional[Dict[str, Any]] = None
+    skeleton: Optional[Dict[str, Any]] = None,
+    research_context: Optional[Dict[str, Any]] = None
 ) -> str:
     """
     시스템 프롬프트를 생성합니다.
@@ -24,10 +70,12 @@ def build_system_prompt(
     템플릿이 제공되지 않으면 기본 심리 공포 프롬프트를 사용합니다.
     템플릿이 제공되면 기존 로직을 따릅니다 (하위 호환성).
     Phase 2A: skeleton이 제공되면 스토리 구조가 추가됩니다.
+    Phase A: research_context가 제공되면 연구 컨텍스트가 추가됩니다.
 
     Args:
         template (Optional[Dict[str, Any]]): 프롬프트 템플릿 데이터 (legacy format)
         skeleton (Optional[Dict[str, Any]]): Phase 2A 템플릿 스켈레톤
+        research_context (Optional[Dict[str, Any]]): Research context for injection
 
     Returns:
         str: 완성된 시스템 프롬프트 문자열
@@ -36,6 +84,7 @@ def build_system_prompt(
         >>> system_prompt = build_system_prompt()  # 기본 프롬프트 사용
         >>> system_prompt = build_system_prompt(template=old_template)  # 레거시 템플릿 기반
         >>> system_prompt = build_system_prompt(skeleton=selected_skeleton)  # Phase 2A 스켈레톤 기반
+        >>> system_prompt = build_system_prompt(skeleton=skel, research_context=ctx)  # with research
     """
     logger.debug("시스템 프롬프트 생성 시작")
 
@@ -127,6 +176,11 @@ Use natural, modern Korean prose suitable for literary horror fiction.
 Use this framework to guide the story's direction while maintaining creative freedom in specific details.
 """
             logger.debug(f"스켈레톤 템플릿 적용: {template_name}")
+
+        # Phase A: Research context injection
+        if research_context:
+            system_prompt += _format_research_context(research_context)
+            logger.debug(f"[ResearchInject] Context injected: {len(research_context.get('key_concepts', []))} concepts")
 
         logger.debug("기본 심리 공포 프롬프트 사용")
         return system_prompt

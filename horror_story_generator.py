@@ -22,6 +22,14 @@ import anthropic
 # Prompt builder module (extracted for modularity)
 from prompt_builder import build_system_prompt, build_user_prompt
 
+# Phase A: Research integration module
+try:
+    from research_integration import select_research_for_template, get_research_context_for_prompt
+    from research_integration.selector import get_research_context_for_prompt
+    RESEARCH_INTEGRATION_AVAILABLE = True
+except ImportError:
+    RESEARCH_INTEGRATION_AVAILABLE = False
+
 # Phase 2A: Template skeleton configuration
 TEMPLATE_SKELETONS_PATH = Path(__file__).parent / "phase1_foundation" / "03_templates" / "template_skeletons_v1.json"
 
@@ -1051,9 +1059,22 @@ def generate_horror_story(
         else:
             logger.info("기본 심리 공포 프롬프트 사용 (템플릿 없음)")
 
+    # Phase A: Research context selection (if skeleton available)
+    research_context = None
+    if skeleton and RESEARCH_INTEGRATION_AVAILABLE:
+        try:
+            research_selection = select_research_for_template(skeleton)
+            if research_selection.has_matches:
+                research_context = get_research_context_for_prompt(research_selection)
+                logger.info(f"[ResearchInject] {research_selection.reason}")
+            else:
+                logger.info("[ResearchInject] No matching research cards")
+        except Exception as e:
+            logger.warning(f"[ResearchInject] Research selection failed: {e}")
+
     # 3. 프롬프트 빌드
     logger.info("프롬프트 생성 중...")
-    system_prompt = build_system_prompt(template, skeleton=skeleton)
+    system_prompt = build_system_prompt(template, skeleton=skeleton, research_context=research_context)
     user_prompt = build_user_prompt(custom_request, template)
     logger.info("프롬프트 생성 완료")
 
@@ -1215,8 +1236,21 @@ def generate_with_dedup_control(
 
         logger.info(f"[Phase2C][CONTROL]   템플릿: {template_id} - {template_name}")
 
+        # Phase A: Research context selection
+        research_context = None
+        if skeleton and RESEARCH_INTEGRATION_AVAILABLE:
+            try:
+                research_selection = select_research_for_template(skeleton)
+                if research_selection.has_matches:
+                    research_context = get_research_context_for_prompt(research_selection)
+                    logger.info(f"[ResearchInject] {research_selection.reason}")
+                else:
+                    logger.info("[ResearchInject] No matching research cards")
+            except Exception as e:
+                logger.warning(f"[ResearchInject] Research selection failed: {e}")
+
         # Build prompts
-        system_prompt = build_system_prompt(template=None, skeleton=skeleton)
+        system_prompt = build_system_prompt(template=None, skeleton=skeleton, research_context=research_context)
         user_prompt = build_user_prompt(custom_request=None, template=None)
 
         # Call API
@@ -1243,10 +1277,12 @@ def generate_with_dedup_control(
         # Phase 2C: Determine signal and decision
         signal = get_similarity_signal(similarity_observation)
         logger.info(f"[Phase2C][CONTROL]   신호: {signal}")
+        logger.info(f"[DedupSignal] Signal={signal}, Template={template_id}")
 
         if should_accept_story(signal):
             # ACCEPT
             logger.info(f"[Phase2C][CONTROL]   결정: ACCEPT")
+            logger.info(f"[DedupSignal] Decision=ACCEPT")
 
             # Add to in-memory
             add_to_generation_memory(
@@ -1326,6 +1362,7 @@ def generate_with_dedup_control(
         else:
             # HIGH - need to retry
             logger.info(f"[Phase2C][CONTROL]   결정: RETRY (HIGH 감지)")
+            logger.info(f"[DedupSignal] Decision=RETRY, Attempt={attempt}")
             if attempt < max_attempts - 1:
                 logger.info(f"[Phase2C][CONTROL]   다음 시도로 진행...")
             continue
@@ -1334,6 +1371,7 @@ def generate_with_dedup_control(
     logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     logger.info("[Phase2C][CONTROL] 모든 시도 실패 - SKIP")
     logger.info("[Phase2C][CONTROL] 파일 저장 안함, 루프 계속")
+    logger.info("[DedupSignal] Decision=SKIP, Reason=AllAttemptsExhausted")
     logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     # Record skip in registry
