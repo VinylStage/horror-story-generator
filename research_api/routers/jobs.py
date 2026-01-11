@@ -8,6 +8,8 @@ Endpoints:
 - POST /jobs/research/trigger - Trigger research generation
 - GET /jobs/{job_id} - Get job status
 - GET /jobs - List all jobs
+- POST /jobs/{job_id}/cancel - Cancel a running job
+- POST /jobs/monitor - Monitor all running jobs
 """
 
 import subprocess
@@ -24,6 +26,9 @@ from ..schemas.jobs import (
     JobTriggerResponse,
     JobStatusResponse,
     JobListResponse,
+    JobCancelResponse,
+    JobMonitorResult,
+    JobMonitorResponse,
 )
 
 # Import job manager from project root
@@ -33,6 +38,11 @@ from job_manager import (
     load_job,
     update_job_status,
     list_jobs as list_jobs_func,
+)
+from job_monitor import (
+    monitor_job,
+    monitor_all_running_jobs,
+    cancel_job as cancel_job_func,
 )
 
 router = APIRouter()
@@ -268,4 +278,68 @@ async def list_jobs(
         jobs=job_responses,
         total=len(job_responses),
         message=f"Found {len(job_responses)} jobs",
+    )
+
+
+@router.post("/{job_id}/cancel", response_model=JobCancelResponse)
+async def cancel_job(job_id: str):
+    """
+    Cancel a running job.
+
+    Sends SIGTERM to the job's process for graceful shutdown.
+    """
+    result = cancel_job_func(job_id)
+
+    return JobCancelResponse(
+        job_id=job_id,
+        success=result.get("success", False),
+        message=result.get("message"),
+        error=result.get("error"),
+    )
+
+
+@router.post("/monitor", response_model=JobMonitorResponse)
+async def monitor_jobs():
+    """
+    Monitor all running jobs and update their status.
+
+    Checks if processes are still running, collects artifacts,
+    and updates job status to succeeded/failed as appropriate.
+    """
+    results = monitor_all_running_jobs()
+
+    monitor_results = [
+        JobMonitorResult(
+            job_id=r.get("job_id", ""),
+            status=r.get("status"),
+            pid=r.get("pid"),
+            artifacts=r.get("artifacts", []),
+            error=r.get("error"),
+            message=r.get("message"),
+        )
+        for r in results
+    ]
+
+    return JobMonitorResponse(
+        monitored_count=len(monitor_results),
+        results=monitor_results,
+    )
+
+
+@router.post("/{job_id}/monitor", response_model=JobMonitorResult)
+async def monitor_single_job(job_id: str):
+    """
+    Monitor a single job and update its status.
+
+    Checks if the job's process is still running and updates status.
+    """
+    result = monitor_job(job_id)
+
+    return JobMonitorResult(
+        job_id=result.get("job_id", job_id),
+        status=result.get("status"),
+        pid=result.get("pid"),
+        artifacts=result.get("artifacts", []),
+        error=result.get("error"),
+        message=result.get("message"),
     )

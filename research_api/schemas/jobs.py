@@ -60,3 +60,30 @@ class JobListResponse(BaseModel):
     jobs: List[JobStatusResponse] = Field(default=[])
     total: int
     message: Optional[str] = None
+
+
+class JobCancelResponse(BaseModel):
+    """Response from job cancel endpoint."""
+
+    job_id: str
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+
+class JobMonitorResult(BaseModel):
+    """Result of monitoring a single job."""
+
+    job_id: str
+    status: Optional[str] = None
+    pid: Optional[int] = None
+    artifacts: List[str] = Field(default=[])
+    error: Optional[str] = None
+    message: Optional[str] = None
+
+
+class JobMonitorResponse(BaseModel):
+    """Response from job monitor endpoint."""
+
+    monitored_count: int
+    results: List[JobMonitorResult] = Field(default=[])
