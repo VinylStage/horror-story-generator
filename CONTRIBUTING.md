@@ -376,43 +376,111 @@ PR을 제출하기 전에 다음 항목을 확인하세요:
 
 ---
 
-## 커밋 메시지 규칙
+## 커밋 메시지 규칙 (Conventional Commits)
+
+이 프로젝트는 [Conventional Commits](https://www.conventionalcommits.org/) 규격을 따릅니다.
+release-please가 이 커밋 메시지를 분석하여 자동으로 CHANGELOG를 생성합니다.
 
 ### 기본 형식
 
 ```
-<타입>: <제목>
+<type>(<scope>): <description>
 
-<본문> (선택사항)
+[optional body]
 
-<푸터> (선택사항)
+[optional footer(s)]
 ```
 
-### 타입
+### 타입 (Types)
 
-- `feat`: 새로운 기능 추가
-- `fix`: 버그 수정
-- `docs`: 문서 수정
-- `style`: 코드 포맷팅, 세미콜론 누락 등 (로직 변경 없음)
-- `refactor`: 코드 리팩토링
-- `test`: 테스트 코드 추가 또는 수정
-- `chore`: 빌드 프로세스, 패키지 매니저 등 수정
+| 타입 | 설명 | CHANGELOG 섹션 |
+|------|------|----------------|
+| `feat` | 새로운 기능 추가 | Features |
+| `fix` | 버그 수정 | Bug Fixes |
+| `perf` | 성능 개선 | Performance Improvements |
+| `refactor` | 코드 리팩토링 (기능 변경 없음) | Code Refactoring |
+| `docs` | 문서 수정 | Documentation |
+| `test` | 테스트 코드 추가/수정 | (hidden) |
+| `chore` | 빌드, 패키지 등 기타 작업 | (hidden) |
+| `ci` | CI/CD 관련 변경 | (hidden) |
+
+### 스코프 (Scope) - 선택사항
+
+변경이 적용되는 영역을 괄호 안에 명시합니다:
+
+- `api` - Trigger API 관련
+- `story` - 스토리 생성 관련
+- `research` - 리서치 생성 관련
+- `dedup` - 중복 검사 관련
+- `cli` - CLI 관련
+- `docs` - 문서 관련
+- `release` - 릴리스/버전 관련
 
 ### 예시
 
 ```bash
-# 기능 추가
-git commit -m "feat: 커스텀 템플릿 지원 추가"
+# 새 기능 추가
+git commit -m "feat(api): add batch job trigger endpoint"
 
 # 버그 수정
-git commit -m "fix: YAML frontmatter 생성 시 인코딩 오류 수정"
+git commit -m "fix(story): correct canonical fingerprint calculation"
+
+# 성능 개선
+git commit -m "perf(dedup): optimize FAISS index search"
 
 # 문서 수정
-git commit -m "docs: CONTRIBUTING.md에 코딩 컨벤션 추가"
+git commit -m "docs: update API reference with new endpoints"
 
-# 리팩토링
-git commit -m "refactor: save_story 함수 타입 힌트 개선"
+# Breaking Change (메이저 버전 업데이트)
+git commit -m "feat(api)!: change job status response format
+
+BREAKING CHANGE: The status field now returns an object instead of a string."
+
+# 스코프 없는 간단한 수정
+git commit -m "fix: resolve typo in error message"
 ```
+
+### Breaking Changes
+
+Breaking change가 있는 경우:
+1. 타입 뒤에 `!`를 추가하거나
+2. 푸터에 `BREAKING CHANGE:` 를 명시
+
+이는 메이저 버전 업데이트를 트리거합니다.
+
+### 버전 범프 규칙
+
+| 커밋 타입 | 버전 변경 | 예시 |
+|-----------|-----------|------|
+| `fix` | PATCH (0.0.x) | 0.3.0 → 0.3.1 |
+| `feat` | MINOR (0.x.0) | 0.3.0 → 0.4.0 |
+| `feat!` 또는 `BREAKING CHANGE` | MAJOR (x.0.0) | 0.3.0 → 1.0.0 |
+
+---
+
+## 버전 관리 및 릴리스
+
+### 현재 버전
+
+- **버전 소스**: `pyproject.toml`의 `version` 필드
+- **매니페스트**: `.release-please-manifest.json`
+- **현재 버전**: v0.3.0
+
+### 릴리스 프로세스
+
+이 프로젝트는 [release-please](https://github.com/googleapis/release-please)를 사용합니다.
+
+현재 **준비 모드(INACTIVE)**로 설정되어 있습니다:
+- GitHub Actions workflow는 수동 실행만 가능 (`workflow_dispatch`)
+- 자동 릴리스/태그 생성 비활성화
+- Draft PR만 생성
+
+### 버전 정책
+
+- v0.x.x: 초기 개발 단계 (현재)
+- v1.0.0: 프로덕션 준비 완료 시
+- API 변경 시 마이너 버전 업데이트
+- 버그 수정 시 패치 버전 업데이트
 
 ---
 
