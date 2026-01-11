@@ -247,6 +247,50 @@ python -m src.research.executor run "현대 한국 오피스텔의 고립과 공
 
 ---
 
+## Deduplication System Test (Added 2026-01-12 02:00 KST)
+
+### Story Dedup Test ✅ PASS
+
+Generated 5 stories with `--enable-dedup` flag:
+
+| Story | Template | Dedup Signal | Similarity |
+|-------|----------|--------------|------------|
+| 계정 복구 | T-SYS-001 | LOW | - |
+| 마지막 칸 | T-LIM-001 | LOW | - |
+| 주민 평가 | T-APT-001 | LOW | - |
+| 층간소음 | T-DOM-001 | LOW | - |
+| 스마트홈 | T-DOM-002 | LOW | - |
+
+All stories were correctly classified as unique (LOW similarity signal).
+
+---
+
+### Research Dedup Test ✅ PASS
+
+**Bug Found & Fixed:**
+- **Issue:** Research dedup used `qwen3:30b` model for embeddings, but this model doesn't support the `/api/embed` endpoint (HTTP 501)
+- **Fix:** Changed default embedding model to `nomic-embed-text` (768 dimensions)
+- **Commit:** `ea2bc13`
+
+**Test Procedure:**
+1. Generated 2 unique research cards (different topics)
+2. Generated 3 duplicate research cards (similar Korean apartment/officetel isolation topics)
+3. Rebuilt FAISS index with all 19 cards
+4. Ran similarity check on duplicate cards
+
+**Duplicate Detection Results:**
+
+| Card ID | Topic | Nearest Card | Similarity | Signal |
+|---------|-------|--------------|------------|--------|
+| RC-20260112-014153 | 현대 한국 오피스텔의 고립과 공포 | RC-015248 | **0.9019** | HIGH |
+| RC-20260112-015216 | 원룸 오피스텔에서의 고립감과 공포 | RC-015248 | **0.8934** | HIGH |
+| RC-20260112-015233 | 한국 1인가구 아파트에서의 사회적 고립과 공포 | RC-014153 | **0.8749** | HIGH |
+| RC-20260112-015248 | 서울 오피스텔의 고립과 공포 | RC-014153 | **0.9019** | HIGH |
+
+All intentional duplicate cards were correctly detected with HIGH similarity signals (≥ 0.85).
+
+---
+
 ## Conclusion
 
 STEP 4-B refactoring validation is **COMPLETE**:
@@ -258,5 +302,7 @@ STEP 4-B refactoring validation is **COMPLETE**:
 - ✅ Core documentation updated
 - ✅ **Actual story generation works** (Claude API)
 - ✅ **Actual research generation works** (Ollama)
+- ✅ **Story dedup system works** (SQLite + in-memory)
+- ✅ **Research dedup system works** (FAISS + nomic-embed-text)
 
 The codebase is fully functional after STEP 4-B refactoring. Both story and research generation pipelines work correctly with real API calls.

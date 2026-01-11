@@ -14,7 +14,8 @@ Research cards may include optional quality metadata fields for future filtering
   "version": "1.0",
   "metadata": {
     "created_at": "2026-01-11T14:30:52",
-    "model": "qwen3:30b",
+    "model": "qwen3:30b",           // Generation model
+    "embed_model": "nomic-embed-text", // Embedding model for dedup
     "status": "complete"
   },
   "output": {

@@ -6,11 +6,23 @@ Deduplication signals provide advisory information about story similarity to hel
 
 ## Signal Levels
 
+### Story Dedup (Canonical Matching)
+
 | Signal | Similarity Score | Meaning | Suggested Action |
 |--------|-----------------|---------|------------------|
 | `LOW` | < 0.3 | Story appears sufficiently unique | Proceed normally |
 | `MEDIUM` | 0.3 - 0.6 | Some overlap with existing stories | Review or proceed at discretion |
 | `HIGH` | > 0.6 | Significant similarity detected | Consider regenerating or modifying |
+
+### Research Dedup (Semantic Embedding)
+
+| Signal | Similarity Score | Meaning | Suggested Action |
+|--------|-----------------|---------|------------------|
+| `LOW` | < 0.70 | Research topic is unique | Proceed normally |
+| `MEDIUM` | 0.70 - 0.85 | Some semantic overlap | Consider different angle |
+| `HIGH` | ≥ 0.85 | High semantic similarity | Likely duplicate topic |
+
+**Note:** Research dedup uses `nomic-embed-text` embeddings via Ollama for semantic similarity (768 dimensions).
 
 ## Computation Method
 
