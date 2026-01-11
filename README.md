@@ -42,6 +42,12 @@ CLAUDE_MODEL=claude-sonnet-4-5-20250929
 OUTPUT_DIR=./generated_stories
 MAX_TOKENS=8192
 TEMPERATURE=0.8
+
+# 연구 카드 자동 주입 설정 (선택)
+AUTO_INJECT_RESEARCH=true        # 연구 카드 자동 선택/주입 활성화
+RESEARCH_INJECT_TOP_K=1          # 주입할 연구 카드 수
+RESEARCH_INJECT_REQUIRE=false    # 연구 카드 필수 여부
+RESEARCH_INJECT_EXCLUDE_DUP_LEVEL=HIGH  # 제외할 중복 레벨 (HIGH/MEDIUM)
 ```
 
 ---
@@ -146,6 +152,7 @@ horror-story-generator/
 │   │   └── research/            # 연구 중복 (FAISS)
 │   ├── registry/                # 데이터 저장소
 │   ├── infra/                   # 인프라 (로깅, 경로 등)
+│   │   └── research_context/    # 연구↔스토리 연동 (공유 모듈)
 │   └── api/                     # FastAPI 서버
 ├── assets/
 │   └── templates/               # 15개 템플릿 스켈레톤

@@ -76,7 +76,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    A["Template Selection<br/>template_loader.py"] --> B["Research Context<br/>(optional)"]
+    A["Template Selection<br/>template_loader.py"] --> B["Research Selection<br/>research_context/"]
     B --> C["Prompt Construction<br/>prompt_builder.py"]
     C --> D["Claude API Call<br/>api_client.py"]
     D --> E{"Dedup Check<br/>enabled?"}
@@ -89,6 +89,25 @@ flowchart LR
     G --> J["Record in SQLite<br/>story_registry.py"]
 ```
 
+### Research Auto-Injection (Default: ON)
+
+Story generation automatically selects and injects matching research cards:
+
+1. **Selection**: Uses `select_research_for_template()` from `src/infra/research_context/`
+2. **Affinity Scoring**: Matches template's `canonical_core` against research `canonical_affinity`
+3. **Dedup Filter**: Excludes HIGH-dedup cards by default (configurable)
+4. **Injection**: Adds research context to system prompt
+
+**Configuration:**
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `AUTO_INJECT_RESEARCH` | `true` | Enable/disable auto-injection |
+| `RESEARCH_INJECT_TOP_K` | `1` | Number of cards to inject |
+| `RESEARCH_INJECT_REQUIRE` | `false` | Fail if no research matches |
+| `RESEARCH_INJECT_EXCLUDE_DUP_LEVEL` | `HIGH` | Exclude HIGH/MEDIUM duplicates |
+
+**Traceability**: Story metadata includes `research_used` field listing injected card IDs.
+
 ### Key Modules
 
 | Module | File | Responsibility |
@@ -98,6 +117,7 @@ flowchart LR
 | Prompt Builder | `src/story/prompt_builder.py` | Constructs LLM prompts |
 | API Client | `src/story/api_client.py` | Claude API communication |
 | Story Registry | `src/registry/story_registry.py` | Deduplication database |
+| Research Context | `src/infra/research_context/` | Unified research selection & injection |
 
 ### Deduplication Control
 
@@ -165,6 +185,18 @@ flowchart LR
       "mechanism": ["surveillance"]
     }
   },
+  "canonical_core": {
+    "setting_archetype": "apartment",
+    "primary_fear": "isolation",
+    "antagonist_archetype": "system",
+    "threat_mechanism": "surveillance",
+    "twist_family": "inevitability"
+  },
+  "dedup": {
+    "level": "LOW",
+    "similarity_score": 0.45,
+    "most_similar_card": "RC-20260110-091234"
+  },
   "validation": {
     "has_title": true,
     "has_summary": true,
@@ -187,6 +219,26 @@ flowchart LR
 | Embedder | `src/dedup/research/embedder.py` | Ollama embedding (nomic-embed-text) |
 | FAISS Index | `src/dedup/research/index.py` | Vector storage |
 | Dedup | `src/dedup/research/dedup.py` | Similarity checking |
+| Canonical Collapse | `src/research/executor/canonical_collapse.py` | canonical_affinity → canonical_core |
+
+### Canonical Core Normalization
+
+Research cards include `canonical_core` - a normalized, schema-valid representation collapsed from `canonical_affinity`:
+
+```
+canonical_affinity (arrays)     →     canonical_core (single values)
+────────────────────────────────────────────────────────────────────
+setting: ["apartment", "urban"] →     setting_archetype: "apartment"
+primary_fear: ["isolation"]     →     primary_fear: "isolation"
+antagonist: ["system"]          →     antagonist_archetype: "system"
+mechanism: ["surveillance"]     →     threat_mechanism: "surveillance"
+(missing twist)                 →     twist_family: "inevitability" (default)
+```
+
+**Collapse Rules:**
+- First valid value wins (invalid values are filtered)
+- Primary fear uses priority ordering (annihilation > identity_erasure > ...)
+- Missing dimensions get sensible defaults
 
 ---
 
@@ -347,6 +399,48 @@ The story generator supports graceful shutdown via SIGINT/SIGTERM:
 
 ---
 
+## Unified Research Context Module
+
+Located at `src/infra/research_context/`, this module provides a single source of truth for research card selection and injection, used by both CLI and API.
+
+### Module Structure
+
+| File | Exports | Purpose |
+|------|---------|---------|
+| `policy.py` | `DedupLevel`, `is_usable_card`, `get_dedup_level` | Dedup level rules and card usability |
+| `repository.py` | `load_usable_research_cards`, `get_card_by_id` | Card loading with dedup filtering |
+| `selector.py` | `ResearchSelection`, `select_research_for_template` | Canonical affinity matching |
+| `formatter.py` | `build_research_context`, `format_research_for_prompt`, `format_research_for_metadata` | Prompt formatting and traceability |
+
+### Dedup Level Policy
+
+| Level | Similarity Score | Default Behavior |
+|-------|------------------|------------------|
+| LOW | < 0.70 | Usable (unique content) |
+| MEDIUM | 0.70-0.85 | Usable (some overlap) |
+| HIGH | ≥ 0.85 | **Excluded** (likely duplicate) |
+
+### Selection Algorithm
+
+1. Load all usable cards (excludes HIGH dedup by default)
+2. For each card, compute affinity score against template's `canonical_core`
+3. Weight dimensions: primary_fear (0.3), setting (0.25), antagonist (0.25), mechanism (0.2)
+4. Return top-K cards with scores above threshold
+
+### Traceability
+
+Story metadata includes:
+```json
+{
+  "research_used": ["RC-20260112-143052"],
+  "research_injection_mode": "auto",
+  "research_selection_score": 0.85,
+  "research_selection_reason": "Matched 1/21 usable cards"
+}
+```
+
+---
+
 ## Design Decisions
 
 Key architectural decisions are documented in `docs/technical/decision_log.md`:
@@ -356,6 +450,8 @@ Key architectural decisions are documented in `docs/technical/decision_log.md`:
 - **D-003**: Assisted manual generation (not fully automated)
 - **D-004**: HIGH-only blocking policy for deduplication
 - **D-005**: File-based job storage for simplicity
+- **D-006**: Unified research context module (`src/infra/research_context/`) for CLI/API consistency
+- **D-007**: Research auto-injection ON by default with traceability metadata
 
 ---
 
@@ -375,4 +471,4 @@ Key architectural decisions are documented in `docs/technical/decision_log.md`:
 
 ---
 
-**Note:** All documentation reflects the current `src/` package structure (Post STEP 4-B).
+**Note:** All documentation reflects the current `src/` package structure with unified research context module (Post STEP 4-C + unified pipeline).
