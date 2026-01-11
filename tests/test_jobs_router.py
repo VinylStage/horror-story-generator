@@ -4,6 +4,7 @@ Tests for jobs router.
 Phase B+: Trigger API endpoint tests.
 """
 
+import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -258,3 +259,114 @@ class TestBuildCommands:
 
         assert "--topic" in cmd
         assert "--tag" not in cmd
+
+
+class TestDedupCheckEndpoint:
+    """Tests for POST /jobs/{job_id}/dedup_check endpoint."""
+
+    @pytest.fixture
+    def temp_jobs_dir(self):
+        """Create temporary jobs directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            jobs_path = Path(tmpdir) / "jobs"
+            jobs_path.mkdir()
+            yield jobs_path
+
+    @pytest.fixture
+    def client(self):
+        """Create test client for API."""
+        from research_api.main import app
+        from fastapi.testclient import TestClient
+        return TestClient(app)
+
+    def test_dedup_check_nonexistent_job(self, client, temp_jobs_dir):
+        """Should return 404 for nonexistent job."""
+        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+            response = client.post("/jobs/nonexistent/dedup_check")
+
+        assert response.status_code == 404
+
+    def test_dedup_check_story_job_rejected(self, client, temp_jobs_dir):
+        """Should reject story job type."""
+        from job_manager import Job
+
+        job = Job(
+            job_id="story-job",
+            type="story_generation",
+            status="succeeded",
+            artifacts=["/path/to/story.json"]
+        )
+
+        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("research_api.routers.jobs.load_job", return_value=job):
+                response = client.post("/jobs/story-job/dedup_check")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["has_artifact"] is False
+        assert "only available for research" in data["message"]
+
+    def test_dedup_check_no_artifacts(self, client, temp_jobs_dir):
+        """Should handle job with no artifacts."""
+        from job_manager import Job
+
+        job = Job(
+            job_id="research-empty",
+            type="research",
+            status="running",
+            artifacts=[]
+        )
+
+        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("research_api.routers.jobs.load_job", return_value=job):
+                response = client.post("/jobs/research-empty/dedup_check")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["has_artifact"] is False
+        assert "no artifacts" in data["message"]
+
+    def test_dedup_check_with_artifact(self, client, temp_jobs_dir):
+        """Should evaluate dedup for research job with artifact."""
+        from job_manager import Job
+
+        # Create a temporary research card file
+        research_dir = temp_jobs_dir.parent / "research"
+        research_dir.mkdir()
+        card_file = research_dir / "RC-test.json"
+        card_file.write_text(json.dumps({
+            "card_id": "RC-test",
+            "output": {
+                "title": "Test Research Card",
+                "canonical_affinity": {
+                    "setting": ["urban"],
+                    "primary_fear": ["isolation"],
+                    "antagonist": ["system"],
+                    "mechanism": ["surveillance"]
+                }
+            }
+        }))
+
+        job = Job(
+            job_id="research-with-card",
+            type="research",
+            status="succeeded",
+            artifacts=[str(card_file)]
+        )
+
+        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("research_api.routers.jobs.load_job", return_value=job):
+                with patch("research_api.services.dedup_service.evaluate_dedup") as mock_dedup:
+                    mock_dedup.return_value = {
+                        "signal": "LOW",
+                        "similarity_score": 0.1,
+                        "message": None
+                    }
+
+                    response = client.post("/jobs/research-with-card/dedup_check")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["has_artifact"] is True
+        assert data["signal"] == "LOW"
+        assert data["similarity_score"] == 0.1

@@ -24,6 +24,7 @@ from .jobs import (
     JobCancelResponse,
     JobMonitorResult,
     JobMonitorResponse,
+    JobDedupCheckResponse,
 )
 
 __all__ = [
@@ -42,4 +43,5 @@ __all__ = [
     "JobCancelResponse",
     "JobMonitorResult",
     "JobMonitorResponse",
+    "JobDedupCheckResponse",
 ]

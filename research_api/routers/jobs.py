@@ -10,6 +10,8 @@ Endpoints:
 - GET /jobs - List all jobs
 - POST /jobs/{job_id}/cancel - Cancel a running job
 - POST /jobs/monitor - Monitor all running jobs
+- POST /jobs/{job_id}/monitor - Monitor single job
+- POST /jobs/{job_id}/dedup_check - Check dedup for research job
 """
 
 import subprocess
@@ -29,6 +31,7 @@ from ..schemas.jobs import (
     JobCancelResponse,
     JobMonitorResult,
     JobMonitorResponse,
+    JobDedupCheckResponse,
 )
 
 # Import job manager from project root
@@ -343,3 +346,99 @@ async def monitor_single_job(job_id: str):
         error=result.get("error"),
         message=result.get("message"),
     )
+
+
+@router.post("/{job_id}/dedup_check", response_model=JobDedupCheckResponse)
+async def check_job_dedup(job_id: str):
+    """
+    Check dedup signal for a research job's artifact.
+
+    If the job produced a research card artifact, evaluates its
+    similarity against existing content using the dedup service.
+    """
+    job = load_job(job_id)
+
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+    # Only research jobs can have dedup checks
+    if job.type != "research":
+        return JobDedupCheckResponse(
+            job_id=job_id,
+            has_artifact=False,
+            message="Dedup check only available for research jobs",
+        )
+
+    # Check if job has artifacts
+    if not job.artifacts:
+        return JobDedupCheckResponse(
+            job_id=job_id,
+            has_artifact=False,
+            message="Job has no artifacts yet (still running or failed)",
+        )
+
+    # Get the first research card artifact
+    artifact_path = job.artifacts[0]
+
+    try:
+        import json
+        from pathlib import Path as PathLib
+
+        artifact_file = PathLib(artifact_path)
+        if not artifact_file.exists():
+            return JobDedupCheckResponse(
+                job_id=job_id,
+                has_artifact=False,
+                message=f"Artifact file not found: {artifact_path}",
+            )
+
+        # Load research card
+        with open(artifact_file, "r", encoding="utf-8") as f:
+            card_data = json.load(f)
+
+        # Extract canonical affinity for dedup evaluation
+        output = card_data.get("output", {})
+        canonical = output.get("canonical_affinity", {})
+
+        if not canonical:
+            return JobDedupCheckResponse(
+                job_id=job_id,
+                has_artifact=True,
+                artifact_path=artifact_path,
+                message="Research card has no canonical affinity for dedup evaluation",
+            )
+
+        # Build canonical core from affinity
+        # Convert lists to first item or comma-separated string
+        canonical_core = {}
+        for key in ["setting", "primary_fear", "antagonist", "mechanism"]:
+            value = canonical.get(key, [])
+            if isinstance(value, list) and value:
+                canonical_core[key] = value[0] if len(value) == 1 else ", ".join(value)
+            elif isinstance(value, str):
+                canonical_core[key] = value
+
+        # Use dedup service to evaluate
+        from ..services import dedup_service
+
+        result = await dedup_service.evaluate_dedup(
+            canonical_core=canonical_core,
+            title=output.get("title"),
+        )
+
+        return JobDedupCheckResponse(
+            job_id=job_id,
+            has_artifact=True,
+            artifact_path=artifact_path,
+            signal=result.get("signal", "LOW"),
+            similarity_score=result.get("similarity_score", 0.0),
+            message=result.get("message"),
+        )
+
+    except Exception as e:
+        return JobDedupCheckResponse(
+            job_id=job_id,
+            has_artifact=True,
+            artifact_path=artifact_path,
+            message=f"Dedup evaluation error: {str(e)}",
+        )

@@ -87,3 +87,14 @@ class JobMonitorResponse(BaseModel):
 
     monitored_count: int
     results: List[JobMonitorResult] = Field(default=[])
+
+
+class JobDedupCheckResponse(BaseModel):
+    """Response from job dedup check endpoint."""
+
+    job_id: str
+    has_artifact: bool = Field(default=False, description="Whether job produced an artifact")
+    artifact_path: Optional[str] = None
+    signal: Optional[str] = Field(default=None, description="Dedup signal (LOW/MEDIUM/HIGH)")
+    similarity_score: Optional[float] = Field(default=None, description="Similarity score")
+    message: Optional[str] = None
