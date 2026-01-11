@@ -50,7 +50,8 @@ from src.infra.job_monitor import (
 router = APIRouter()
 
 # Project root for subprocess execution
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+# File is at src/api/routers/jobs.py, so project root is 4 levels up
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 LOGS_DIR = PROJECT_ROOT / "logs"
 
 
