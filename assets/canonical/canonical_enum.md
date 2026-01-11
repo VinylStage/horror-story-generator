@@ -250,8 +250,10 @@ JSON 표현:
 | `/docs/technical/canonical_enum.md` | 사람용 정의서 (본 문서) |
 | `/assets/canonical/canonical_enum.md` | 동일 문서 (assets 복사본) |
 | `/schema/canonical_key.schema.json` | 기계용 JSON Schema (Draft 2020-12) |
+| `/docs/technical/KU_TO_CANONICAL_KEY_RULES.md` | KU → CK 생성 규칙서 |
 
 JSON Schema는 본 문서와 동일한 enum 값을 포함하며, 프로그래밍적 검증에 사용된다.
+KU에서 Canonical Key를 생성하는 규칙은 KU_TO_CANONICAL_KEY_RULES.md에 정의되어 있다.
     
 
 ---
