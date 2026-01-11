@@ -40,8 +40,8 @@ from .story_seed import (
 
 from .seed_integration import (
     SeedSelection,
-    select_seed_for_story,
-    format_seed_for_prompt,
+    select_seed_for_generation,
+    format_seed_for_system_prompt,
 )
 
 __all__ = [
@@ -67,6 +67,6 @@ __all__ = [
     "generate_and_save_seed",
     # seed_integration
     "SeedSelection",
-    "select_seed_for_story",
-    "format_seed_for_prompt",
+    "select_seed_for_generation",
+    "format_seed_for_system_prompt",
 ]
