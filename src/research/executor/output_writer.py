@@ -69,7 +69,9 @@ def build_json_output(
     model: str,
     output: Dict[str, Any],
     validation: Dict[str, Any],
-    metadata: Dict[str, Any]
+    metadata: Dict[str, Any],
+    canonical_core: Optional[Dict[str, str]] = None,
+    dedup_result: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Build the complete JSON output structure.
@@ -82,13 +84,15 @@ def build_json_output(
         output: Processed LLM output
         validation: Validation results
         metadata: Execution metadata
+        canonical_core: Collapsed single-value canonical key (optional)
+        dedup_result: Deduplication check result (optional)
 
     Returns:
         Complete JSON structure for file output
     """
     now = datetime.now()
 
-    return {
+    result = {
         "card_id": card_id,
         "version": SCHEMA_VERSION,
         "metadata": {
@@ -113,6 +117,20 @@ def build_json_output(
         },
         "validation": validation
     }
+
+    # Add canonical_core if provided
+    if canonical_core:
+        result["canonical_core"] = canonical_core
+
+    # Add dedup metadata if provided
+    if dedup_result:
+        result["dedup"] = {
+            "similarity_score": dedup_result.get("similarity_score", 0.0),
+            "level": dedup_result.get("signal", "LOW"),
+            "nearest_card_id": dedup_result.get("nearest_card_id"),
+        }
+
+    return result
 
 
 def build_markdown_output(
@@ -209,7 +227,9 @@ def write_output(
     validation: Dict[str, Any],
     metadata: Dict[str, Any],
     output_dir: Optional[Path] = None,
-    skip_markdown: bool = False
+    skip_markdown: bool = False,
+    canonical_core: Optional[Dict[str, str]] = None,
+    dedup_result: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Optional[Path]]:
     """
     Write output files to disk.
@@ -224,6 +244,8 @@ def write_output(
         metadata: Execution metadata
         output_dir: Output directory (default: ./data/research)
         skip_markdown: If True, skip .md file generation
+        canonical_core: Collapsed single-value canonical key (optional)
+        dedup_result: Deduplication check result (optional)
 
     Returns:
         Dict with paths to written files (None if write failed)
@@ -237,7 +259,11 @@ def write_output(
     result = {"json": None, "md": None}
 
     # Write JSON
-    json_data = build_json_output(card_id, topic, tags, model, output, validation, metadata)
+    json_data = build_json_output(
+        card_id, topic, tags, model, output, validation, metadata,
+        canonical_core=canonical_core,
+        dedup_result=dedup_result
+    )
 
     try:
         with open(paths["json"], "w", encoding="utf-8") as f:

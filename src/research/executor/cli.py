@@ -176,9 +176,47 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     logger.info(f"[ResearchExec] Quality: {validation.get('quality_score', 'unknown')}")
 
-    # Generate card ID and write output
+    # Generate card ID
     card_id = generate_card_id()
 
+    # Phase: Collapse canonical_affinity to canonical_core
+    canonical_core = None
+    try:
+        from .canonical_collapse import collapse_canonical_affinity, validate_canonical_core
+        affinity = output.get("canonical_affinity", {})
+        canonical_core = collapse_canonical_affinity(affinity)
+        is_valid, error = validate_canonical_core(canonical_core)
+        if is_valid:
+            logger.info(f"[ResearchExec] Canonical core: {canonical_core}")
+        else:
+            logger.warning(f"[ResearchExec] Invalid canonical_core: {error}")
+    except Exception as e:
+        logger.warning(f"[ResearchExec] Failed to collapse canonical: {e}")
+
+    # Phase: Build preliminary card data for dedup check
+    preliminary_card = {
+        "card_id": card_id,
+        "output": output,
+        "validation": validation,
+        "metadata": {"card_id": card_id},
+    }
+
+    # Phase: Dedup check (non-blocking, adds to index)
+    dedup_result = None
+    try:
+        from src.dedup.research import check_duplicate, add_card_to_index
+        result = check_duplicate(preliminary_card)
+        dedup_result = result.to_dict()
+        logger.info(f"[ResearchExec] Dedup: signal={result.signal.value}, score={result.similarity_score:.4f}")
+
+        # Add to index after check (will be saved with write_output)
+        # Note: We add after generation to ensure the card exists
+    except ImportError:
+        logger.debug("[ResearchExec] Dedup module not available, skipping")
+    except Exception as e:
+        logger.warning(f"[ResearchExec] Dedup check failed: {e}")
+
+    # Write output with canonical_core and dedup metadata
     try:
         paths = write_output(
             card_id=card_id,
@@ -189,12 +227,28 @@ def cmd_run(args: argparse.Namespace) -> int:
             validation=validation,
             metadata=metadata,
             output_dir=output_dir,
-            skip_markdown=skip_markdown
+            skip_markdown=skip_markdown,
+            canonical_core=canonical_core,
+            dedup_result=dedup_result
         )
     except IOError as e:
         logger.error(f"[ResearchExec] Disk error: {e}")
         print(f"Error: Failed to write output files: {e}", file=sys.stderr)
         return EXIT_DISK_ERROR
+
+    # Add card to FAISS index after successful write
+    try:
+        from src.dedup.research import add_card_to_index
+        # Reload the full card data with all fields
+        if paths.get("json"):
+            with open(paths["json"], "r", encoding="utf-8") as f:
+                full_card = json.load(f)
+            add_card_to_index(full_card, card_id)
+            logger.info(f"[ResearchExec] Added to dedup index: {card_id}")
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning(f"[ResearchExec] Failed to add to index: {e}")
 
     # Update last run
     update_last_run(card_id, topic, model, output_dir)
@@ -203,6 +257,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     print(f"Card ID: {card_id}")
     print(f"Title: {output.get('title', 'Untitled')}")
     print(f"Quality: {validation.get('quality_score', 'unknown')}")
+    if dedup_result:
+        print(f"Dedup: {dedup_result.get('signal', 'N/A')} (score={dedup_result.get('similarity_score', 0):.2f})")
 
     if paths.get("json"):
         print(f"JSON: {paths['json']}")
