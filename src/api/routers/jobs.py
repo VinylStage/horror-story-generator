@@ -88,7 +88,7 @@ def build_story_command(params: dict) -> list[str]:
 
 def build_research_command(params: dict) -> list[str]:
     """Build CLI command for research generation."""
-    cmd = [sys.executable, "-m", "research_executor", "run"]
+    cmd = [sys.executable, "-m", "src.research.executor", "run"]
 
     # Topic is positional argument
     cmd.append(params["topic"])
@@ -170,7 +170,7 @@ async def trigger_research_generation(request: ResearchTriggerRequest):
     """
     Trigger research generation job.
 
-    Launches `python -m research_executor` as background subprocess.
+    Launches `python -m src.research.executor` as background subprocess.
     Returns immediately with job_id for status tracking.
     """
     ensure_logs_dir()

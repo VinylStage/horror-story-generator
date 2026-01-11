@@ -1,5 +1,5 @@
 """
-Entry point for running as module: python -m research_executor
+Entry point for running as module: python -m src.research.executor
 """
 
 import sys

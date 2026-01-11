@@ -1,7 +1,7 @@
 """
 Research service - business logic for research operations.
 
-Connects to research_executor CLI via subprocess.
+Connects to src.research.executor CLI via subprocess.
 
 Phase B+: Integrates with Ollama resource manager for model lifecycle.
 """
@@ -18,7 +18,7 @@ from .ollama_resource import get_resource_manager
 logger = logging.getLogger(__name__)
 
 # Path to research_executor module
-RESEARCH_EXECUTOR_MODULE = "research_executor"
+RESEARCH_EXECUTOR_MODULE = "src.research.executor"
 
 
 # Default model from config

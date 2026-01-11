@@ -67,7 +67,7 @@ Local-only API server for research card management and deduplication signal eval
 ### Usage
 ```bash
 # Start server
-poetry run uvicorn research_api.main:app --host 127.0.0.1 --port 8000
+poetry run uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 
 # Generate research
 curl -X POST http://localhost:8000/research/run -H "Content-Type: application/json" -d '{"topic": "Korean apartment horror"}'

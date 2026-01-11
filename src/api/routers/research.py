@@ -28,7 +28,7 @@ async def run_research(request: ResearchRunRequest):
     """
     Execute research generation via Ollama.
 
-    This endpoint triggers research_executor CLI via subprocess.
+    This endpoint triggers src.research.executor CLI via subprocess.
     """
     result = await research_service.execute_research(
         topic=request.topic,
