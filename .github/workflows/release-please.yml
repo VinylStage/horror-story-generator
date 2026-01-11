@@ -1,0 +1,53 @@
+# Release Please Workflow
+#
+# STATUS: INACTIVE / PREPARATION ONLY
+#
+# This workflow is configured for MANUAL execution only.
+# It will NOT trigger automatically on push or pull_request.
+#
+# To use: Go to Actions tab → Select "Release Please" → Click "Run workflow"
+#
+# NOTE: Even when run manually, this is configured to create DRAFT PRs only.
+# No releases or tags will be created automatically.
+
+name: Release Please
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no changes)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Release Please (Dry Run)
+        if: ${{ inputs.dry_run == 'true' }}
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # Dry run - only show what would be done
+          dry-run: true
+
+      - name: Run Release Please
+        if: ${{ inputs.dry_run == 'false' }}
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # Will create DRAFT PRs only (configured in release-please-config.json)
