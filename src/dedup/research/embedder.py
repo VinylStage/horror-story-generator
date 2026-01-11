@@ -26,7 +26,7 @@ OLLAMA_EMBED_ENDPOINT = "/api/embed"
 
 # Default embedding model
 # Note: qwen3:30b supports embeddings via Ollama
-DEFAULT_EMBED_MODEL = "qwen3:30b"
+DEFAULT_EMBED_MODEL = "nomic-embed-text"
 
 # Embedding dimension (will be detected from first embedding)
 _embedding_dim: Optional[int] = None

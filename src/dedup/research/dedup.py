@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, List
 
-from .embedder import get_embedding, create_card_text_for_embedding
+from .embedder import get_embedding, create_card_text_for_embedding, DEFAULT_EMBED_MODEL
 from .index import get_index, FaissIndex
 
 logger = logging.getLogger("horror_story_generator")
@@ -87,7 +87,7 @@ def get_dedup_signal(similarity: float) -> DedupSignal:
 def check_duplicate(
     card_data: dict,
     index: Optional[FaissIndex] = None,
-    model: str = "qwen3:30b"
+    model: str = DEFAULT_EMBED_MODEL
 ) -> DedupResult:
     """
     Check if a research card is a semantic duplicate of existing cards.
@@ -167,7 +167,7 @@ def add_card_to_index(
     card_data: dict,
     card_id: str,
     index: Optional[FaissIndex] = None,
-    model: str = "qwen3:30b",
+    model: str = DEFAULT_EMBED_MODEL,
     save: bool = True
 ) -> bool:
     """
@@ -218,7 +218,7 @@ def add_card_to_index(
 def batch_index_cards(
     cards: List[dict],
     index: Optional[FaissIndex] = None,
-    model: str = "qwen3:30b"
+    model: str = DEFAULT_EMBED_MODEL
 ) -> int:
     """
     Add multiple research cards to the index.
@@ -259,7 +259,7 @@ def get_similar_cards(
     card_data: dict,
     k: int = 5,
     index: Optional[FaissIndex] = None,
-    model: str = "qwen3:30b"
+    model: str = DEFAULT_EMBED_MODEL
 ) -> List[tuple]:
     """
     Find cards similar to the given card.

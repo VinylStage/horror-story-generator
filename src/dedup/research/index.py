@@ -34,7 +34,7 @@ class FaissIndex:
         self,
         index_path: Optional[Path] = None,
         metadata_path: Optional[Path] = None,
-        dimension: int = 4096  # Default for qwen3:30b
+        dimension: int = 768  # Default for nomic-embed-text
     ):
         """
         Initialize the FAISS index.
