@@ -243,13 +243,15 @@ JSON 표현:
 
 ---
 
-## **6. 이 문서의 위치 (추천)**
+## **6. 관련 파일**
 
-- /docs/canonical_enum.md
-    
-- /schema/canonical_key.json
-    
-- LLM 프롬프트에 **항상 첨부 가능한 참조 문서**
+| 파일 | 용도 |
+|------|------|
+| `/docs/technical/canonical_enum.md` | 사람용 정의서 (본 문서) |
+| `/assets/canonical/canonical_enum.md` | 동일 문서 (assets 복사본) |
+| `/schema/canonical_key.schema.json` | 기계용 JSON Schema (Draft 2020-12) |
+
+JSON Schema는 본 문서와 동일한 enum 값을 포함하며, 프로그래밍적 검증에 사용된다.
     
 
 ---

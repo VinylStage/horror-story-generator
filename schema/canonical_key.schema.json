@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://horror-story-generator/schema/canonical_key.schema.json",
+  "title": "Canonical Key",
+  "description": "Defines the structural identity of a horror story template through 5 canonical dimensions. Used for deduplication and template uniqueness validation.",
+  "version": "1.0",
+  "type": "object",
+  "properties": {
+    "setting_archetype": {
+      "type": "string",
+      "description": "The essential spatial archetype where horror occurs",
+      "enum": [
+        "apartment",
+        "hospital",
+        "rural",
+        "domestic_space",
+        "digital",
+        "liminal",
+        "infrastructure",
+        "body",
+        "abstract"
+      ]
+    },
+    "primary_fear": {
+      "type": "string",
+      "description": "The single core fear that the story ultimately evokes",
+      "enum": [
+        "loss_of_autonomy",
+        "identity_erasure",
+        "social_displacement",
+        "contamination",
+        "isolation",
+        "annihilation"
+      ]
+    },
+    "antagonist_archetype": {
+      "type": "string",
+      "description": "The type of entity or structure that causes the horror",
+      "enum": [
+        "ghost",
+        "system",
+        "technology",
+        "body",
+        "collective",
+        "unknown"
+      ]
+    },
+    "threat_mechanism": {
+      "type": "string",
+      "description": "The mechanism through which horror operates and persists",
+      "enum": [
+        "surveillance",
+        "possession",
+        "debt",
+        "infection",
+        "impersonation",
+        "confinement",
+        "erosion",
+        "exploitation"
+      ]
+    },
+    "twist_family": {
+      "type": "string",
+      "description": "The structural resolution or twist type of the narrative",
+      "enum": [
+        "revelation",
+        "inevitability",
+        "inversion",
+        "circularity",
+        "self_is_monster",
+        "ambiguity"
+      ]
+    }
+  },
+  "required": [
+    "setting_archetype",
+    "primary_fear",
+    "antagonist_archetype",
+    "threat_mechanism",
+    "twist_family"
+  ],
+  "additionalProperties": false
+}
