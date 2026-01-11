@@ -1,0 +1,147 @@
+Current Path,Category,Proposed New Path,Runtime Impact,Safe to Move
+# ROOT PYTHON MODULES
+main.py,ACTIVE,main.py (keep at root),HIGH,NO - entry point
+horror_story_generator.py,ACTIVE,src/generator/horror_story_generator.py,HIGH,NO - requires import updates
+api_client.py,ACTIVE,src/generator/api_client.py,HIGH,NO - requires import updates
+prompt_builder.py,ACTIVE,src/generator/prompt_builder.py,HIGH,NO - requires import updates
+template_loader.py,ACTIVE,src/generator/template_loader.py,HIGH,NO - requires import updates
+logging_config.py,ACTIVE,src/generator/logging_config.py,MEDIUM,NO - requires import updates
+story_registry.py,ACTIVE,src/dedup/story_registry.py,HIGH,NO - requires import updates
+similarity.py,ACTIVE,src/dedup/similarity.py,MEDIUM,NO - requires import updates
+data_paths.py,ACTIVE,src/common/data_paths.py,HIGH,NO - requires import updates
+job_manager.py,ACTIVE,src/jobs/manager.py,MEDIUM,NO - requires import updates
+job_monitor.py,ACTIVE,src/jobs/monitor.py,MEDIUM,NO - requires import updates
+seed_integration.py,ACTIVE,src/registry/seed_integration.py,MEDIUM,NO - requires import updates
+seed_registry.py,ACTIVE,src/registry/seed_registry.py,MEDIUM,NO - requires import updates
+story_seed.py,ACTIVE,src/common/story_seed.py,MEDIUM,NO - requires import updates
+research_registry.py,ACTIVE,src/registry/research_registry.py,MEDIUM,NO - requires import updates
+# RESEARCH API PACKAGE
+research_api/__init__.py,ACTIVE,src/api/__init__.py,HIGH,NO - requires import updates
+research_api/main.py,ACTIVE,src/api/main.py,HIGH,NO - requires import updates
+research_api/routers/__init__.py,ACTIVE,src/api/routers/__init__.py,MEDIUM,NO - requires import updates
+research_api/routers/jobs.py,ACTIVE,src/api/routers/jobs.py,HIGH,NO - requires import updates
+research_api/routers/research.py,ACTIVE,src/api/routers/research.py,MEDIUM,NO - requires import updates
+research_api/routers/dedup.py,ACTIVE,src/api/routers/dedup.py,MEDIUM,NO - requires import updates
+research_api/schemas/__init__.py,ACTIVE,src/api/schemas/__init__.py,MEDIUM,NO - requires import updates
+research_api/schemas/jobs.py,ACTIVE,src/api/schemas/jobs.py,MEDIUM,NO - requires import updates
+research_api/schemas/research.py,ACTIVE,src/api/schemas/research.py,MEDIUM,NO - requires import updates
+research_api/schemas/dedup.py,ACTIVE,src/api/schemas/dedup.py,MEDIUM,NO - requires import updates
+research_api/services/__init__.py,ACTIVE,src/api/services/__init__.py,MEDIUM,NO - requires import updates
+research_api/services/dedup_service.py,ACTIVE,src/api/services/dedup_service.py,MEDIUM,NO - requires import updates
+research_api/services/research_service.py,ACTIVE,src/api/services/research_service.py,MEDIUM,NO - requires import updates
+research_api/services/ollama_resource.py,ACTIVE,src/api/services/ollama_resource.py,MEDIUM,NO - requires import updates
+# RESEARCH EXECUTOR PACKAGE
+research_executor/__init__.py,ACTIVE,src/research/__init__.py,HIGH,NO - requires import updates
+research_executor/__main__.py,ACTIVE,src/research/__main__.py,HIGH,NO - requires import updates
+research_executor/cli.py,ACTIVE,src/research/cli.py,HIGH,NO - requires import updates
+research_executor/config.py,ACTIVE,src/research/config.py,MEDIUM,NO - requires import updates
+research_executor/executor.py,ACTIVE,src/research/executor.py,HIGH,NO - requires import updates
+research_executor/output_writer.py,ACTIVE,src/research/output_writer.py,MEDIUM,NO - requires import updates
+research_executor/prompt_template.py,ACTIVE,src/research/prompt_template.py,MEDIUM,NO - requires import updates
+research_executor/validator.py,ACTIVE,src/research/validator.py,MEDIUM,NO - requires import updates
+# RESEARCH DEDUP PACKAGE
+research_dedup/__init__.py,ACTIVE,src/dedup/__init__.py (merge),MEDIUM,NO - requires import updates
+research_dedup/dedup.py,ACTIVE,src/dedup/research_dedup.py,MEDIUM,NO - requires import updates
+research_dedup/embedder.py,ACTIVE,src/dedup/embedder.py,MEDIUM,NO - requires import updates
+research_dedup/index.py,ACTIVE,src/dedup/faiss_index.py,MEDIUM,NO - requires import updates
+# RESEARCH INTEGRATION PACKAGE
+research_integration/__init__.py,ACTIVE,src/research/__init__.py (merge),MEDIUM,NO - requires import updates
+research_integration/loader.py,ACTIVE,src/research/loader.py,MEDIUM,NO - requires import updates
+research_integration/selector.py,ACTIVE,src/research/selector.py,MEDIUM,NO - requires import updates
+research_integration/phase_b_hooks.py,ACTIVE,src/research/hooks.py,MEDIUM,NO - requires import updates
+# FOUNDATION ASSETS - KNOWLEDGE UNITS
+phase1_foundation/01_knowledge_units/knowledge_units.json,DATA,assets/knowledge_units/knowledge_units.json,HIGH,NO - path refs in code
+# FOUNDATION ASSETS - TEMPLATES
+phase1_foundation/03_templates/template_skeletons_v1.json,DATA,assets/templates/template_skeletons_v1.json,HIGH,NO - path refs in code
+# FOUNDATION ASSETS - CANONICAL
+phase1_foundation/02_canonical_abstraction/canonical_enum.md,DOC,assets/canonical/canonical_enum.md,LOW,YES
+phase1_foundation/02_canonical_abstraction/ku_canonical_features.json,DATA,assets/canonical/ku_canonical_features.json,MEDIUM,NO - path refs in code
+phase1_foundation/02_canonical_abstraction/resolved_canonical_keys.json,DATA,assets/canonical/resolved_canonical_keys.json,MEDIUM,NO - path refs in code
+# FOUNDATION ASSETS - RAW RESEARCH
+phase1_foundation/00_raw_research/report.md,ARCHIVE,docs/archive/raw_research/report.md,LOW,YES
+phase1_foundation/00_raw_research/results.json,ARCHIVE,docs/archive/raw_research/results.json,LOW,YES
+# PHASE2 EXECUTION SPECS
+phase2_execution/ku_selector/ku_selector_spec.md,ARCHIVE,docs/archive/phase_docs/ku_selector_spec.md,LOW,YES
+phase2_execution/prompt_compiler/prompt_schema.md,ARCHIVE,docs/archive/phase_docs/prompt_schema.md,LOW,YES
+# TESTS
+tests/__init__.py,SUPPORT,tests/__init__.py (no change),LOW,YES
+tests/test_api_client.py,SUPPORT,tests/test_api_client.py (no change),LOW,YES
+tests/test_api_endpoints.py,SUPPORT,tests/test_api_endpoints.py (no change),LOW,YES
+tests/test_data_paths.py,SUPPORT,tests/test_data_paths.py (no change),LOW,YES
+tests/test_dedup_service.py,SUPPORT,tests/test_dedup_service.py (no change),LOW,YES
+tests/test_embedder_mock.py,SUPPORT,tests/test_embedder_mock.py (no change),LOW,YES
+tests/test_faiss_index.py,SUPPORT,tests/test_faiss_index.py (no change),LOW,YES
+tests/test_horror_story_generator.py,SUPPORT,tests/test_horror_story_generator.py (no change),LOW,YES
+tests/test_job_manager.py,SUPPORT,tests/test_job_manager.py (no change),LOW,YES
+tests/test_job_monitor.py,SUPPORT,tests/test_job_monitor.py (no change),LOW,YES
+tests/test_jobs_router.py,SUPPORT,tests/test_jobs_router.py (no change),LOW,YES
+tests/test_logging_config.py,SUPPORT,tests/test_logging_config.py (no change),LOW,YES
+tests/test_ollama_resource.py,SUPPORT,tests/test_ollama_resource.py (no change),LOW,YES
+tests/test_prompt_builder.py,SUPPORT,tests/test_prompt_builder.py (no change),LOW,YES
+tests/test_research_dedup.py,SUPPORT,tests/test_research_dedup.py (no change),LOW,YES
+tests/test_research_registry.py,SUPPORT,tests/test_research_registry.py (no change),LOW,YES
+tests/test_research_service.py,SUPPORT,tests/test_research_service.py (no change),LOW,YES
+tests/test_seed_integration.py,SUPPORT,tests/test_seed_integration.py (no change),LOW,YES
+tests/test_seed_registry.py,SUPPORT,tests/test_seed_registry.py (no change),LOW,YES
+tests/test_similarity.py,SUPPORT,tests/test_similarity.py (no change),LOW,YES
+tests/test_story_seed.py,SUPPORT,tests/test_story_seed.py (no change),LOW,YES
+tests/test_story_seed_mock.py,SUPPORT,tests/test_story_seed_mock.py (no change),LOW,YES
+tests/test_template_loader.py,SUPPORT,tests/test_template_loader.py (no change),LOW,YES
+# CORE DOCUMENTATION
+CONTRIBUTING.md,DOC,docs/core/CONTRIBUTING.md,LOW,YES
+docs/README.md,DOC,docs/core/README.md,LOW,YES
+docs/README_DRAFT.md,DOC,docs/core/README.md (replace),LOW,YES
+docs/ARCHITECTURE_DRAFT.md,DOC,docs/core/ARCHITECTURE.md,LOW,YES
+docs/API_DRAFT.md,DOC,docs/core/API.md,LOW,YES
+docs/roadmap_DRAFT.md,DOC,docs/core/ROADMAP.md,LOW,YES
+docs/DOCUMENT_MAP.md,DOC,docs/core/DOCUMENT_MAP.md,LOW,YES
+# TECHNICAL DOCUMENTATION
+docs/canonical_enum.md,DOC,docs/technical/canonical_enum.md,LOW,YES
+docs/decision_log.md,DOC,docs/technical/decision_log.md,LOW,YES
+docs/runbook_24h_test.md,DOC,docs/technical/runbook_24h_test.md,LOW,YES
+docs/TRIGGER_API.md,DOC,docs/technical/TRIGGER_API.md,LOW,YES
+docs/system_architecture.md,DOC,docs/archive/system_architecture.md (superseded),LOW,YES
+docs/FUTURE_VECTOR_BACKEND_NOTE.md,DOC,docs/technical/FUTURE_VECTOR_BACKEND_NOTE.md,LOW,YES
+# ARCHIVE DOCUMENTATION - PHASE DOCS
+docs/PHASE_B_PLUS.md,ARCHIVE,docs/archive/phase_docs/PHASE_B_PLUS.md,LOW,YES
+docs/PHASE2_PREPARATION_ANALYSIS.md,ARCHIVE,docs/archive/phase_docs/PHASE2_PREPARATION_ANALYSIS.md,LOW,YES
+docs/PHASE2A_TEMPLATE_ACTIVATION.md,ARCHIVE,docs/archive/phase_docs/PHASE2A_TEMPLATE_ACTIVATION.md,LOW,YES
+docs/PHASE2B_GENERATION_MEMORY.md,ARCHIVE,docs/archive/phase_docs/PHASE2B_GENERATION_MEMORY.md,LOW,YES
+docs/PHASE2C_DEDUP_CONTROL.md,ARCHIVE,docs/archive/phase_docs/PHASE2C_DEDUP_CONTROL.md,LOW,YES
+docs/PHASE2C_RESEARCH_JOB.md,ARCHIVE,docs/archive/phase_docs/PHASE2C_RESEARCH_JOB.md,LOW,YES
+docs/PROJECT_HANDOFF.md,ARCHIVE,docs/archive/phase_docs/PROJECT_HANDOFF.md,LOW,YES
+# ARCHIVE DOCUMENTATION - N8N GUIDES
+docs/n8n_environment_setup.md,ARCHIVE,docs/archive/n8n_guides/n8n_environment_setup.md,LOW,YES
+docs/n8n_execute_command_guide.md,ARCHIVE,docs/archive/n8n_guides/n8n_execute_command_guide.md,LOW,YES
+docs/n8n_output_validation.md,ARCHIVE,docs/archive/n8n_guides/n8n_output_validation.md,LOW,YES
+docs/n8n_workflow_import_guide.md,ARCHIVE,docs/archive/n8n_guides/n8n_workflow_import_guide.md,LOW,YES
+# ARCHIVE DOCUMENTATION - WORK LOGS
+docs/work_log_20260108.md,ARCHIVE,docs/archive/work_logs/work_log_20260108.md,LOW,YES
+docs/work_log_20260109.md,ARCHIVE,docs/archive/work_logs/work_log_20260109.md,LOW,YES
+# ARCHIVE DOCUMENTATION - ANALYSIS
+docs/analysis/TASK1_AS_IS_OVERVIEW.md,DOC,docs/archive/analysis/TASK1_AS_IS_OVERVIEW.md,LOW,YES
+docs/analysis/TASK2_PHASE_DOCUMENT_CLASSIFICATION.md,DOC,docs/archive/analysis/TASK2_PHASE_DOCUMENT_CLASSIFICATION.md,LOW,YES
+docs/analysis/TASK3_VERSION_DEFINITION_DRAFT.md,DOC,docs/archive/analysis/TASK3_VERSION_DEFINITION_DRAFT.md,LOW,YES
+docs/analysis/TASK4_DIRECTORY_STRUCTURE_PROPOSAL.md,DOC,docs/archive/analysis/TASK4_DIRECTORY_STRUCTURE_PROPOSAL.md,LOW,YES
+docs/analysis/TASK5_DOCUMENTATION_STRATEGY.md,DOC,docs/archive/analysis/TASK5_DOCUMENTATION_STRATEGY.md,LOW,YES
+docs/analysis/TASK6_CLEANUP_PLAN.md,DOC,docs/archive/analysis/TASK6_CLEANUP_PLAN.md,LOW,YES
+# ARCHIVE - LEGACY TEMPLATES
+archive/templates_legacy/horror_story_prompt_template.json,ARCHIVE,archive/templates_legacy/ (no change),LOW,YES
+archive/templates_legacy/sample.json,ARCHIVE,archive/templates_legacy/ (no change),LOW,YES
+archive/templates_legacy/template_skeletons_v1.json,ARCHIVE,archive/templates_legacy/ (no change),LOW,YES
+# N8N WORKFLOWS
+n8n_workflows/01_basic_generation.json,SUPPORT,docs/archive/n8n_workflows/01_basic_generation.json,LOW,YES
+n8n_workflows/02_template_selection.json,SUPPORT,docs/archive/n8n_workflows/02_basic_generation.json,LOW,YES
+# CONFIGURATION FILES
+pyproject.toml,ACTIVE,pyproject.toml (no change),HIGH,NO
+.release-please-manifest.json,ACTIVE,.release-please-manifest.json (no change),MEDIUM,NO
+release-please-config.json,ACTIVE,release-please-config.json (no change),MEDIUM,NO
+.github/workflows/release-please.yml,ACTIVE,.github/workflows/release-please.yml (no change),LOW,YES
+.env.example,ACTIVE,.env.example (no change),LOW,YES
+.gitignore,ACTIVE,.gitignore (no change),LOW,NO
+# DATA DIRECTORIES (generated at runtime)
+data/research/,DATA,data/research/ (no change),HIGH,NO - runtime generated
+data/seeds/,DATA,data/seeds/ (no change),MEDIUM,NO - runtime generated
+jobs/,DATA,data/jobs/ (consolidate),LOW,YES
+logs/,DATA,logs/ (no change),LOW,YES
+generated_stories/,DATA,data/stories/ (consolidate),MEDIUM,YES - after code update

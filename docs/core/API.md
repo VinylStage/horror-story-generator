@@ -1,0 +1,437 @@
+# API Reference
+
+**Status:** Draft
+**Last Updated:** 2026-01-12
+**Base URL:** `http://localhost:8000`
+
+---
+
+## Overview
+
+The Trigger API provides non-blocking job execution for story and research generation. Jobs are executed as background subprocesses, with status available via polling.
+
+### Design Principle
+
+> **CLI = Source of Truth**
+
+The API triggers CLI commands via subprocess. All business logic resides in the CLI tools (`main.py`, `research_executor`).
+
+---
+
+## Quick Start
+
+```bash
+# Start server
+uvicorn research_api.main:app --host 0.0.0.0 --port 8000
+
+# Trigger story generation
+curl -X POST http://localhost:8000/jobs/story/trigger \
+  -H "Content-Type: application/json" \
+  -d '{"max_stories": 3, "enable_dedup": true}'
+
+# Check status
+curl http://localhost:8000/jobs/{job_id}
+```
+
+---
+
+## Endpoints
+
+### Job Trigger Endpoints
+
+#### POST /jobs/story/trigger
+
+Trigger a story generation job.
+
+**Request Body:**
+
+```json
+{
+  "max_stories": 5,
+  "duration_seconds": 300,
+  "interval_seconds": 30,
+  "enable_dedup": true,
+  "db_path": "/path/to/stories.db",
+  "load_history": true
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `max_stories` | integer | No | 1 | Maximum stories to generate |
+| `duration_seconds` | integer | No | null | Time limit in seconds |
+| `interval_seconds` | integer | No | 0 | Wait between generations |
+| `enable_dedup` | boolean | No | false | Enable deduplication |
+| `db_path` | string | No | null | SQLite database path |
+| `load_history` | boolean | No | false | Load existing stories |
+
+**Response:** `202 Accepted`
+
+```json
+{
+  "job_id": "abc-123-def",
+  "type": "story_generation",
+  "status": "running",
+  "message": "Story generation job started with PID 12345"
+}
+```
+
+---
+
+#### POST /jobs/research/trigger
+
+Trigger a research generation job.
+
+**Request Body:**
+
+```json
+{
+  "topic": "Korean apartment horror",
+  "tags": ["urban", "isolation"],
+  "model": "qwen3:30b",
+  "timeout": 120
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `topic` | string | **Yes** | - | Research topic |
+| `tags` | array | No | [] | Classification tags |
+| `model` | string | No | "qwen3:30b" | Ollama model name |
+| `timeout` | integer | No | 60 | Generation timeout |
+
+**Response:** `202 Accepted`
+
+```json
+{
+  "job_id": "xyz-789-ghi",
+  "type": "research",
+  "status": "running",
+  "message": "Research job started with PID 54321"
+}
+```
+
+---
+
+### Job Management Endpoints
+
+#### GET /jobs/{job_id}
+
+Get status of a specific job.
+
+**Response:** `200 OK`
+
+```json
+{
+  "job_id": "abc-123-def",
+  "type": "story_generation",
+  "status": "succeeded",
+  "params": {
+    "max_stories": 5,
+    "enable_dedup": true
+  },
+  "pid": 12345,
+  "log_path": "logs/story_abc-123-def.log",
+  "artifacts": [
+    "data/stories/story_20260112_143052.json"
+  ],
+  "created_at": "2026-01-12T14:30:00",
+  "started_at": "2026-01-12T14:30:01",
+  "finished_at": "2026-01-12T14:35:00",
+  "exit_code": 0,
+  "error": null
+}
+```
+
+**Error Response:** `404 Not Found`
+
+```json
+{
+  "detail": "Job not found: nonexistent-id"
+}
+```
+
+---
+
+#### GET /jobs
+
+List all jobs with optional filtering.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Filter by status (queued, running, succeeded, failed, cancelled) |
+| `type` | string | Filter by type (story_generation, research) |
+| `limit` | integer | Max results (default: 50, max: 200) |
+
+**Response:** `200 OK`
+
+```json
+{
+  "jobs": [
+    {
+      "job_id": "abc-123-def",
+      "type": "story_generation",
+      "status": "running",
+      ...
+    }
+  ],
+  "total": 1,
+  "message": "Found 1 jobs"
+}
+```
+
+---
+
+#### POST /jobs/{job_id}/cancel
+
+Cancel a running job by sending SIGTERM.
+
+**Response:** `200 OK`
+
+```json
+{
+  "job_id": "abc-123-def",
+  "success": true,
+  "message": "Sent SIGTERM to PID 12345",
+  "error": null
+}
+```
+
+**Error Response:**
+
+```json
+{
+  "job_id": "abc-123-def",
+  "success": false,
+  "message": null,
+  "error": "Job not running (status: succeeded)"
+}
+```
+
+---
+
+### Monitoring Endpoints
+
+#### POST /jobs/monitor
+
+Monitor all running jobs and update their status.
+
+Checks if processes are still running, collects artifacts, and updates job status to succeeded/failed.
+
+**Response:** `200 OK`
+
+```json
+{
+  "monitored_count": 2,
+  "results": [
+    {
+      "job_id": "abc-123-def",
+      "status": "succeeded",
+      "pid": null,
+      "artifacts": ["data/stories/story_1.json"],
+      "error": null,
+      "message": null
+    },
+    {
+      "job_id": "xyz-789-ghi",
+      "status": "running",
+      "pid": 54321,
+      "artifacts": [],
+      "error": null,
+      "message": "Process still running"
+    }
+  ]
+}
+```
+
+---
+
+#### POST /jobs/{job_id}/monitor
+
+Monitor a single job and update its status.
+
+**Response:** `200 OK`
+
+```json
+{
+  "job_id": "abc-123-def",
+  "status": "succeeded",
+  "pid": null,
+  "artifacts": ["data/stories/story_1.json"],
+  "error": null,
+  "message": null
+}
+```
+
+---
+
+#### POST /jobs/{job_id}/dedup_check
+
+Check deduplication signal for a research job's artifact.
+
+Only available for research jobs with completed artifacts.
+
+**Response:** `200 OK`
+
+```json
+{
+  "job_id": "xyz-789-ghi",
+  "has_artifact": true,
+  "artifact_path": "data/research/RC-20260112-143052.json",
+  "signal": "LOW",
+  "similarity_score": 0.15,
+  "message": null
+}
+```
+
+**No Artifact Response:**
+
+```json
+{
+  "job_id": "xyz-789-ghi",
+  "has_artifact": false,
+  "artifact_path": null,
+  "signal": null,
+  "similarity_score": null,
+  "message": "Job has no artifacts yet (still running or failed)"
+}
+```
+
+---
+
+## Data Schemas
+
+### Job Status Values
+
+| Status | Description |
+|--------|-------------|
+| `queued` | Job created, not yet started |
+| `running` | Process is executing |
+| `succeeded` | Process completed with no errors |
+| `failed` | Process exited with errors |
+| `cancelled` | User cancelled the job |
+
+### Job Types
+
+| Type | Description |
+|------|-------------|
+| `story_generation` | Story generation via `main.py` |
+| `research` | Research generation via `research_executor` |
+
+### Dedup Signal Values
+
+| Signal | Score Range | Meaning |
+|--------|-------------|---------|
+| `LOW` | < 0.3 | Sufficiently unique |
+| `MEDIUM` | 0.3 - 0.6 | Some overlap |
+| `HIGH` | > 0.6 | Significant similarity |
+
+---
+
+## Error Handling
+
+### HTTP Status Codes
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 202 | Accepted (job triggered) |
+| 404 | Job not found |
+| 422 | Validation error (invalid parameters) |
+| 500 | Internal server error |
+
+### Error Response Format
+
+```json
+{
+  "detail": "Error message describing the problem"
+}
+```
+
+---
+
+## Workflow Integration
+
+### Polling Pattern
+
+Recommended pattern for n8n or similar workflow tools:
+
+```
+1. POST /jobs/*/trigger → Get job_id
+2. Wait 30 seconds
+3. GET /jobs/{job_id} → Check status
+4. If status == "running": Go to step 2
+5. If status == "succeeded": Process artifacts
+6. If status == "failed": Handle error
+```
+
+### Webhook Integration (Planned)
+
+Future versions may support webhook callbacks:
+
+```json
+{
+  "webhook_url": "https://your-server.com/callback",
+  "events": ["succeeded", "failed"]
+}
+```
+
+---
+
+## CLI Command Mapping
+
+The API triggers these CLI commands:
+
+### Story Generation
+
+```bash
+python main.py \
+  --max-stories {max_stories} \
+  --duration-seconds {duration_seconds} \
+  --interval-seconds {interval_seconds} \
+  --enable-dedup \
+  --db-path {db_path} \
+  --load-history
+```
+
+### Research Generation
+
+```bash
+python -m research_executor run {topic} \
+  --tags {tag1} {tag2} \
+  --model {model} \
+  --timeout {timeout}
+```
+
+---
+
+## Rate Limiting
+
+Currently, no rate limiting is implemented. For production use, consider:
+
+- Adding API key authentication
+- Implementing request rate limits
+- Limiting concurrent jobs per type
+
+---
+
+## Assumptions and Limitations
+
+### Assumptions
+
+- Single instance deployment
+- Local file system access for logs and artifacts
+- Subprocess execution capability
+
+### Limitations
+
+- No authentication (add for production)
+- No WebSocket support for real-time updates
+- Job history not automatically cleaned up
+- No distributed job execution
+
+---
+
+**Note:** This is a draft document. See `docs/DOCUMENT_MAP.md` for documentation status.
