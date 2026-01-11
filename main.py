@@ -22,13 +22,25 @@ from dotenv import load_dotenv
 from horror_story_generator import (
     generate_horror_story, customize_template,
     generate_with_dedup_control, load_past_stories_into_memory,
-    DailyRotatingFileHandler  # Shared logging handler
+    setup_logging  # Reuse shared logging setup
 )
 from story_registry import init_registry, get_registry, close_registry
 
 
 # Phase 1: Graceful shutdown support
 shutdown_requested = False
+
+
+# 환경 변수 로드
+load_dotenv()
+
+# =============================================================================
+# Logging Configuration (reuse horror_story_generator.setup_logging)
+# =============================================================================
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logger = setup_logging(log_level)
+logger.info("메인 스크립트 시작")
+
 
 def signal_handler(signum, frame):
     """
@@ -40,44 +52,6 @@ def signal_handler(signum, frame):
     logger.info(f"{signal_name} 수신 - 현재 작업 완료 후 종료합니다")
     logger.info(f"{'=' * 80}")
     shutdown_requested = True
-
-
-# 환경 변수 로드
-load_dotenv()
-
-# =============================================================================
-# Logging Configuration (unified with horror_story_generator)
-# =============================================================================
-# Uses DailyRotatingFileHandler from horror_story_generator for consistency.
-# Both modules write to the same daily log file.
-# =============================================================================
-log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-numeric_level = getattr(logging, log_level, logging.INFO)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(numeric_level)
-logger.propagate = False  # Prevent duplicate logs
-
-# Clear existing handlers (if re-imported)
-if logger.handlers:
-    logger.handlers.clear()
-
-# Formatter (same as horror_story_generator)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# Console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(numeric_level)
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
-
-# File handler (shared DailyRotatingFileHandler)
-file_handler = DailyRotatingFileHandler(log_dir="logs", encoding='utf-8')
-file_handler.setLevel(numeric_level)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-logger.info(f"메인 스크립트 시작 - 로그 파일: {file_handler.baseFilename}")
 
 
 def run_basic_generation() -> Dict[str, Any]:

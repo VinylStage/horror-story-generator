@@ -25,7 +25,6 @@ from prompt_builder import build_system_prompt, build_user_prompt
 # Phase A: Research integration module
 try:
     from research_integration import select_research_for_template, get_research_context_for_prompt
-    from research_integration.selector import get_research_context_for_prompt
     RESEARCH_INTEGRATION_AVAILABLE = True
 except ImportError:
     RESEARCH_INTEGRATION_AVAILABLE = False

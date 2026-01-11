@@ -11,8 +11,8 @@ OLLAMA_BASE_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
 OLLAMA_GENERATE_ENDPOINT = "/api/generate"
 OLLAMA_TAGS_ENDPOINT = "/api/tags"
 
-# Default model
-DEFAULT_MODEL = "qwen3:30b"
+# Default model (qwen2.5:14b is faster and more reliable for local execution)
+DEFAULT_MODEL = "qwen2.5:14b"
 
 # Timeouts (seconds)
 DEFAULT_TIMEOUT = 300

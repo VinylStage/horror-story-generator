@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "n8n-test"
+name = "horror-story-generator"
 version = "0.1.0"
-description = ""
+description = "Korean horror story generator using Claude API with research integration"
 authors = ["VinylStage <mcpe9869@gmail.com>"]
 package-mode = false
 
