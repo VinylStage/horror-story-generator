@@ -29,12 +29,12 @@ class TestGetProjectRoot:
         assert result.exists()
         assert result.is_dir()
 
-    def test_contains_data_paths_file(self):
-        """Should be the directory containing data_paths.py."""
+    def test_contains_main_py(self):
+        """Should be the project root containing main.py."""
         from src.infra.data_paths import get_project_root
 
         result = get_project_root()
-        assert (result / "data_paths.py").exists()
+        assert (result / "main.py").exists()
 
 
 class TestGetDataRoot:

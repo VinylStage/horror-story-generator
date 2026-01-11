@@ -295,7 +295,7 @@ class TestFaissIndexLoad:
         """Should fail when FAISS not available."""
         from src.dedup.research.index import FaissIndex
 
-        with patch("research_dedup.index.FAISS_AVAILABLE", False):
+        with patch("src.dedup.research.index.FAISS_AVAILABLE", False):
             index = FaissIndex()
             result = index._load()
 
@@ -348,7 +348,7 @@ class TestGetIndex:
     def test_get_index_creates_global(self):
         """Should create global index instance."""
         from src.dedup.research.index import get_index, is_faiss_available
-        import research_dedup.index as module
+        import src.dedup.research.index as module
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -371,7 +371,7 @@ class TestGetIndex:
     def test_get_index_returns_same_instance(self):
         """Should return same global instance."""
         from src.dedup.research.index import get_index, is_faiss_available
-        import research_dedup.index as module
+        import src.dedup.research.index as module
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -394,7 +394,7 @@ class TestGetIndex:
     def test_get_index_uses_default_paths(self):
         """Should use default paths from data_paths."""
         from src.dedup.research.index import get_index, is_faiss_available
-        import research_dedup.index as module
+        import src.dedup.research.index as module
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -403,8 +403,8 @@ class TestGetIndex:
         module._global_index = None
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("data_paths.get_faiss_index_path", return_value=Path(tmpdir) / "default.faiss"):
-                with patch("data_paths.get_vector_metadata_path", return_value=Path(tmpdir) / "default.json"):
+            with patch("src.infra.data_paths.get_faiss_index_path", return_value=Path(tmpdir) / "default.faiss"):
+                with patch("src.infra.data_paths.get_vector_metadata_path", return_value=Path(tmpdir) / "default.json"):
                     index = get_index()
 
                     assert index is not None
@@ -415,7 +415,7 @@ class TestGetIndex:
     def test_get_index_import_error(self):
         """Should handle ImportError for data_paths."""
         from src.dedup.research.index import get_index, is_faiss_available
-        import research_dedup.index as module
+        import src.dedup.research.index as module
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -441,7 +441,7 @@ class TestEnsureIndex:
 
         index = FaissIndex()
 
-        with patch("research_dedup.index.FAISS_AVAILABLE", False):
+        with patch("src.dedup.research.index.FAISS_AVAILABLE", False):
             result = index._ensure_index()
 
             assert result is False

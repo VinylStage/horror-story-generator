@@ -359,7 +359,7 @@ class TestGetEmbeddingFunctions:
     def test_get_embedder_singleton(self):
         """Should return same embedder instance for same model."""
         from src.dedup.research.embedder import get_embedder
-        import research_dedup.embedder as module
+        import src.dedup.research.embedder as module
 
         # Reset global state
         module._embedder = None

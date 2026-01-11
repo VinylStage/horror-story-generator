@@ -37,9 +37,9 @@ class TestStoryTriggerEndpoint:
         logs_dir = temp_jobs_dir.parent / "logs"
         logs_dir.mkdir(exist_ok=True)
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("research_api.routers.jobs.LOGS_DIR", logs_dir):
-                with patch("research_api.routers.jobs.subprocess.Popen") as mock_popen:
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.api.routers.jobs.LOGS_DIR", logs_dir):
+                with patch("src.api.routers.jobs.subprocess.Popen") as mock_popen:
                     mock_process = MagicMock()
                     mock_process.pid = 12345
                     mock_popen.return_value = mock_process
@@ -60,9 +60,9 @@ class TestStoryTriggerEndpoint:
         logs_dir = temp_jobs_dir.parent / "logs"
         logs_dir.mkdir(exist_ok=True)
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("research_api.routers.jobs.LOGS_DIR", logs_dir):
-                with patch("research_api.routers.jobs.subprocess.Popen") as mock_popen:
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.api.routers.jobs.LOGS_DIR", logs_dir):
+                with patch("src.api.routers.jobs.subprocess.Popen") as mock_popen:
                     mock_process = MagicMock()
                     mock_process.pid = 99999
                     mock_popen.return_value = mock_process
@@ -99,9 +99,9 @@ class TestResearchTriggerEndpoint:
         logs_dir = temp_jobs_dir.parent / "logs"
         logs_dir.mkdir(exist_ok=True)
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("research_api.routers.jobs.LOGS_DIR", logs_dir):
-                with patch("research_api.routers.jobs.subprocess.Popen") as mock_popen:
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.api.routers.jobs.LOGS_DIR", logs_dir):
+                with patch("src.api.routers.jobs.subprocess.Popen") as mock_popen:
                     mock_process = MagicMock()
                     mock_process.pid = 54321
                     mock_popen.return_value = mock_process
@@ -137,7 +137,7 @@ class TestJobStatusEndpoint:
         """Should return job status."""
         from src.infra.job_manager import create_job, update_job_status
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             # Create a job directly
             job = create_job("story_generation", {"max_stories": 1})
             update_job_status(job.job_id, "running", pid=11111)
@@ -153,7 +153,7 @@ class TestJobStatusEndpoint:
 
     def test_get_nonexistent_job(self, client, temp_jobs_dir):
         """Should return 404 for nonexistent job."""
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             response = client.get("/jobs/nonexistent-job-id")
 
             assert response.status_code == 404
@@ -164,7 +164,7 @@ class TestJobListEndpoint:
 
     def test_list_jobs_empty(self, client, temp_jobs_dir):
         """Should return empty list when no jobs."""
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             response = client.get("/jobs")
 
             assert response.status_code == 200
@@ -176,7 +176,7 @@ class TestJobListEndpoint:
         """Should filter jobs by status and type."""
         from src.infra.job_manager import create_job, update_job_status
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             # Create jobs
             job1 = create_job("story_generation", {})
             job2 = create_job("research", {})
@@ -234,7 +234,7 @@ class TestBuildCommands:
         cmd = build_research_command(params)
 
         assert "-m" in cmd
-        assert "research_executor" in cmd
+        assert "src.research.executor" in cmd
         assert "run" in cmd
         assert "Korean horror" in cmd
         assert "--tags" in cmd
@@ -284,7 +284,7 @@ class TestDedupCheckEndpoint:
 
     def test_dedup_check_nonexistent_job(self, client, temp_jobs_dir):
         """Should return 404 for nonexistent job."""
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             response = client.post("/jobs/nonexistent/dedup_check")
 
         assert response.status_code == 404
@@ -300,8 +300,8 @@ class TestDedupCheckEndpoint:
             artifacts=["/path/to/story.json"]
         )
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("research_api.routers.jobs.load_job", return_value=job):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.api.routers.jobs.load_job", return_value=job):
                 response = client.post("/jobs/story-job/dedup_check")
 
         assert response.status_code == 200
@@ -320,8 +320,8 @@ class TestDedupCheckEndpoint:
             artifacts=[]
         )
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("research_api.routers.jobs.load_job", return_value=job):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.api.routers.jobs.load_job", return_value=job):
                 response = client.post("/jobs/research-empty/dedup_check")
 
         assert response.status_code == 200
@@ -357,9 +357,9 @@ class TestDedupCheckEndpoint:
             artifacts=[str(card_file)]
         )
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("research_api.routers.jobs.load_job", return_value=job):
-                with patch("research_api.services.dedup_service.evaluate_dedup") as mock_dedup:
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.api.routers.jobs.load_job", return_value=job):
+                with patch("src.api.services.dedup_service.evaluate_dedup") as mock_dedup:
                     mock_dedup.return_value = {
                         "signal": "LOW",
                         "similarity_score": 0.1,

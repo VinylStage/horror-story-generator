@@ -82,13 +82,13 @@ class TestSelectSeedForGeneration:
         from src.story.seed_integration import select_seed_for_generation, SeedSelection
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("seed_integration.get_seed_registry") as mock_registry:
+            with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
                 mock_reg = MagicMock()
                 mock_reg.list_available.return_value = []
                 mock_reg.count.return_value = 0
                 mock_registry.return_value = mock_reg
 
-                with patch("seed_integration.list_seeds", return_value=[]):
+                with patch("src.story.seed_integration.list_seeds", return_value=[]):
                     result = select_seed_for_generation()
 
                     assert isinstance(result, SeedSelection)
@@ -97,7 +97,7 @@ class TestSelectSeedForGeneration:
         """Should handle registry being unavailable."""
         from src.story.seed_integration import select_seed_for_generation
 
-        with patch("seed_integration.get_seed_registry") as mock_registry:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
             mock_registry.side_effect = Exception("Database error")
 
             result = select_seed_for_generation()
@@ -110,13 +110,13 @@ class TestSelectSeedForGeneration:
         """Should handle no seeds available."""
         from src.story.seed_integration import select_seed_for_generation
 
-        with patch("seed_integration.get_seed_registry") as mock_registry:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
             mock_reg.list_available.return_value = []
             mock_reg.count.return_value = 0
             mock_registry.return_value = mock_reg
 
-            with patch("seed_integration.list_seeds", return_value=[]):
+            with patch("src.story.seed_integration.list_seeds", return_value=[]):
                 result = select_seed_for_generation()
 
                 assert result.seed is None
@@ -127,7 +127,7 @@ class TestSelectSeedForGeneration:
         from src.story.seed_integration import select_seed_for_generation
         from src.registry.seed_registry import SeedRecord
 
-        with patch("seed_integration.get_seed_registry") as mock_registry:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
             mock_record = SeedRecord(
                 seed_id="SS-001",
@@ -141,7 +141,7 @@ class TestSelectSeedForGeneration:
             mock_reg.get_least_used.return_value = mock_record
             mock_registry.return_value = mock_reg
 
-            with patch("seed_integration.load_seed") as mock_load:
+            with patch("src.story.seed_integration.load_seed") as mock_load:
                 mock_load.return_value = None  # Will trigger file not found
 
                 result = select_seed_for_generation(strategy="least_used")
@@ -153,7 +153,7 @@ class TestSelectSeedForGeneration:
         from src.story.seed_integration import select_seed_for_generation
         from src.registry.seed_registry import SeedRecord
 
-        with patch("seed_integration.get_seed_registry") as mock_registry:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
             mock_record = SeedRecord(
                 seed_id="SS-001",
@@ -164,7 +164,7 @@ class TestSelectSeedForGeneration:
             mock_reg.count.return_value = 1
             mock_registry.return_value = mock_reg
 
-            with patch("seed_integration.load_seed", return_value=None):
+            with patch("src.story.seed_integration.load_seed", return_value=None):
                 result = select_seed_for_generation(strategy="random")
 
                 assert isinstance(result.total_available, int)
@@ -174,7 +174,7 @@ class TestSelectSeedForGeneration:
         from src.story.seed_integration import select_seed_for_generation
 
         # Various failure scenarios
-        with patch("seed_integration.get_seed_registry") as mock_registry:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
             mock_registry.side_effect = RuntimeError("Catastrophic failure")
 
             # Should not raise
@@ -307,7 +307,7 @@ class TestMarkSeedUsed:
         """Should mark seed as used."""
         from src.story.seed_integration import mark_seed_used
 
-        with patch("seed_integration.get_seed_registry") as mock_get:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_get:
             mock_reg = MagicMock()
             mock_reg.mark_used.return_value = True
             mock_get.return_value = mock_reg
@@ -321,7 +321,7 @@ class TestMarkSeedUsed:
         """Should return False on registry error."""
         from src.story.seed_integration import mark_seed_used
 
-        with patch("seed_integration.get_seed_registry") as mock_get:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_get:
             mock_get.side_effect = Exception("Database error")
 
             result = mark_seed_used("SS-001")
@@ -348,12 +348,12 @@ class TestGetSeedInjectionStatus:
         """Should return status dictionary."""
         from src.story.seed_integration import get_seed_injection_status
 
-        with patch("seed_integration.get_seed_registry") as mock_get:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_get:
             mock_reg = MagicMock()
             mock_reg.get_stats.return_value = {"total": 5, "available": 3}
             mock_get.return_value = mock_reg
 
-            with patch("seed_integration.list_seeds", return_value=[]):
+            with patch("src.story.seed_integration.list_seeds", return_value=[]):
                 result = get_seed_injection_status()
 
                 assert "available" in result
@@ -364,7 +364,7 @@ class TestGetSeedInjectionStatus:
         """Should handle errors gracefully."""
         from src.story.seed_integration import get_seed_injection_status
 
-        with patch("seed_integration.get_seed_registry") as mock_get:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_get:
             mock_get.side_effect = Exception("Database unavailable")
 
             result = get_seed_injection_status()
@@ -391,7 +391,7 @@ class TestSelectSeedAdvanced:
             cultural_elements=[]
         )
 
-        with patch("seed_integration.get_seed_registry") as mock_registry:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
             mock_record = SeedRecord(
                 seed_id="SS-001",
@@ -406,7 +406,7 @@ class TestSelectSeedAdvanced:
 
             # Mock Path.exists to return True so the seed file is "found"
             with patch("pathlib.Path.exists", return_value=True):
-                with patch("seed_integration.load_seed", return_value=mock_seed):
+                with patch("src.story.seed_integration.load_seed", return_value=mock_seed):
                     result = select_seed_for_generation()
 
                     assert result.seed is not None
@@ -427,17 +427,17 @@ class TestSelectSeedAdvanced:
             cultural_elements=[]
         )
 
-        with patch("seed_integration.get_seed_registry") as mock_registry:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
             mock_reg.list_available.return_value = []
             mock_reg.count.return_value = 0
             mock_registry.return_value = mock_reg
 
-            with patch("seed_integration.list_seeds") as mock_list:
+            with patch("src.story.seed_integration.list_seeds") as mock_list:
                 from pathlib import Path
                 mock_list.return_value = [Path("/fake/SS-FILE-001.json")]
 
-                with patch("seed_integration.load_seed", return_value=mock_seed):
+                with patch("src.story.seed_integration.load_seed", return_value=mock_seed):
                     result = select_seed_for_generation()
 
                     # Should have attempted to get seed from file system
@@ -458,7 +458,7 @@ class TestSelectSeedAdvanced:
             cultural_elements=[]
         )
 
-        with patch("seed_integration.get_seed_registry") as mock_registry:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
             records = [
                 SeedRecord(seed_id=f"SS-00{i}", source_card_id="RC-001", created_at=datetime.now(), file_path=f"/path/SS-00{i}.json")
@@ -469,7 +469,7 @@ class TestSelectSeedAdvanced:
             mock_registry.return_value = mock_reg
 
             with patch("pathlib.Path.exists", return_value=True):
-                with patch("seed_integration.load_seed", return_value=mock_seed):
+                with patch("src.story.seed_integration.load_seed", return_value=mock_seed):
                     with patch("random.choice", return_value=records[2]):
                         result = select_seed_for_generation(strategy="random")
 
@@ -481,7 +481,7 @@ class TestSelectSeedAdvanced:
         from src.story.seed_integration import select_seed_for_generation
         from src.registry.seed_registry import SeedRecord
 
-        with patch("seed_integration.get_seed_registry") as mock_registry:
+        with patch("src.story.seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
             mock_record = SeedRecord(
                 seed_id="SS-001",
@@ -494,7 +494,7 @@ class TestSelectSeedAdvanced:
             mock_reg.get_least_used.return_value = mock_record
             mock_registry.return_value = mock_reg
 
-            with patch("seed_integration.load_seed", return_value=None):
+            with patch("src.story.seed_integration.load_seed", return_value=None):
                 result = select_seed_for_generation()
 
                 # Load failed, but should handle gracefully

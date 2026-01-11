@@ -232,7 +232,7 @@ class TestGetResourceManager:
             OllamaResourceManager,
             _resource_manager
         )
-        import research_api.services.ollama_resource as module
+        import src.api.services.ollama_resource as module
 
         # Reset global state
         module._resource_manager = None
@@ -247,7 +247,7 @@ class TestGetResourceManager:
     def test_returns_same_instance(self):
         """Should return same instance on multiple calls."""
         from src.api.services.ollama_resource import get_resource_manager
-        import research_api.services.ollama_resource as module
+        import src.api.services.ollama_resource as module
 
         # Reset global state
         module._resource_manager = None
@@ -272,7 +272,7 @@ class TestStartupShutdown:
             shutdown_resource_manager,
             get_resource_manager
         )
-        import research_api.services.ollama_resource as module
+        import src.api.services.ollama_resource as module
 
         # Reset global state
         module._resource_manager = None
@@ -291,7 +291,7 @@ class TestStartupShutdown:
             startup_resource_manager,
             shutdown_resource_manager
         )
-        import research_api.services.ollama_resource as module
+        import src.api.services.ollama_resource as module
 
         # Reset global state
         module._resource_manager = None
@@ -305,7 +305,7 @@ class TestStartupShutdown:
     async def test_shutdown_handles_no_manager(self):
         """Should handle shutdown when no manager exists."""
         from src.api.services.ollama_resource import shutdown_resource_manager
-        import research_api.services.ollama_resource as module
+        import src.api.services.ollama_resource as module
 
         # Ensure no manager
         module._resource_manager = None
@@ -363,7 +363,7 @@ class TestEnvironmentConfiguration:
             os.environ["OLLAMA_BASE_URL"] = "http://custom-ollama:11434"
 
             # Reimport to pick up new env var
-            import research_api.services.ollama_resource as module
+            import src.api.services.ollama_resource as module
             importlib.reload(module)
 
             assert module.OLLAMA_BASE_URL == "http://custom-ollama:11434"
@@ -375,7 +375,7 @@ class TestEnvironmentConfiguration:
                 os.environ.pop("OLLAMA_BASE_URL", None)
 
             # Restore default
-            import research_api.services.ollama_resource as module
+            import src.api.services.ollama_resource as module
             importlib.reload(module)
 
     def test_uses_env_idle_timeout(self):
@@ -389,7 +389,7 @@ class TestEnvironmentConfiguration:
             os.environ["OLLAMA_IDLE_TIMEOUT_SECONDS"] = "600"
 
             # Reimport to pick up new env var
-            import research_api.services.ollama_resource as module
+            import src.api.services.ollama_resource as module
             importlib.reload(module)
 
             assert module.OLLAMA_IDLE_TIMEOUT_SECONDS == 600
@@ -401,5 +401,5 @@ class TestEnvironmentConfiguration:
                 os.environ.pop("OLLAMA_IDLE_TIMEOUT_SECONDS", None)
 
             # Restore default
-            import research_api.services.ollama_resource as module
+            import src.api.services.ollama_resource as module
             importlib.reload(module)

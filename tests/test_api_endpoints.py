@@ -16,8 +16,8 @@ class TestHealthEndpoint:
         from fastapi.testclient import TestClient
         from src.api.main import app
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
                 client = TestClient(app)
                 response = client.get("/health")
 
@@ -41,9 +41,9 @@ class TestResourceStatusEndpoint:
             "model_count": 0
         }
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.main.get_resource_manager") as mock_get:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.main.get_resource_manager") as mock_get:
                     mock_manager = MagicMock()
                     mock_manager.get_status.return_value = mock_status
                     mock_get.return_value = mock_manager
@@ -70,9 +70,9 @@ class TestResearchRunEndpoint:
             "output_path": "/path/to/card.json"
         }
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.research_service.execute_research", new_callable=AsyncMock) as mock_exec:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.research_service.execute_research", new_callable=AsyncMock) as mock_exec:
                     mock_exec.return_value = mock_result
 
                     client = TestClient(app)
@@ -98,9 +98,9 @@ class TestResearchRunEndpoint:
             "output_path": None
         }
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.research_service.execute_research", new_callable=AsyncMock) as mock_exec:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.research_service.execute_research", new_callable=AsyncMock) as mock_exec:
                     mock_exec.return_value = mock_result
 
                     client = TestClient(app)
@@ -119,9 +119,9 @@ class TestResearchRunEndpoint:
         from fastapi.testclient import TestClient
         from src.api.main import app
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.research_service.execute_research", new_callable=AsyncMock) as mock_exec:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.research_service.execute_research", new_callable=AsyncMock) as mock_exec:
                     mock_exec.return_value = {"card_id": "RC-001", "status": "complete"}
 
                     client = TestClient(app)
@@ -152,9 +152,9 @@ class TestResearchValidateEndpoint:
             "message": "Validation passed"
         }
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.research_service.validate_card", new_callable=AsyncMock) as mock_validate:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.research_service.validate_card", new_callable=AsyncMock) as mock_validate:
                     mock_validate.return_value = mock_result
 
                     client = TestClient(app)
@@ -180,9 +180,9 @@ class TestResearchValidateEndpoint:
             "message": "Card not found"
         }
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.research_service.validate_card", new_callable=AsyncMock) as mock_validate:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.research_service.validate_card", new_callable=AsyncMock) as mock_validate:
                     mock_validate.return_value = mock_result
 
                     client = TestClient(app)
@@ -226,9 +226,9 @@ class TestResearchListEndpoint:
             "offset": 0
         }
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.research_service.list_cards", new_callable=AsyncMock) as mock_list:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.research_service.list_cards", new_callable=AsyncMock) as mock_list:
                     mock_list.return_value = mock_result
 
                     client = TestClient(app)
@@ -244,9 +244,9 @@ class TestResearchListEndpoint:
         from fastapi.testclient import TestClient
         from src.api.main import app
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.research_service.list_cards", new_callable=AsyncMock) as mock_list:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.research_service.list_cards", new_callable=AsyncMock) as mock_list:
                     mock_list.return_value = {"cards": [], "total": 0, "limit": 5, "offset": 10}
 
                     client = TestClient(app)
@@ -263,9 +263,9 @@ class TestResearchListEndpoint:
         from fastapi.testclient import TestClient
         from src.api.main import app
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.research_service.list_cards", new_callable=AsyncMock) as mock_list:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.research_service.list_cards", new_callable=AsyncMock) as mock_list:
                     mock_list.return_value = {"cards": [], "total": 0, "limit": 10, "offset": 0}
 
                     client = TestClient(app)
@@ -291,9 +291,9 @@ class TestDedupEvaluateEndpoint:
             "message": None
         }
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.dedup_service.evaluate_dedup", new_callable=AsyncMock) as mock_eval:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.dedup_service.evaluate_dedup", new_callable=AsyncMock) as mock_eval:
                     mock_eval.return_value = mock_result
 
                     client = TestClient(app)
@@ -332,9 +332,9 @@ class TestDedupEvaluateEndpoint:
             "message": "High similarity detected"
         }
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.dedup_service.evaluate_dedup", new_callable=AsyncMock) as mock_eval:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.dedup_service.evaluate_dedup", new_callable=AsyncMock) as mock_eval:
                     mock_eval.return_value = mock_result
 
                     client = TestClient(app)
@@ -360,9 +360,9 @@ class TestDedupEvaluateEndpoint:
         from fastapi.testclient import TestClient
         from src.api.main import app
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
-                with patch("research_api.services.dedup_service.evaluate_dedup", new_callable=AsyncMock) as mock_eval:
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
+                with patch("src.api.services.dedup_service.evaluate_dedup", new_callable=AsyncMock) as mock_eval:
                     mock_eval.return_value = {"signal": "LOW", "similarity_score": 0.0, "similar_stories": []}
 
                     client = TestClient(app)
@@ -382,8 +382,8 @@ class TestOpenAPISchema:
         from fastapi.testclient import TestClient
         from src.api.main import app
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
                 client = TestClient(app)
                 response = client.get("/openapi.json")
 
@@ -397,8 +397,8 @@ class TestOpenAPISchema:
         from fastapi.testclient import TestClient
         from src.api.main import app
 
-        with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
-            with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
+        with patch("src.api.main.startup_resource_manager", new_callable=AsyncMock):
+            with patch("src.api.main.shutdown_resource_manager", new_callable=AsyncMock):
                 client = TestClient(app)
                 response = client.get("/docs")
 

@@ -345,7 +345,7 @@ class TestCheckDuplicate:
 
         card_data = {"input": {"topic": "Test"}}
 
-        with patch("research_dedup.dedup.get_embedding", return_value=None):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=None):
             result = check_duplicate(card_data, index=index)
 
             assert result.signal == DedupSignal.LOW
@@ -364,7 +364,7 @@ class TestCheckDuplicate:
 
         card_data = {"input": {"topic": "Test"}}
 
-        with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=embedding):
             result = check_duplicate(card_data, index=index)
 
             assert result.nearest_card_id == "RC-001"
@@ -388,7 +388,7 @@ class TestCheckDuplicate:
             "metadata": {"card_id": "RC-001"}  # Exclude self
         }
 
-        with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=embedding):
             result = check_duplicate(card_data, index=index)
 
             # Should find RC-002, not RC-001 (self)
@@ -408,7 +408,7 @@ class TestCheckDuplicate:
 
         card_data = {"input": {"topic": "Test"}, "metadata": {"card_id": "RC-001"}}
 
-        with patch("research_dedup.dedup.get_embedding", return_value=[0.1] * 4096):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=[0.1] * 4096):
             # Mock get_nearest to return None
             with patch.object(index, "get_nearest", return_value=None):
                 result = check_duplicate(card_data, index=index)
@@ -431,7 +431,7 @@ class TestAddCardToIndex:
         card_data = {"input": {"topic": "Test"}, "output": {"title": "Title"}}
         embedding = [0.1] * 4096
 
-        with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=embedding):
             result = add_card_to_index(card_data, "RC-001", index=index, save=False)
 
             assert result is True
@@ -451,7 +451,7 @@ class TestAddCardToIndex:
         card_data = {"input": {"topic": "Test"}}
 
         # Should return True without calling get_embedding
-        with patch("research_dedup.dedup.get_embedding") as mock_embed:
+        with patch("src.dedup.research.dedup.get_embedding") as mock_embed:
             result = add_card_to_index(card_data, "RC-001", index=index)
 
             assert result is True
@@ -483,7 +483,7 @@ class TestAddCardToIndex:
         index = FaissIndex()
         card_data = {"input": {"topic": "Test"}}
 
-        with patch("research_dedup.dedup.get_embedding", return_value=None):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=None):
             result = add_card_to_index(card_data, "RC-001", index=index)
 
             assert result is False
@@ -504,7 +504,7 @@ class TestAddCardToIndex:
             card_data = {"input": {"topic": "Test"}}
             embedding = [0.1] * 4096
 
-            with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+            with patch("src.dedup.research.dedup.get_embedding", return_value=embedding):
                 result = add_card_to_index(card_data, "RC-001", index=index, save=True)
 
                 assert result is True
@@ -533,7 +533,7 @@ class TestBatchIndexCards:
                 {"input": {"topic": "Test 3"}, "metadata": {"card_id": "RC-003"}},
             ]
 
-            with patch("research_dedup.dedup.get_embedding", return_value=[0.1] * 4096):
+            with patch("src.dedup.research.dedup.get_embedding", return_value=[0.1] * 4096):
                 added = batch_index_cards(cards, index=index)
 
                 assert added == 3
@@ -554,7 +554,7 @@ class TestBatchIndexCards:
             {"input": {"topic": "Test 3"}},  # No metadata
         ]
 
-        with patch("research_dedup.dedup.get_embedding", return_value=[0.1] * 4096):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=[0.1] * 4096):
             added = batch_index_cards(cards, index=index)
 
             assert added == 1  # Only one with valid card_id
@@ -621,7 +621,7 @@ class TestGetSimilarCards:
 
         card_data = {"input": {"topic": "Test"}}
 
-        with patch("research_dedup.dedup.get_embedding", return_value=None):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=None):
             result = get_similar_cards(card_data, index=index)
 
             assert result == []
@@ -642,7 +642,7 @@ class TestGetSimilarCards:
         card_data = {"input": {"topic": "Test"}}
 
         # Query with same embedding as RC-001
-        with patch("research_dedup.dedup.get_embedding", return_value=[1.0] + [0.0] * 4095):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=[1.0] + [0.0] * 4095):
             result = get_similar_cards(card_data, k=5, index=index)
 
             assert len(result) > 0
@@ -666,7 +666,7 @@ class TestGetSimilarCards:
             "metadata": {"card_id": "RC-001"}
         }
 
-        with patch("research_dedup.dedup.get_embedding", return_value=embedding):
+        with patch("src.dedup.research.dedup.get_embedding", return_value=embedding):
             result = get_similar_cards(card_data, k=5, index=index)
 
             # RC-001 should be excluded

@@ -138,7 +138,7 @@ class TestEvaluateDedup:
         mock_registry.load_recent_accepted.return_value = []
         mock_registry.close = MagicMock()
 
-        with patch("research_api.services.dedup_service.StoryRegistry", return_value=mock_registry):
+        with patch("src.api.services.dedup_service.StoryRegistry", return_value=mock_registry):
             result = await evaluate_dedup(
                 template_id="test_001",
                 canonical_core={"setting": "apartment"}
@@ -163,7 +163,7 @@ class TestEvaluateDedup:
         mock_registry.load_recent_accepted.return_value = mock_stories
         mock_registry.close = MagicMock()
 
-        with patch("research_api.services.dedup_service.StoryRegistry", return_value=mock_registry):
+        with patch("src.api.services.dedup_service.StoryRegistry", return_value=mock_registry):
             result = await evaluate_dedup(
                 template_id="test_001",
                 canonical_core={}
@@ -186,8 +186,8 @@ class TestEvaluateDedup:
         mock_registry.close = MagicMock()
 
         # Mock parse_semantic_summary to return a matching core
-        with patch("research_api.services.dedup_service.StoryRegistry", return_value=mock_registry):
-            with patch("research_api.services.dedup_service.parse_semantic_summary") as mock_parse:
+        with patch("src.api.services.dedup_service.StoryRegistry", return_value=mock_registry):
+            with patch("src.api.services.dedup_service.parse_semantic_summary") as mock_parse:
                 mock_parse.return_value = {
                     "setting": "apartment",
                     "primary_fear": "isolation"
@@ -213,8 +213,8 @@ class TestEvaluateDedup:
         mock_registry.load_recent_accepted.return_value = mock_stories
         mock_registry.close = MagicMock()
 
-        with patch("research_api.services.dedup_service.StoryRegistry", return_value=mock_registry):
-            with patch("research_api.services.dedup_service.parse_semantic_summary") as mock_parse:
+        with patch("src.api.services.dedup_service.StoryRegistry", return_value=mock_registry):
+            with patch("src.api.services.dedup_service.parse_semantic_summary") as mock_parse:
                 # Return identical core for high similarity
                 mock_parse.return_value = {
                     "setting": "a", "primary_fear": "b", "antagonist": "c",
@@ -242,15 +242,15 @@ class TestEvaluateDedup:
         mock_registry.load_recent_accepted.return_value = mock_stories
         mock_registry.close = MagicMock()
 
-        with patch("research_api.services.dedup_service.StoryRegistry", return_value=mock_registry):
-            with patch("research_api.services.dedup_service.parse_semantic_summary") as mock_parse:
+        with patch("src.api.services.dedup_service.StoryRegistry", return_value=mock_registry):
+            with patch("src.api.services.dedup_service.parse_semantic_summary") as mock_parse:
                 # Partial match
                 mock_parse.return_value = {
                     "setting": "apartment",
                     "primary_fear": "isolation"
                 }
 
-                with patch("research_api.services.dedup_service.compute_canonical_similarity", return_value=0.5):
+                with patch("src.api.services.dedup_service.compute_canonical_similarity", return_value=0.5):
                     result = await evaluate_dedup(
                         canonical_core={"setting": "apartment", "primary_fear": "isolation"}
                     )
@@ -263,7 +263,7 @@ class TestEvaluateDedup:
         """Should handle exceptions gracefully."""
         from src.api.services.dedup_service import evaluate_dedup
 
-        with patch("research_api.services.dedup_service.StoryRegistry", side_effect=Exception("DB error")):
+        with patch("src.api.services.dedup_service.StoryRegistry", side_effect=Exception("DB error")):
             result = await evaluate_dedup()
 
             assert result["signal"] == "LOW"
@@ -283,11 +283,11 @@ class TestEvaluateDedup:
         mock_registry.load_recent_accepted.return_value = mock_stories
         mock_registry.close = MagicMock()
 
-        with patch("research_api.services.dedup_service.StoryRegistry", return_value=mock_registry):
-            with patch("research_api.services.dedup_service.parse_semantic_summary") as mock_parse:
+        with patch("src.api.services.dedup_service.StoryRegistry", return_value=mock_registry):
+            with patch("src.api.services.dedup_service.parse_semantic_summary") as mock_parse:
                 mock_parse.return_value = {"setting": "apartment"}
 
-                with patch("research_api.services.dedup_service.compute_canonical_similarity", return_value=0.5):
+                with patch("src.api.services.dedup_service.compute_canonical_similarity", return_value=0.5):
                     result = await evaluate_dedup(
                         canonical_core={"setting": "apartment"}
                     )

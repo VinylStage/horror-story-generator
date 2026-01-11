@@ -95,7 +95,7 @@ class TestJobOperations:
         """Should create and save job."""
         from src.infra.job_manager import create_job, JOBS_DIR
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job(
                 job_type="story_generation",
                 params={"max_stories": 3}
@@ -113,7 +113,7 @@ class TestJobOperations:
         """Should save job to disk."""
         from src.infra.job_manager import Job, save_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job = Job(
                 job_id="save-test",
                 type="research",
@@ -129,7 +129,7 @@ class TestJobOperations:
         """Should load job from disk."""
         from src.infra.job_manager import Job, save_job, load_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             original = Job(
                 job_id="load-test",
                 type="story_generation",
@@ -148,7 +148,7 @@ class TestJobOperations:
         """Should return None for nonexistent job."""
         from src.infra.job_manager import load_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             result = load_job("nonexistent")
 
             assert result is None
@@ -157,7 +157,7 @@ class TestJobOperations:
         """Should update job status to running with started_at."""
         from src.infra.job_manager import create_job, update_job_status, load_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job("research", {})
 
             update_job_status(job.job_id, "running", pid=9999)
@@ -171,7 +171,7 @@ class TestJobOperations:
         """Should update job status to succeeded with finished_at."""
         from src.infra.job_manager import create_job, update_job_status, load_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job("story_generation", {})
             update_job_status(job.job_id, "running", pid=1234)
 
@@ -192,7 +192,7 @@ class TestJobOperations:
         """Should update job status to failed with error."""
         from src.infra.job_manager import create_job, update_job_status, load_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job("research", {})
 
             update_job_status(
@@ -211,7 +211,7 @@ class TestJobOperations:
         """Should return False for nonexistent job."""
         from src.infra.job_manager import update_job_status
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             result = update_job_status("nonexistent", "running")
 
             assert result is False
@@ -220,7 +220,7 @@ class TestJobOperations:
         """Should list all jobs."""
         from src.infra.job_manager import create_job, list_jobs
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             create_job("story_generation", {"id": 1})
             create_job("research", {"id": 2})
             create_job("story_generation", {"id": 3})
@@ -233,7 +233,7 @@ class TestJobOperations:
         """Should filter jobs by status."""
         from src.infra.job_manager import create_job, update_job_status, list_jobs
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job1 = create_job("story_generation", {})
             job2 = create_job("research", {})
             job3 = create_job("story_generation", {})
@@ -251,7 +251,7 @@ class TestJobOperations:
         """Should filter jobs by type."""
         from src.infra.job_manager import create_job, list_jobs
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             create_job("story_generation", {})
             create_job("research", {})
             create_job("story_generation", {})
@@ -266,7 +266,7 @@ class TestJobOperations:
         """Should respect limit parameter."""
         from src.infra.job_manager import create_job, list_jobs
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             for i in range(10):
                 create_job("story_generation", {"id": i})
 
@@ -278,7 +278,7 @@ class TestJobOperations:
         """Should delete job from disk."""
         from src.infra.job_manager import create_job, delete_job, load_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job("research", {})
             job_id = job.job_id
 
@@ -291,7 +291,7 @@ class TestJobOperations:
         """Should return False for nonexistent job."""
         from src.infra.job_manager import delete_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             result = delete_job("nonexistent")
 
             assert result is False
@@ -300,7 +300,7 @@ class TestJobOperations:
         """Should get all running jobs."""
         from src.infra.job_manager import create_job, update_job_status, get_running_jobs
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job1 = create_job("story_generation", {})
             job2 = create_job("research", {})
 
@@ -315,7 +315,7 @@ class TestJobOperations:
         """Should get all queued jobs."""
         from src.infra.job_manager import create_job, update_job_status, get_queued_jobs
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job1 = create_job("story_generation", {})
             job2 = create_job("research", {})
             job3 = create_job("story_generation", {})
@@ -342,7 +342,7 @@ class TestJobManagerErrorHandling:
         """Should handle write errors gracefully."""
         from src.infra.job_manager import Job, save_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             job = Job(job_id="error-test", type="research", status="queued")
 
             with patch("builtins.open", side_effect=IOError("Write failed")):
@@ -354,7 +354,7 @@ class TestJobManagerErrorHandling:
         """Should handle read errors gracefully."""
         from src.infra.job_manager import load_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             # Create a corrupted file
             (temp_jobs_dir / "corrupted.json").write_text("not valid json")
 
@@ -366,7 +366,7 @@ class TestJobManagerErrorHandling:
         """Should skip corrupted files in listing."""
         from src.infra.job_manager import create_job, list_jobs
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
             create_job("story_generation", {})
 
             # Create a corrupted file
@@ -383,7 +383,7 @@ class TestJobManagerErrorHandling:
         with tempfile.TemporaryDirectory() as tmpdir:
             new_dir = Path(tmpdir) / "new_jobs"
 
-            with patch("job_manager.JOBS_DIR", new_dir):
+            with patch("src.infra.job_manager.JOBS_DIR", new_dir):
                 result = ensure_jobs_dir()
 
                 assert new_dir.exists()

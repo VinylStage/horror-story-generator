@@ -23,7 +23,7 @@ class TestExecuteResearch:
             b""
         ))
 
-        with patch("research_api.services.research_service.get_resource_manager") as mock_rm:
+        with patch("src.api.services.research_service.get_resource_manager") as mock_rm:
             mock_rm.return_value = MagicMock()
             with patch("asyncio.create_subprocess_exec", return_value=mock_process):
                 with patch("asyncio.wait_for", return_value=(
@@ -56,7 +56,7 @@ class TestExecuteResearch:
             b"Ollama connection failed"
         ))
 
-        with patch("research_api.services.research_service.get_resource_manager") as mock_rm:
+        with patch("src.api.services.research_service.get_resource_manager") as mock_rm:
             mock_rm.return_value = MagicMock()
             with patch("asyncio.create_subprocess_exec", return_value=mock_process):
                 with patch("asyncio.wait_for", return_value=(b"", b"Ollama connection failed")):
@@ -74,7 +74,7 @@ class TestExecuteResearch:
         from src.api.services.research_service import execute_research
         import asyncio
 
-        with patch("research_api.services.research_service.get_resource_manager") as mock_rm:
+        with patch("src.api.services.research_service.get_resource_manager") as mock_rm:
             mock_rm.return_value = MagicMock()
             with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock):
                 with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
@@ -92,7 +92,7 @@ class TestExecuteResearch:
         """Should handle general exception."""
         from src.api.services.research_service import execute_research
 
-        with patch("research_api.services.research_service.get_resource_manager") as mock_rm:
+        with patch("src.api.services.research_service.get_resource_manager") as mock_rm:
             mock_rm.return_value = MagicMock()
             with patch("asyncio.create_subprocess_exec", side_effect=Exception("Process error")):
                 result = await execute_research(
@@ -112,7 +112,7 @@ class TestExecuteResearch:
         mock_process.returncode = 0
         mock_process.communicate = AsyncMock(return_value=(b"Card ID: RC-001", b""))
 
-        with patch("research_api.services.research_service.get_resource_manager") as mock_rm:
+        with patch("src.api.services.research_service.get_resource_manager") as mock_rm:
             mock_rm.return_value = MagicMock()
             with patch("asyncio.create_subprocess_exec", return_value=mock_process) as mock_exec:
                 with patch("asyncio.wait_for", return_value=(b"Card ID: RC-001", b"")):

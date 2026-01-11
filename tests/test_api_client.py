@@ -18,7 +18,7 @@ class TestCallClaudeApi:
         mock_message.content = [Mock(text="Generated story text")]
         mock_message.usage = Mock(input_tokens=100, output_tokens=500)
 
-        with patch("api_client.anthropic.Anthropic") as mock_anthropic:
+        with patch("src.story.api_client.anthropic.Anthropic") as mock_anthropic:
             mock_client = Mock()
             mock_client.messages.create.return_value = mock_message
             mock_anthropic.return_value = mock_client
@@ -47,7 +47,7 @@ class TestCallClaudeApi:
         mock_message.content = [Mock(text="Generated story text")]
         mock_message.usage = None
 
-        with patch("api_client.anthropic.Anthropic") as mock_anthropic:
+        with patch("src.story.api_client.anthropic.Anthropic") as mock_anthropic:
             mock_client = Mock()
             mock_client.messages.create.return_value = mock_message
             mock_anthropic.return_value = mock_client
@@ -70,7 +70,7 @@ class TestCallClaudeApi:
 
     def test_api_call_error(self):
         """Test API call error handling."""
-        with patch("api_client.anthropic.Anthropic") as mock_anthropic:
+        with patch("src.story.api_client.anthropic.Anthropic") as mock_anthropic:
             mock_client = Mock()
             mock_client.messages.create.side_effect = Exception("API Error")
             mock_anthropic.return_value = mock_client
@@ -100,7 +100,7 @@ class TestGenerateSemanticSummary:
         mock_message = Mock()
         mock_message.content = [Mock(text="This is a summary of the story.")]
 
-        with patch("api_client.anthropic.Anthropic") as mock_anthropic:
+        with patch("src.story.api_client.anthropic.Anthropic") as mock_anthropic:
             mock_client = Mock()
             mock_client.messages.create.return_value = mock_message
             mock_anthropic.return_value = mock_client
@@ -117,7 +117,7 @@ class TestGenerateSemanticSummary:
 
     def test_summary_fallback_on_error(self):
         """Test fallback to story snippet on error."""
-        with patch("api_client.anthropic.Anthropic") as mock_anthropic:
+        with patch("src.story.api_client.anthropic.Anthropic") as mock_anthropic:
             mock_client = Mock()
             mock_client.messages.create.side_effect = Exception("API Error")
             mock_anthropic.return_value = mock_client
@@ -140,7 +140,7 @@ class TestGenerateSemanticSummary:
         mock_message = Mock()
         mock_message.content = [Mock(text="Summary")]
 
-        with patch("api_client.anthropic.Anthropic") as mock_anthropic:
+        with patch("src.story.api_client.anthropic.Anthropic") as mock_anthropic:
             mock_client = Mock()
             mock_client.messages.create.return_value = mock_message
             mock_anthropic.return_value = mock_client

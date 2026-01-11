@@ -70,7 +70,7 @@ class TestCollectArtifacts:
             started_at=(datetime.now() - timedelta(hours=1)).isoformat()
         )
 
-        with patch("job_monitor.STORY_OUTPUT_DIR", temp_dirs["stories"]):
+        with patch("src.infra.job_monitor.STORY_OUTPUT_DIR", temp_dirs["stories"]):
             artifacts = collect_story_artifacts(job)
 
         assert len(artifacts) == 1
@@ -92,7 +92,7 @@ class TestCollectArtifacts:
             started_at=(datetime.now() - timedelta(hours=1)).isoformat()
         )
 
-        with patch("job_monitor.RESEARCH_OUTPUT_DIR", temp_dirs["research"]):
+        with patch("src.infra.job_monitor.RESEARCH_OUTPUT_DIR", temp_dirs["research"]):
             artifacts = collect_research_artifacts(job)
 
         assert len(artifacts) == 1
@@ -118,7 +118,7 @@ class TestCollectArtifacts:
             started_at=datetime.now().isoformat()  # Job started now
         )
 
-        with patch("job_monitor.STORY_OUTPUT_DIR", temp_dirs["stories"]):
+        with patch("src.infra.job_monitor.STORY_OUTPUT_DIR", temp_dirs["stories"]):
             artifacts = collect_story_artifacts(job)
 
         assert len(artifacts) == 0
@@ -227,8 +227,8 @@ class TestMonitorJob:
         """Should return error for nonexistent job."""
         from src.infra.job_monitor import monitor_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("job_monitor.load_job", return_value=None):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.infra.job_monitor.load_job", return_value=None):
                 result = monitor_job("nonexistent")
 
         assert "error" in result
@@ -246,8 +246,8 @@ class TestMonitorJob:
             pid=os.getpid()  # Current process
         )
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("job_monitor.load_job", return_value=job):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.infra.job_monitor.load_job", return_value=job):
                 result = monitor_job("running-job")
 
         assert result["status"] == "running"
@@ -266,11 +266,11 @@ class TestMonitorJob:
             started_at=datetime.now().isoformat()
         )
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("job_monitor.load_job", return_value=job):
-                with patch("job_monitor.collect_artifacts", return_value=["/path/to/story.json"]):
-                    with patch("job_monitor.check_job_log_for_errors", return_value=None):
-                        with patch("job_monitor.update_job_status") as mock_update:
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.infra.job_monitor.load_job", return_value=job):
+                with patch("src.infra.job_monitor.collect_artifacts", return_value=["/path/to/story.json"]):
+                    with patch("src.infra.job_monitor.check_job_log_for_errors", return_value=None):
+                        with patch("src.infra.job_monitor.update_job_status") as mock_update:
                             result = monitor_job("completed-job")
 
         assert result["status"] == "succeeded"
@@ -292,8 +292,8 @@ class TestCancelJob:
         """Should return error for nonexistent job."""
         from src.infra.job_monitor import cancel_job
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("job_monitor.load_job", return_value=None):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.infra.job_monitor.load_job", return_value=None):
                 result = cancel_job("nonexistent")
 
         assert result["success"] is False
@@ -311,8 +311,8 @@ class TestCancelJob:
             pid=None
         )
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("job_monitor.load_job", return_value=job):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.infra.job_monitor.load_job", return_value=job):
                 result = cancel_job("queued-job")
 
         assert result["success"] is False
@@ -330,9 +330,9 @@ class TestCancelJob:
             pid=999999999  # Non-existent PID
         )
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("job_monitor.load_job", return_value=job):
-                with patch("job_monitor.update_job_status"):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.infra.job_monitor.load_job", return_value=job):
+                with patch("src.infra.job_monitor.update_job_status"):
                     result = cancel_job("exited-job")
 
         assert result["success"] is True
@@ -346,7 +346,7 @@ class TestMonitorAllRunningJobs:
         """Should handle no running jobs."""
         from src.infra.job_monitor import monitor_all_running_jobs
 
-        with patch("job_monitor.get_running_jobs", return_value=[]):
+        with patch("src.infra.job_monitor.get_running_jobs", return_value=[]):
             results = monitor_all_running_jobs()
 
         assert results == []
@@ -361,8 +361,8 @@ class TestMonitorAllRunningJobs:
             Job(job_id="job-2", type="research", status="running", pid=os.getpid()),
         ]
 
-        with patch("job_monitor.get_running_jobs", return_value=jobs):
-            with patch("job_monitor.load_job", side_effect=lambda jid: next((j for j in jobs if j.job_id == jid), None)):
+        with patch("src.infra.job_monitor.get_running_jobs", return_value=jobs):
+            with patch("src.infra.job_monitor.load_job", side_effect=lambda jid: next((j for j in jobs if j.job_id == jid), None)):
                 results = monitor_all_running_jobs()
 
         assert len(results) == 2
@@ -397,9 +397,9 @@ class TestMonitorEndpoints:
             pid=999999999
         )
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("job_monitor.load_job", return_value=job):
-                with patch("job_monitor.update_job_status"):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.infra.job_monitor.load_job", return_value=job):
+                with patch("src.infra.job_monitor.update_job_status"):
                     response = client.post("/jobs/cancel-test/cancel")
 
         assert response.status_code == 200
@@ -409,8 +409,8 @@ class TestMonitorEndpoints:
 
     def test_monitor_all_endpoint(self, client, temp_jobs_dir):
         """Should monitor all jobs via API."""
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("job_monitor.get_running_jobs", return_value=[]):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.infra.job_monitor.get_running_jobs", return_value=[]):
                 response = client.post("/jobs/monitor")
 
         assert response.status_code == 200
@@ -429,8 +429,8 @@ class TestMonitorEndpoints:
             pid=os.getpid()
         )
 
-        with patch("job_manager.JOBS_DIR", temp_jobs_dir):
-            with patch("job_monitor.load_job", return_value=job):
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch("src.infra.job_monitor.load_job", return_value=job):
                 response = client.post("/jobs/single-test/monitor")
 
         assert response.status_code == 200
