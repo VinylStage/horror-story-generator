@@ -14,7 +14,7 @@ class TestExecuteResearch:
     @pytest.mark.asyncio
     async def test_execute_research_success(self):
         """Should execute research and return card info."""
-        from research_api.services.research_service import execute_research
+        from src.api.services.research_service import execute_research
 
         mock_process = AsyncMock()
         mock_process.returncode = 0
@@ -47,7 +47,7 @@ class TestExecuteResearch:
     @pytest.mark.asyncio
     async def test_execute_research_cli_error(self):
         """Should handle CLI error."""
-        from research_api.services.research_service import execute_research
+        from src.api.services.research_service import execute_research
 
         mock_process = AsyncMock()
         mock_process.returncode = 1
@@ -71,7 +71,7 @@ class TestExecuteResearch:
     @pytest.mark.asyncio
     async def test_execute_research_timeout(self):
         """Should handle timeout."""
-        from research_api.services.research_service import execute_research
+        from src.api.services.research_service import execute_research
         import asyncio
 
         with patch("research_api.services.research_service.get_resource_manager") as mock_rm:
@@ -90,7 +90,7 @@ class TestExecuteResearch:
     @pytest.mark.asyncio
     async def test_execute_research_exception(self):
         """Should handle general exception."""
-        from research_api.services.research_service import execute_research
+        from src.api.services.research_service import execute_research
 
         with patch("research_api.services.research_service.get_resource_manager") as mock_rm:
             mock_rm.return_value = MagicMock()
@@ -106,7 +106,7 @@ class TestExecuteResearch:
     @pytest.mark.asyncio
     async def test_execute_research_with_model_override(self):
         """Should pass model and timeout to subprocess."""
-        from research_api.services.research_service import execute_research
+        from src.api.services.research_service import execute_research
 
         mock_process = AsyncMock()
         mock_process.returncode = 0
@@ -137,7 +137,7 @@ class TestParseCliOutput:
 
     def test_parse_full_output(self):
         """Should parse all fields from CLI output."""
-        from research_api.services.research_service import parse_cli_output
+        from src.api.services.research_service import parse_cli_output
 
         output = """Card ID: RC-20260111-120000
 Title: The Haunted Apartment
@@ -154,7 +154,7 @@ Markdown: /data/research/2026/01/RC-20260111-120000.md"""
 
     def test_parse_partial_output(self):
         """Should handle partial output."""
-        from research_api.services.research_service import parse_cli_output
+        from src.api.services.research_service import parse_cli_output
 
         output = "Card ID: RC-001"
         result = parse_cli_output(output)
@@ -165,7 +165,7 @@ Markdown: /data/research/2026/01/RC-20260111-120000.md"""
 
     def test_parse_empty_output(self):
         """Should handle empty output."""
-        from research_api.services.research_service import parse_cli_output
+        from src.api.services.research_service import parse_cli_output
 
         result = parse_cli_output("")
 
@@ -179,7 +179,7 @@ class TestValidateCard:
     @pytest.mark.asyncio
     async def test_validate_invalid_card_id(self):
         """Should reject invalid card ID format."""
-        from research_api.services.research_service import validate_card
+        from src.api.services.research_service import validate_card
 
         result = await validate_card("invalid")
 
@@ -189,7 +189,7 @@ class TestValidateCard:
     @pytest.mark.asyncio
     async def test_validate_card_not_found(self):
         """Should handle card file not found."""
-        from research_api.services.research_service import validate_card
+        from src.api.services.research_service import validate_card
 
         with patch("pathlib.Path.exists", return_value=False):
             result = await validate_card("RC-20260111-120000")
@@ -200,7 +200,7 @@ class TestValidateCard:
     @pytest.mark.asyncio
     async def test_validate_card_success(self):
         """Should validate card successfully."""
-        from research_api.services.research_service import validate_card
+        from src.api.services.research_service import validate_card
 
         mock_process = AsyncMock()
         mock_process.returncode = 0
@@ -223,7 +223,7 @@ class TestValidateCard:
     @pytest.mark.asyncio
     async def test_validate_card_cli_error(self):
         """Should handle CLI validation error."""
-        from research_api.services.research_service import validate_card
+        from src.api.services.research_service import validate_card
 
         mock_process = AsyncMock()
         mock_process.returncode = 1
@@ -246,7 +246,7 @@ class TestValidateCard:
     @pytest.mark.asyncio
     async def test_validate_card_exception(self):
         """Should handle exception during validation."""
-        from research_api.services.research_service import validate_card
+        from src.api.services.research_service import validate_card
 
         with patch("pathlib.Path.exists", return_value=True):
             with patch("asyncio.create_subprocess_exec", side_effect=Exception("Process error")):
@@ -262,7 +262,7 @@ class TestListCards:
     @pytest.mark.asyncio
     async def test_list_cards_success(self):
         """Should list cards successfully."""
-        from research_api.services.research_service import list_cards
+        from src.api.services.research_service import list_cards
 
         mock_output = """Research Cards:
 RC-20260111-001  2026-01-11  [good]  Card One
@@ -286,7 +286,7 @@ RC-20260111-002  2026-01-11  [excellent]  Card Two"""
     @pytest.mark.asyncio
     async def test_list_cards_with_quality_filter(self):
         """Should filter cards by quality."""
-        from research_api.services.research_service import list_cards
+        from src.api.services.research_service import list_cards
 
         mock_output = """RC-20260111-001  2026-01-11  [good]  Card One
 RC-20260111-002  2026-01-11  [excellent]  Card Two
@@ -306,7 +306,7 @@ RC-20260111-003  2026-01-11  [good]  Card Three"""
     @pytest.mark.asyncio
     async def test_list_cards_cli_error(self):
         """Should handle CLI error."""
-        from research_api.services.research_service import list_cards
+        from src.api.services.research_service import list_cards
 
         mock_process = AsyncMock()
         mock_process.returncode = 1
@@ -322,7 +322,7 @@ RC-20260111-003  2026-01-11  [good]  Card Three"""
     @pytest.mark.asyncio
     async def test_list_cards_exception(self):
         """Should handle exception."""
-        from research_api.services.research_service import list_cards
+        from src.api.services.research_service import list_cards
 
         with patch("asyncio.create_subprocess_exec", side_effect=Exception("Error")):
             result = await list_cards()
@@ -336,7 +336,7 @@ class TestParseListOutput:
 
     def test_parse_list_with_header(self):
         """Should skip header lines."""
-        from research_api.services.research_service import parse_list_output
+        from src.api.services.research_service import parse_list_output
 
         output = """Research Cards:
 ================
@@ -349,7 +349,7 @@ RC-20260111-001  2026-01-11  [good]  Card One"""
 
     def test_parse_list_pagination(self):
         """Should apply pagination."""
-        from research_api.services.research_service import parse_list_output
+        from src.api.services.research_service import parse_list_output
 
         output = """RC-001  2026-01-11  [good]  Card 1
 RC-002  2026-01-11  [good]  Card 2
@@ -364,7 +364,7 @@ RC-004  2026-01-11  [good]  Card 4"""
 
     def test_parse_list_quality_filter(self):
         """Should filter by quality."""
-        from research_api.services.research_service import parse_list_output
+        from src.api.services.research_service import parse_list_output
 
         output = """RC-001  2026-01-11  [good]  Card 1
 RC-002  2026-01-11  [excellent]  Card 2
@@ -377,7 +377,7 @@ RC-003  2026-01-11  [good]  Card 3"""
 
     def test_parse_list_short_lines(self):
         """Should skip malformed lines."""
-        from research_api.services.research_service import parse_list_output
+        from src.api.services.research_service import parse_list_output
 
         output = """RC-001  2026-01-11  [good]  Card 1
 RC-002  short

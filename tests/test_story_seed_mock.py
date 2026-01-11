@@ -18,7 +18,7 @@ class TestGenerateSeedFromCard:
 
     def test_generate_seed_success(self):
         """Should generate seed from card with mocked LLM."""
-        from story_seed import generate_seed_from_card
+        from src.story.story_seed import generate_seed_from_card
 
         card_data = {
             "input": {"topic": "Korean apartment horror"},
@@ -66,7 +66,7 @@ class TestGenerateSeedFromCard:
 
     def test_generate_seed_with_thinking_tags(self):
         """Should handle LLM response with thinking tags."""
-        from story_seed import generate_seed_from_card
+        from src.story.story_seed import generate_seed_from_card
 
         card_data = {
             "input": {"topic": "Test"},
@@ -103,7 +103,7 @@ The main themes are about isolation and fear.
 
     def test_generate_seed_connection_error(self):
         """Should return None on connection error."""
-        from story_seed import generate_seed_from_card
+        from src.story.story_seed import generate_seed_from_card
         import urllib.error
 
         card_data = {
@@ -123,7 +123,7 @@ The main themes are about isolation and fear.
 
     def test_generate_seed_invalid_json_response(self):
         """Should return None for invalid JSON in LLM response."""
-        from story_seed import generate_seed_from_card
+        from src.story.story_seed import generate_seed_from_card
 
         card_data = {
             "input": {"topic": "Test"},
@@ -147,7 +147,7 @@ The main themes are about isolation and fear.
 
     def test_generate_seed_partial_response(self):
         """Should handle partial JSON response."""
-        from story_seed import generate_seed_from_card
+        from src.story.story_seed import generate_seed_from_card
 
         card_data = {
             "input": {"topic": "Test"},
@@ -184,7 +184,7 @@ class TestParseSeedJson:
 
     def test_parse_clean_json(self):
         """Should parse clean JSON string."""
-        from story_seed import parse_seed_json
+        from src.story.story_seed import parse_seed_json
 
         text = '{"key_themes": ["a", "b"], "atmosphere_tags": ["c"]}'
         result = parse_seed_json(text)
@@ -194,7 +194,7 @@ class TestParseSeedJson:
 
     def test_parse_json_with_markdown(self):
         """Should extract JSON from markdown code blocks."""
-        from story_seed import parse_seed_json
+        from src.story.story_seed import parse_seed_json
 
         text = '''Here is the result:
 ```json
@@ -209,7 +209,7 @@ Done!'''
 
     def test_parse_json_with_nested_braces(self):
         """Should handle nested JSON structures."""
-        from story_seed import parse_seed_json
+        from src.story.story_seed import parse_seed_json
 
         text = '''{"key_themes": ["a"], "metadata": {"nested": {"deep": true}}}'''
 
@@ -220,14 +220,14 @@ Done!'''
 
     def test_parse_empty_string(self):
         """Should return None for empty string."""
-        from story_seed import parse_seed_json
+        from src.story.story_seed import parse_seed_json
 
         result = parse_seed_json("")
         assert result is None
 
     def test_parse_no_json_content(self):
         """Should return None when no JSON found."""
-        from story_seed import parse_seed_json
+        from src.story.story_seed import parse_seed_json
 
         result = parse_seed_json("This is just plain text without any JSON")
         assert result is None
@@ -238,7 +238,7 @@ class TestExtractCardFields:
 
     def test_extract_all_fields(self):
         """Should extract all available fields."""
-        from story_seed import extract_card_fields
+        from src.story.story_seed import extract_card_fields
 
         card_data = {
             "input": {"topic": "Korean Horror"},
@@ -260,7 +260,7 @@ class TestExtractCardFields:
 
     def test_extract_missing_input(self):
         """Should handle missing input section."""
-        from story_seed import extract_card_fields
+        from src.story.story_seed import extract_card_fields
 
         card_data = {
             "output": {
@@ -275,7 +275,7 @@ class TestExtractCardFields:
 
     def test_extract_missing_output(self):
         """Should handle missing output section."""
-        from story_seed import extract_card_fields
+        from src.story.story_seed import extract_card_fields
 
         card_data = {
             "input": {"topic": "Topic Only"}
@@ -293,7 +293,7 @@ class TestSeedPersistence:
 
     def test_save_and_load_seed(self):
         """Should save and load seed correctly."""
-        from story_seed import StorySeed, save_seed, load_seed
+        from src.story.story_seed import StorySeed, save_seed, load_seed
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -322,7 +322,7 @@ class TestSeedPersistence:
 
     def test_save_seed_creates_directory(self):
         """Should create output directory if not exists."""
-        from story_seed import StorySeed, save_seed
+        from src.story.story_seed import StorySeed, save_seed
 
         with tempfile.TemporaryDirectory() as tmpdir:
             new_dir = Path(tmpdir) / "nested" / "seeds"
@@ -348,7 +348,7 @@ class TestGetRandomSeed:
 
     def test_get_random_seed_from_directory(self):
         """Should get random seed from directory."""
-        from story_seed import StorySeed, save_seed, get_random_seed
+        from src.story.story_seed import StorySeed, save_seed, get_random_seed
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -373,7 +373,7 @@ class TestGetRandomSeed:
 
     def test_get_random_seed_empty_directory(self):
         """Should return None for empty directory."""
-        from story_seed import get_random_seed
+        from src.story.story_seed import get_random_seed
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = get_random_seed(seeds_dir=Path(tmpdir))
@@ -385,7 +385,7 @@ class TestListSeeds:
 
     def test_list_seeds_finds_files(self):
         """Should find all SS-*.json files."""
-        from story_seed import list_seeds
+        from src.story.story_seed import list_seeds
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -403,7 +403,7 @@ class TestListSeeds:
 
     def test_list_seeds_nonexistent_directory(self):
         """Should return empty list for nonexistent directory."""
-        from story_seed import list_seeds
+        from src.story.story_seed import list_seeds
 
         result = list_seeds(seeds_dir=Path("/nonexistent/path"))
 
@@ -415,7 +415,7 @@ class TestGenerateSeedId:
 
     def test_generate_seed_id_format(self):
         """Should generate ID in correct format."""
-        from story_seed import generate_seed_id
+        from src.story.story_seed import generate_seed_id
 
         seed_id = generate_seed_id()
 
@@ -425,7 +425,7 @@ class TestGenerateSeedId:
 
     def test_generate_seed_id_uniqueness(self):
         """Should generate unique IDs."""
-        from story_seed import generate_seed_id
+        from src.story.story_seed import generate_seed_id
         import time
 
         ids = []
@@ -439,7 +439,7 @@ class TestGenerateSeedId:
 
     def test_generate_seed_id_date_based(self):
         """Should include current date."""
-        from story_seed import generate_seed_id
+        from src.story.story_seed import generate_seed_id
         from datetime import datetime
 
         seed_id = generate_seed_id()

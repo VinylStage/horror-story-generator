@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from logging_config import DailyRotatingFileHandler, setup_logging
+from src.infra.logging_config import DailyRotatingFileHandler, setup_logging
 
 
 class TestDailyRotatingFileHandler:

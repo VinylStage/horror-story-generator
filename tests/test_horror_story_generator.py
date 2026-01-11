@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from horror_story_generator import (
+from src.story.generator import (
     load_prompt_template,
     extract_title_from_story,
     extract_tags_from_story,

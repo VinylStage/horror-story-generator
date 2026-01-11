@@ -22,7 +22,7 @@ class TestComputeSignal:
 
     def test_low_signal(self):
         """Should return LOW for low similarity."""
-        from research_api.services.dedup_service import compute_signal
+        from src.api.services.dedup_service import compute_signal
 
         assert compute_signal(0.0) == "LOW"
         assert compute_signal(0.1) == "LOW"
@@ -30,7 +30,7 @@ class TestComputeSignal:
 
     def test_medium_signal(self):
         """Should return MEDIUM for medium similarity."""
-        from research_api.services.dedup_service import compute_signal
+        from src.api.services.dedup_service import compute_signal
 
         assert compute_signal(0.3) == "MEDIUM"
         assert compute_signal(0.45) == "MEDIUM"
@@ -38,7 +38,7 @@ class TestComputeSignal:
 
     def test_high_signal(self):
         """Should return HIGH for high similarity."""
-        from research_api.services.dedup_service import compute_signal
+        from src.api.services.dedup_service import compute_signal
 
         assert compute_signal(0.6) == "HIGH"
         assert compute_signal(0.8) == "HIGH"
@@ -50,7 +50,7 @@ class TestComputeCanonicalSimilarity:
 
     def test_identical_cores(self):
         """Should return 1.0 for identical cores."""
-        from research_api.services.dedup_service import compute_canonical_similarity
+        from src.api.services.dedup_service import compute_canonical_similarity
 
         core = {
             "setting": "apartment",
@@ -65,7 +65,7 @@ class TestComputeCanonicalSimilarity:
 
     def test_completely_different_cores(self):
         """Should return 0.0 for different cores."""
-        from research_api.services.dedup_service import compute_canonical_similarity
+        from src.api.services.dedup_service import compute_canonical_similarity
 
         core1 = {
             "setting": "apartment",
@@ -87,7 +87,7 @@ class TestComputeCanonicalSimilarity:
 
     def test_partial_match(self):
         """Should return partial score for some matches."""
-        from research_api.services.dedup_service import compute_canonical_similarity
+        from src.api.services.dedup_service import compute_canonical_similarity
 
         core1 = {
             "setting": "apartment",
@@ -110,14 +110,14 @@ class TestComputeCanonicalSimilarity:
 
     def test_empty_cores(self):
         """Should handle empty cores."""
-        from research_api.services.dedup_service import compute_canonical_similarity
+        from src.api.services.dedup_service import compute_canonical_similarity
 
         result = compute_canonical_similarity({}, {})
         assert result == 0.0
 
     def test_case_insensitive_matching(self):
         """Should match values case-insensitively."""
-        from research_api.services.dedup_service import compute_canonical_similarity
+        from src.api.services.dedup_service import compute_canonical_similarity
 
         core1 = {"setting": "APARTMENT", "primary_fear": "Isolation"}
         core2 = {"setting": "apartment", "primary_fear": "isolation"}
@@ -132,7 +132,7 @@ class TestEvaluateDedup:
     @pytest.mark.asyncio
     async def test_evaluate_no_existing_stories(self):
         """Should return LOW when no stories exist."""
-        from research_api.services.dedup_service import evaluate_dedup
+        from src.api.services.dedup_service import evaluate_dedup
 
         mock_registry = MagicMock()
         mock_registry.load_recent_accepted.return_value = []
@@ -151,7 +151,7 @@ class TestEvaluateDedup:
     @pytest.mark.asyncio
     async def test_evaluate_with_template_match(self):
         """Should increase similarity for template matches."""
-        from research_api.services.dedup_service import evaluate_dedup
+        from src.api.services.dedup_service import evaluate_dedup
 
         mock_stories = [
             MockStory(id="1", template_id="test_001", semantic_summary=""),
@@ -175,7 +175,7 @@ class TestEvaluateDedup:
     @pytest.mark.asyncio
     async def test_evaluate_with_canonical_similarity(self):
         """Should compute similarity based on canonical cores."""
-        from research_api.services.dedup_service import evaluate_dedup
+        from src.api.services.dedup_service import evaluate_dedup
 
         mock_stories = [
             MockStory(id="1", template_id="other", semantic_summary=""),
@@ -205,7 +205,7 @@ class TestEvaluateDedup:
     @pytest.mark.asyncio
     async def test_evaluate_high_signal_message(self):
         """Should return appropriate message for HIGH signal."""
-        from research_api.services.dedup_service import evaluate_dedup
+        from src.api.services.dedup_service import evaluate_dedup
 
         mock_stories = [MockStory(id="1", template_id="t", semantic_summary="")]
 
@@ -234,7 +234,7 @@ class TestEvaluateDedup:
     @pytest.mark.asyncio
     async def test_evaluate_medium_signal_message(self):
         """Should return appropriate message for MEDIUM signal."""
-        from research_api.services.dedup_service import evaluate_dedup
+        from src.api.services.dedup_service import evaluate_dedup
 
         mock_stories = [MockStory(id="1", template_id="t", semantic_summary="")]
 
@@ -261,7 +261,7 @@ class TestEvaluateDedup:
     @pytest.mark.asyncio
     async def test_evaluate_exception_handling(self):
         """Should handle exceptions gracefully."""
-        from research_api.services.dedup_service import evaluate_dedup
+        from src.api.services.dedup_service import evaluate_dedup
 
         with patch("research_api.services.dedup_service.StoryRegistry", side_effect=Exception("DB error")):
             result = await evaluate_dedup()
@@ -272,7 +272,7 @@ class TestEvaluateDedup:
     @pytest.mark.asyncio
     async def test_evaluate_similar_stories_list(self):
         """Should return list of similar stories."""
-        from research_api.services.dedup_service import evaluate_dedup
+        from src.api.services.dedup_service import evaluate_dedup
 
         mock_stories = [
             MockStory(id="1", template_id="t1", semantic_summary=""),
@@ -301,14 +301,14 @@ class TestParseSemanticSummary:
 
     def test_parse_returns_empty_dict(self):
         """Should return empty dict (placeholder implementation)."""
-        from research_api.services.dedup_service import parse_semantic_summary
+        from src.api.services.dedup_service import parse_semantic_summary
 
         result = parse_semantic_summary("any summary text")
         assert result == {}
 
     def test_parse_empty_string(self):
         """Should handle empty string."""
-        from research_api.services.dedup_service import parse_semantic_summary
+        from src.api.services.dedup_service import parse_semantic_summary
 
         result = parse_semantic_summary("")
         assert result == {}
@@ -319,7 +319,7 @@ class TestGetMatchedDimensions:
 
     def test_all_dimensions_match(self):
         """Should return all matching dimensions."""
-        from research_api.services.dedup_service import get_matched_dimensions
+        from src.api.services.dedup_service import get_matched_dimensions
 
         core = {
             "setting": "apartment",
@@ -339,7 +339,7 @@ class TestGetMatchedDimensions:
 
     def test_no_dimensions_match(self):
         """Should return empty list when nothing matches."""
-        from research_api.services.dedup_service import get_matched_dimensions
+        from src.api.services.dedup_service import get_matched_dimensions
 
         core1 = {"setting": "apartment", "primary_fear": "isolation"}
         core2 = {"setting": "forest", "primary_fear": "pursuit"}
@@ -349,7 +349,7 @@ class TestGetMatchedDimensions:
 
     def test_partial_match(self):
         """Should return only matching dimensions."""
-        from research_api.services.dedup_service import get_matched_dimensions
+        from src.api.services.dedup_service import get_matched_dimensions
 
         core1 = {"setting": "apartment", "primary_fear": "isolation", "antagonist": "ghost"}
         core2 = {"setting": "apartment", "primary_fear": "pursuit", "antagonist": "ghost"}
@@ -362,7 +362,7 @@ class TestGetMatchedDimensions:
 
     def test_empty_values_not_matched(self):
         """Should not match empty values."""
-        from research_api.services.dedup_service import get_matched_dimensions
+        from src.api.services.dedup_service import get_matched_dimensions
 
         core1 = {"setting": "", "primary_fear": "isolation"}
         core2 = {"setting": "", "primary_fear": "isolation"}

@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 @pytest.fixture
 def client():
     """Create test client for API."""
-    from research_api.main import app
+    from src.api.main import app
     return TestClient(app)
 
 
@@ -135,7 +135,7 @@ class TestJobStatusEndpoint:
 
     def test_get_job_status(self, client, temp_jobs_dir):
         """Should return job status."""
-        from job_manager import create_job, update_job_status
+        from src.infra.job_manager import create_job, update_job_status
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             # Create a job directly
@@ -174,7 +174,7 @@ class TestJobListEndpoint:
 
     def test_list_jobs_with_filter(self, client, temp_jobs_dir):
         """Should filter jobs by status and type."""
-        from job_manager import create_job, update_job_status
+        from src.infra.job_manager import create_job, update_job_status
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             # Create jobs
@@ -198,7 +198,7 @@ class TestBuildCommands:
 
     def test_build_story_command(self):
         """Should build correct story generation command."""
-        from research_api.routers.jobs import build_story_command, PROJECT_ROOT
+        from src.api.routers.jobs import build_story_command, PROJECT_ROOT
         import sys
 
         params = {
@@ -221,7 +221,7 @@ class TestBuildCommands:
 
     def test_build_research_command(self):
         """Should build correct research generation command."""
-        from research_api.routers.jobs import build_research_command
+        from src.api.routers.jobs import build_research_command
         import sys
 
         params = {
@@ -244,7 +244,7 @@ class TestBuildCommands:
 
     def test_build_story_command_minimal(self):
         """Should build minimal command with defaults."""
-        from research_api.routers.jobs import build_story_command
+        from src.api.routers.jobs import build_story_command
 
         params = {}
         cmd = build_story_command(params)
@@ -254,7 +254,7 @@ class TestBuildCommands:
 
     def test_build_research_command_minimal(self):
         """Should build minimal research command."""
-        from research_api.routers.jobs import build_research_command
+        from src.api.routers.jobs import build_research_command
 
         params = {"topic": "test", "tags": []}
         cmd = build_research_command(params)
@@ -278,7 +278,7 @@ class TestDedupCheckEndpoint:
     @pytest.fixture
     def client(self):
         """Create test client for API."""
-        from research_api.main import app
+        from src.api.main import app
         from fastapi.testclient import TestClient
         return TestClient(app)
 
@@ -291,7 +291,7 @@ class TestDedupCheckEndpoint:
 
     def test_dedup_check_story_job_rejected(self, client, temp_jobs_dir):
         """Should reject story job type."""
-        from job_manager import Job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="story-job",
@@ -311,7 +311,7 @@ class TestDedupCheckEndpoint:
 
     def test_dedup_check_no_artifacts(self, client, temp_jobs_dir):
         """Should handle job with no artifacts."""
-        from job_manager import Job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="research-empty",
@@ -331,7 +331,7 @@ class TestDedupCheckEndpoint:
 
     def test_dedup_check_with_artifact(self, client, temp_jobs_dir):
         """Should evaluate dedup for research job with artifact."""
-        from job_manager import Job
+        from src.infra.job_manager import Job
 
         # Create a temporary research card file
         research_dir = temp_jobs_dir.parent / "research"

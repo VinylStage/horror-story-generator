@@ -16,7 +16,7 @@ class TestResearchCardRecord:
 
     def test_create_record(self):
         """Should create record with correct fields."""
-        from research_registry import ResearchCardRecord
+        from src.registry.research_registry import ResearchCardRecord
 
         record = ResearchCardRecord(
             card_id="RC-2026-01-11-001",
@@ -33,7 +33,7 @@ class TestResearchCardRecord:
 
     def test_to_dict(self):
         """Should convert to dictionary."""
-        from research_registry import ResearchCardRecord
+        from src.registry.research_registry import ResearchCardRecord
 
         now = datetime.now()
         record = ResearchCardRecord(
@@ -59,7 +59,7 @@ class TestResearchRegistry:
     @pytest.fixture
     def temp_registry(self):
         """Create a temporary registry for testing."""
-        from research_registry import ResearchRegistry
+        from src.registry.research_registry import ResearchRegistry
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test_registry.sqlite"
@@ -223,14 +223,14 @@ class TestGetRegistry:
 
     def test_returns_registry_instance(self):
         """Should return ResearchRegistry instance."""
-        from research_registry import get_registry, ResearchRegistry
+        from src.registry.research_registry import get_registry, ResearchRegistry
 
         registry = get_registry()
         assert isinstance(registry, ResearchRegistry)
 
     def test_returns_same_instance(self):
         """Should return same instance on multiple calls."""
-        from research_registry import get_registry
+        from src.registry.research_registry import get_registry
 
         registry1 = get_registry()
         registry2 = get_registry()
@@ -244,7 +244,7 @@ class TestResearchRegistryErrors:
     @pytest.fixture
     def temp_registry(self):
         """Create a temporary registry for testing."""
-        from research_registry import ResearchRegistry
+        from src.registry.research_registry import ResearchRegistry
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test_registry.sqlite"

@@ -14,7 +14,7 @@ class TestOllamaEmbedderSync:
 
     def test_get_embedding_success(self):
         """Should get embedding via mocked Ollama API."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -35,7 +35,7 @@ class TestOllamaEmbedderSync:
 
     def test_get_embedding_empty_text(self):
         """Should return None for empty text."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -47,7 +47,7 @@ class TestOllamaEmbedderSync:
 
     def test_get_embedding_connection_error(self):
         """Should handle connection error gracefully."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
         import urllib.error
 
         embedder = OllamaEmbedder()
@@ -61,7 +61,7 @@ class TestOllamaEmbedderSync:
 
     def test_get_embedding_invalid_json(self):
         """Should handle invalid JSON response."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -77,7 +77,7 @@ class TestOllamaEmbedderSync:
 
     def test_get_embedding_no_embeddings_in_response(self):
         """Should handle response without embeddings field."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -97,7 +97,7 @@ class TestOllamaEmbedderSync:
 
     def test_get_embedding_fallback_field(self):
         """Should use 'embedding' field as fallback."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -116,7 +116,7 @@ class TestOllamaEmbedderSync:
 
     def test_get_embeddings_batch(self):
         """Should get embeddings for batch of texts."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -140,7 +140,7 @@ class TestOllamaEmbedderSync:
 
     def test_is_available_true(self):
         """Should return True when Ollama is available."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder(model="qwen3:30b")
 
@@ -158,7 +158,7 @@ class TestOllamaEmbedderSync:
 
     def test_is_available_false(self):
         """Should return False when model not in Ollama."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder(model="nonexistent:model")
 
@@ -176,7 +176,7 @@ class TestOllamaEmbedderSync:
 
     def test_is_available_connection_error(self):
         """Should return False on connection error."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -194,7 +194,7 @@ class TestOllamaEmbedderAsync:
     @pytest.mark.asyncio
     async def test_get_embedding_async_success(self):
         """Should get embedding asynchronously via httpx."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -219,7 +219,7 @@ class TestOllamaEmbedderAsync:
     @pytest.mark.asyncio
     async def test_get_embedding_async_empty_text(self):
         """Should return None for empty text."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -229,7 +229,7 @@ class TestOllamaEmbedderAsync:
     @pytest.mark.asyncio
     async def test_get_embedding_async_http_error(self):
         """Should handle HTTP error gracefully."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
         import httpx
 
         embedder = OllamaEmbedder()
@@ -250,7 +250,7 @@ class TestOllamaEmbedderAsync:
     @pytest.mark.asyncio
     async def test_get_embedding_async_request_error(self):
         """Should handle request error gracefully."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
         import httpx
 
         embedder = OllamaEmbedder()
@@ -271,7 +271,7 @@ class TestOllamaEmbedderAsync:
     @pytest.mark.asyncio
     async def test_get_embeddings_batch_async(self):
         """Should get batch embeddings concurrently."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder()
 
@@ -296,7 +296,7 @@ class TestOllamaEmbedderAsync:
     @pytest.mark.asyncio
     async def test_is_available_async(self):
         """Should check availability asynchronously."""
-        from research_dedup.embedder import OllamaEmbedder
+        from src.dedup.research.embedder import OllamaEmbedder
 
         embedder = OllamaEmbedder(model="qwen3:30b")
 
@@ -322,7 +322,7 @@ class TestGetEmbeddingFunctions:
 
     def test_get_embedding_function(self):
         """Should use global embedder instance."""
-        from research_dedup.embedder import get_embedding
+        from src.dedup.research.embedder import get_embedding
 
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps({
@@ -339,7 +339,7 @@ class TestGetEmbeddingFunctions:
     @pytest.mark.asyncio
     async def test_get_embedding_async_function(self):
         """Should use global embedder for async."""
-        from research_dedup.embedder import get_embedding_async
+        from src.dedup.research.embedder import get_embedding_async
 
         mock_response = MagicMock()
         mock_response.json.return_value = {"embeddings": [[0.1] * 100]}
@@ -358,7 +358,7 @@ class TestGetEmbeddingFunctions:
 
     def test_get_embedder_singleton(self):
         """Should return same embedder instance for same model."""
-        from research_dedup.embedder import get_embedder
+        from src.dedup.research.embedder import get_embedder
         import research_dedup.embedder as module
 
         # Reset global state
@@ -382,7 +382,7 @@ class TestCreateCardTextForEmbedding:
 
     def test_full_card_data(self):
         """Should extract all fields from full card."""
-        from research_dedup.embedder import create_card_text_for_embedding
+        from src.dedup.research.embedder import create_card_text_for_embedding
 
         card_data = {
             "input": {"topic": "Korean apartment horror"},
@@ -404,7 +404,7 @@ class TestCreateCardTextForEmbedding:
 
     def test_partial_card_data(self):
         """Should handle partial card data."""
-        from research_dedup.embedder import create_card_text_for_embedding
+        from src.dedup.research.embedder import create_card_text_for_embedding
 
         card_data = {
             "input": {"topic": "Test Topic"}
@@ -418,7 +418,7 @@ class TestCreateCardTextForEmbedding:
 
     def test_output_only(self):
         """Should handle output-only card."""
-        from research_dedup.embedder import create_card_text_for_embedding
+        from src.dedup.research.embedder import create_card_text_for_embedding
 
         card_data = {
             "output": {

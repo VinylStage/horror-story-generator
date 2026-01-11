@@ -12,7 +12,7 @@ class TestBuildSystemPrompt:
 
     def test_returns_string(self):
         """Should return a string."""
-        from prompt_builder import build_system_prompt
+        from src.story.prompt_builder import build_system_prompt
 
         result = build_system_prompt()
 
@@ -20,7 +20,7 @@ class TestBuildSystemPrompt:
 
     def test_default_prompt_without_template(self):
         """Should return default psychological horror prompt."""
-        from prompt_builder import build_system_prompt
+        from src.story.prompt_builder import build_system_prompt
 
         result = build_system_prompt()
 
@@ -30,7 +30,7 @@ class TestBuildSystemPrompt:
 
     def test_includes_core_guidelines(self):
         """Should include core horror guidelines."""
-        from prompt_builder import build_system_prompt
+        from src.story.prompt_builder import build_system_prompt
 
         result = build_system_prompt()
 
@@ -41,7 +41,7 @@ class TestBuildSystemPrompt:
 
     def test_includes_skeleton_when_provided(self):
         """Should include skeleton when provided."""
-        from prompt_builder import build_system_prompt
+        from src.story.prompt_builder import build_system_prompt
 
         skeleton = {
             "template_name": "test_template",
@@ -68,7 +68,7 @@ class TestBuildSystemPrompt:
 
     def test_includes_research_context_when_provided(self):
         """Should include research context when provided."""
-        from prompt_builder import build_system_prompt
+        from src.story.prompt_builder import build_system_prompt
 
         research_context = {
             "key_concepts": ["liminality", "threshold spaces"],
@@ -86,7 +86,7 @@ class TestBuildSystemPrompt:
 
     def test_includes_seed_context_when_provided(self):
         """Should include seed context when provided."""
-        from prompt_builder import build_system_prompt
+        from src.story.prompt_builder import build_system_prompt
 
         seed_context = {
             "seed_id": "SS-2026-01-11-001",
@@ -108,7 +108,7 @@ class TestBuildSystemPrompt:
 
     def test_includes_both_research_and_seed(self):
         """Should include both research and seed contexts."""
-        from prompt_builder import build_system_prompt
+        from src.story.prompt_builder import build_system_prompt
 
         research_context = {
             "key_concepts": ["concept1"],
@@ -133,7 +133,7 @@ class TestBuildSystemPrompt:
 
     def test_legacy_template_format(self):
         """Should support legacy template format."""
-        from prompt_builder import build_system_prompt
+        from src.story.prompt_builder import build_system_prompt
 
         template = {
             "story_config": {
@@ -163,7 +163,7 @@ class TestFormatResearchContext:
 
     def test_returns_empty_for_none(self):
         """Should return empty string for None."""
-        from prompt_builder import _format_research_context
+        from src.story.prompt_builder import _format_research_context
 
         result = _format_research_context(None)
 
@@ -171,7 +171,7 @@ class TestFormatResearchContext:
 
     def test_returns_empty_for_empty_dict(self):
         """Should return empty string for empty dict."""
-        from prompt_builder import _format_research_context
+        from src.story.prompt_builder import _format_research_context
 
         result = _format_research_context({})
 
@@ -179,7 +179,7 @@ class TestFormatResearchContext:
 
     def test_formats_key_concepts(self):
         """Should format key concepts."""
-        from prompt_builder import _format_research_context
+        from src.story.prompt_builder import _format_research_context
 
         context = {
             "key_concepts": ["liminal spaces", "threshold psychology"]
@@ -193,7 +193,7 @@ class TestFormatResearchContext:
 
     def test_formats_horror_applications(self):
         """Should format horror applications."""
-        from prompt_builder import _format_research_context
+        from src.story.prompt_builder import _format_research_context
 
         context = {
             "horror_applications": ["use as transition terror", "exploit uncertainty"]
@@ -206,7 +206,7 @@ class TestFormatResearchContext:
 
     def test_formats_source_cards(self):
         """Should format source card references."""
-        from prompt_builder import _format_research_context
+        from src.story.prompt_builder import _format_research_context
 
         context = {
             "source_cards": ["RC-001", "RC-002", "RC-003"]
@@ -223,7 +223,7 @@ class TestFormatSeedContext:
 
     def test_returns_empty_for_none(self):
         """Should return empty string for None."""
-        from prompt_builder import _format_seed_context
+        from src.story.prompt_builder import _format_seed_context
 
         result = _format_seed_context(None)
 
@@ -231,7 +231,7 @@ class TestFormatSeedContext:
 
     def test_returns_empty_for_empty_dict(self):
         """Should return empty string for empty dict."""
-        from prompt_builder import _format_seed_context
+        from src.story.prompt_builder import _format_seed_context
 
         result = _format_seed_context({})
 
@@ -239,7 +239,7 @@ class TestFormatSeedContext:
 
     def test_formats_key_themes(self):
         """Should format key themes."""
-        from prompt_builder import _format_seed_context
+        from src.story.prompt_builder import _format_seed_context
 
         context = {
             "key_themes": ["isolation", "paranoia", "surveillance"]
@@ -253,7 +253,7 @@ class TestFormatSeedContext:
 
     def test_formats_atmosphere_tags(self):
         """Should format atmosphere tags."""
-        from prompt_builder import _format_seed_context
+        from src.story.prompt_builder import _format_seed_context
 
         context = {
             "atmosphere_tags": ["oppressive", "uncanny", "liminal"]
@@ -266,7 +266,7 @@ class TestFormatSeedContext:
 
     def test_formats_suggested_hooks(self):
         """Should format suggested hooks."""
-        from prompt_builder import _format_seed_context
+        from src.story.prompt_builder import _format_seed_context
 
         context = {
             "suggested_hooks": [
@@ -282,7 +282,7 @@ class TestFormatSeedContext:
 
     def test_formats_cultural_elements(self):
         """Should format cultural elements."""
-        from prompt_builder import _format_seed_context
+        from src.story.prompt_builder import _format_seed_context
 
         context = {
             "cultural_elements": [
@@ -298,7 +298,7 @@ class TestFormatSeedContext:
 
     def test_formats_seed_id(self):
         """Should format seed ID reference."""
-        from prompt_builder import _format_seed_context
+        from src.story.prompt_builder import _format_seed_context
 
         context = {
             "seed_id": "SS-2026-01-11-001",
@@ -311,7 +311,7 @@ class TestFormatSeedContext:
 
     def test_includes_inspiration_note(self):
         """Should include note about being inspiration."""
-        from prompt_builder import _format_seed_context
+        from src.story.prompt_builder import _format_seed_context
 
         context = {"key_themes": ["test"]}
 
@@ -325,7 +325,7 @@ class TestBuildUserPrompt:
 
     def test_returns_string(self):
         """Should return a string."""
-        from prompt_builder import build_user_prompt
+        from src.story.prompt_builder import build_user_prompt
 
         result = build_user_prompt()
 
@@ -333,7 +333,7 @@ class TestBuildUserPrompt:
 
     def test_uses_custom_request_when_provided(self):
         """Should use custom request when provided."""
-        from prompt_builder import build_user_prompt
+        from src.story.prompt_builder import build_user_prompt
 
         custom = "Write a story about a haunted subway station"
 
@@ -343,7 +343,7 @@ class TestBuildUserPrompt:
 
     def test_returns_default_without_custom(self):
         """Should return default prompt without custom request."""
-        from prompt_builder import build_user_prompt
+        from src.story.prompt_builder import build_user_prompt
 
         result = build_user_prompt()
 
@@ -352,7 +352,7 @@ class TestBuildUserPrompt:
 
     def test_includes_template_context(self):
         """Should include template context when available."""
-        from prompt_builder import build_user_prompt
+        from src.story.prompt_builder import build_user_prompt
 
         template = {
             "story_elements": {
@@ -378,7 +378,7 @@ class TestPromptBuilderIntegration:
 
     def test_full_prompt_construction(self):
         """Should construct full prompt with all contexts."""
-        from prompt_builder import build_system_prompt, build_user_prompt
+        from src.story.prompt_builder import build_system_prompt, build_user_prompt
 
         skeleton = {
             "template_name": "urban_horror",
@@ -425,7 +425,7 @@ class TestPromptBuilderIntegration:
 
     def test_empty_contexts_do_not_break(self):
         """Should handle empty contexts gracefully."""
-        from prompt_builder import build_system_prompt
+        from src.story.prompt_builder import build_system_prompt
 
         # All empty/None contexts
         result = build_system_prompt(

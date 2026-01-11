@@ -18,8 +18,8 @@ class TestSeedSelection:
 
     def test_create_selection_with_seed(self):
         """Should create selection with seed."""
-        from seed_integration import SeedSelection
-        from story_seed import StorySeed
+        from src.story.seed_integration import SeedSelection
+        from src.story.story_seed import StorySeed
 
         seed = StorySeed(
             seed_id="SS-001",
@@ -43,7 +43,7 @@ class TestSeedSelection:
 
     def test_create_selection_without_seed(self):
         """Should create selection without seed."""
-        from seed_integration import SeedSelection
+        from src.story.seed_integration import SeedSelection
 
         selection = SeedSelection(
             seed=None,
@@ -56,8 +56,8 @@ class TestSeedSelection:
 
     def test_has_seed_property(self):
         """Should correctly report has_seed."""
-        from seed_integration import SeedSelection
-        from story_seed import StorySeed
+        from src.story.seed_integration import SeedSelection
+        from src.story.story_seed import StorySeed
 
         no_seed = SeedSelection(None, "No seed", 0)
         assert no_seed.has_seed is False
@@ -79,7 +79,7 @@ class TestSelectSeedForGeneration:
 
     def test_returns_selection_object(self):
         """Should return SeedSelection object."""
-        from seed_integration import select_seed_for_generation, SeedSelection
+        from src.story.seed_integration import select_seed_for_generation, SeedSelection
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("seed_integration.get_seed_registry") as mock_registry:
@@ -95,7 +95,7 @@ class TestSelectSeedForGeneration:
 
     def test_handles_registry_unavailable(self):
         """Should handle registry being unavailable."""
-        from seed_integration import select_seed_for_generation
+        from src.story.seed_integration import select_seed_for_generation
 
         with patch("seed_integration.get_seed_registry") as mock_registry:
             mock_registry.side_effect = Exception("Database error")
@@ -108,7 +108,7 @@ class TestSelectSeedForGeneration:
 
     def test_handles_no_seeds_available(self):
         """Should handle no seeds available."""
-        from seed_integration import select_seed_for_generation
+        from src.story.seed_integration import select_seed_for_generation
 
         with patch("seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
@@ -124,8 +124,8 @@ class TestSelectSeedForGeneration:
 
     def test_strategy_least_used(self):
         """Should use least_used strategy by default."""
-        from seed_integration import select_seed_for_generation
-        from seed_registry import SeedRecord
+        from src.story.seed_integration import select_seed_for_generation
+        from src.registry.seed_registry import SeedRecord
 
         with patch("seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
@@ -150,8 +150,8 @@ class TestSelectSeedForGeneration:
 
     def test_strategy_random(self):
         """Should support random strategy."""
-        from seed_integration import select_seed_for_generation
-        from seed_registry import SeedRecord
+        from src.story.seed_integration import select_seed_for_generation
+        from src.registry.seed_registry import SeedRecord
 
         with patch("seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()
@@ -171,7 +171,7 @@ class TestSelectSeedForGeneration:
 
     def test_never_raises_exception(self):
         """Should never raise exceptions."""
-        from seed_integration import select_seed_for_generation
+        from src.story.seed_integration import select_seed_for_generation
 
         # Various failure scenarios
         with patch("seed_integration.get_seed_registry") as mock_registry:
@@ -187,7 +187,7 @@ class TestGetSeedContextForPrompt:
 
     def test_returns_none_without_seed(self):
         """Should return None when no seed selected."""
-        from seed_integration import get_seed_context_for_prompt, SeedSelection
+        from src.story.seed_integration import get_seed_context_for_prompt, SeedSelection
 
         selection = SeedSelection(seed=None, selection_reason="None", total_available=0)
 
@@ -197,8 +197,8 @@ class TestGetSeedContextForPrompt:
 
     def test_returns_context_dict_with_seed(self):
         """Should return context dict when seed is selected."""
-        from seed_integration import get_seed_context_for_prompt, SeedSelection
-        from story_seed import StorySeed
+        from src.story.seed_integration import get_seed_context_for_prompt, SeedSelection
+        from src.story.story_seed import StorySeed
 
         seed = StorySeed(
             seed_id="SS-001",
@@ -227,7 +227,7 @@ class TestFormatSeedForSystemPrompt:
 
     def test_returns_empty_for_none(self):
         """Should return empty string for None context."""
-        from seed_integration import format_seed_for_system_prompt
+        from src.story.seed_integration import format_seed_for_system_prompt
 
         result = format_seed_for_system_prompt(None)
 
@@ -235,7 +235,7 @@ class TestFormatSeedForSystemPrompt:
 
     def test_returns_empty_for_empty_dict(self):
         """Should return empty string for empty dict (truthy check)."""
-        from seed_integration import format_seed_for_system_prompt
+        from src.story.seed_integration import format_seed_for_system_prompt
 
         result = format_seed_for_system_prompt({})
 
@@ -244,7 +244,7 @@ class TestFormatSeedForSystemPrompt:
 
     def test_formats_themes(self):
         """Should format key themes."""
-        from seed_integration import format_seed_for_system_prompt
+        from src.story.seed_integration import format_seed_for_system_prompt
 
         context = {"key_themes": ["isolation", "paranoia", "dread"]}
 
@@ -257,7 +257,7 @@ class TestFormatSeedForSystemPrompt:
 
     def test_formats_atmosphere(self):
         """Should format atmosphere tags."""
-        from seed_integration import format_seed_for_system_prompt
+        from src.story.seed_integration import format_seed_for_system_prompt
 
         context = {"atmosphere_tags": ["oppressive", "uncanny"]}
 
@@ -269,7 +269,7 @@ class TestFormatSeedForSystemPrompt:
 
     def test_formats_hooks(self):
         """Should format suggested hooks."""
-        from seed_integration import format_seed_for_system_prompt
+        from src.story.seed_integration import format_seed_for_system_prompt
 
         context = {"suggested_hooks": ["A researcher discovers...", "The elevator stops..."]}
 
@@ -280,7 +280,7 @@ class TestFormatSeedForSystemPrompt:
 
     def test_formats_cultural_elements(self):
         """Should format cultural elements."""
-        from seed_integration import format_seed_for_system_prompt
+        from src.story.seed_integration import format_seed_for_system_prompt
 
         context = {"cultural_elements": ["corporate surveillance", "late-night convenience stores"]}
 
@@ -291,7 +291,7 @@ class TestFormatSeedForSystemPrompt:
 
     def test_includes_inspiration_note(self):
         """Should include note about seeds being inspiration."""
-        from seed_integration import format_seed_for_system_prompt
+        from src.story.seed_integration import format_seed_for_system_prompt
 
         context = {"key_themes": ["test"]}
 
@@ -305,7 +305,7 @@ class TestMarkSeedUsed:
 
     def test_marks_seed_in_registry(self):
         """Should mark seed as used."""
-        from seed_integration import mark_seed_used
+        from src.story.seed_integration import mark_seed_used
 
         with patch("seed_integration.get_seed_registry") as mock_get:
             mock_reg = MagicMock()
@@ -319,7 +319,7 @@ class TestMarkSeedUsed:
 
     def test_returns_false_on_error(self):
         """Should return False on registry error."""
-        from seed_integration import mark_seed_used
+        from src.story.seed_integration import mark_seed_used
 
         with patch("seed_integration.get_seed_registry") as mock_get:
             mock_get.side_effect = Exception("Database error")
@@ -330,7 +330,7 @@ class TestMarkSeedUsed:
 
     def test_accepts_custom_registry(self):
         """Should accept custom registry."""
-        from seed_integration import mark_seed_used
+        from src.story.seed_integration import mark_seed_used
 
         mock_reg = MagicMock()
         mock_reg.mark_used.return_value = True
@@ -346,7 +346,7 @@ class TestGetSeedInjectionStatus:
 
     def test_returns_status_dict(self):
         """Should return status dictionary."""
-        from seed_integration import get_seed_injection_status
+        from src.story.seed_integration import get_seed_injection_status
 
         with patch("seed_integration.get_seed_registry") as mock_get:
             mock_reg = MagicMock()
@@ -362,7 +362,7 @@ class TestGetSeedInjectionStatus:
 
     def test_handles_error_gracefully(self):
         """Should handle errors gracefully."""
-        from seed_integration import get_seed_injection_status
+        from src.story.seed_integration import get_seed_injection_status
 
         with patch("seed_integration.get_seed_registry") as mock_get:
             mock_get.side_effect = Exception("Database unavailable")
@@ -378,9 +378,9 @@ class TestSelectSeedAdvanced:
 
     def test_successful_seed_selection_with_load(self):
         """Should successfully select and load a seed."""
-        from seed_integration import select_seed_for_generation
-        from seed_registry import SeedRecord
-        from story_seed import StorySeed
+        from src.story.seed_integration import select_seed_for_generation
+        from src.registry.seed_registry import SeedRecord
+        from src.story.story_seed import StorySeed
 
         mock_seed = StorySeed(
             seed_id="SS-001",
@@ -415,8 +415,8 @@ class TestSelectSeedAdvanced:
 
     def test_fallback_to_files_when_registry_empty(self):
         """Should try file system when registry is empty."""
-        from seed_integration import select_seed_for_generation
-        from story_seed import StorySeed
+        from src.story.seed_integration import select_seed_for_generation
+        from src.story.story_seed import StorySeed
 
         mock_seed = StorySeed(
             seed_id="SS-FILE-001",
@@ -445,9 +445,9 @@ class TestSelectSeedAdvanced:
 
     def test_random_selection_from_multiple_seeds(self):
         """Should select randomly from multiple available seeds."""
-        from seed_integration import select_seed_for_generation
-        from seed_registry import SeedRecord
-        from story_seed import StorySeed
+        from src.story.seed_integration import select_seed_for_generation
+        from src.registry.seed_registry import SeedRecord
+        from src.story.story_seed import StorySeed
 
         mock_seed = StorySeed(
             seed_id="SS-RANDOM",
@@ -478,8 +478,8 @@ class TestSelectSeedAdvanced:
 
     def test_load_failure_returns_none_seed(self):
         """Should return None seed when load fails."""
-        from seed_integration import select_seed_for_generation
-        from seed_registry import SeedRecord
+        from src.story.seed_integration import select_seed_for_generation
+        from src.registry.seed_registry import SeedRecord
 
         with patch("seed_integration.get_seed_registry") as mock_registry:
             mock_reg = MagicMock()

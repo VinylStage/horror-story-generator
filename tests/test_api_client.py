@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch, MagicMock
 
 import pytest
 
-from api_client import call_claude_api, generate_semantic_summary
+from src.story.api_client import call_claude_api, generate_semantic_summary
 
 
 class TestCallClaudeApi:

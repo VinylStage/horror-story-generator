@@ -4,7 +4,7 @@ Tests for similarity module.
 
 import pytest
 
-from similarity import (
+from src.dedup.similarity import (
     GenerationRecord,
     compute_text_similarity,
     observe_similarity,

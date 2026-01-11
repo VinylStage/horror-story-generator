@@ -16,7 +16,7 @@ class TestOllamaResourceManager:
 
     def test_create_manager(self):
         """Should create manager with defaults."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager()
 
@@ -26,7 +26,7 @@ class TestOllamaResourceManager:
 
     def test_create_manager_with_custom_config(self):
         """Should accept custom configuration."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager(
             base_url="http://custom:11434",
@@ -39,7 +39,7 @@ class TestOllamaResourceManager:
     @pytest.mark.asyncio
     async def test_start_manager(self):
         """Should start manager and set running state."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager(idle_timeout=0)  # Disable cleanup loop
 
@@ -52,7 +52,7 @@ class TestOllamaResourceManager:
     @pytest.mark.asyncio
     async def test_start_with_cleanup_task(self):
         """Should start cleanup task when idle_timeout > 0."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager(idle_timeout=60)
 
@@ -66,7 +66,7 @@ class TestOllamaResourceManager:
     @pytest.mark.asyncio
     async def test_stop_manager(self):
         """Should stop manager and cleanup."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager(idle_timeout=0)
 
@@ -78,7 +78,7 @@ class TestOllamaResourceManager:
 
     def test_mark_model_used(self):
         """Should track model usage time."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager()
 
@@ -92,7 +92,7 @@ class TestOllamaResourceManager:
 
     def test_mark_model_used_updates_time(self):
         """Should update time on subsequent uses."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager()
 
@@ -110,7 +110,7 @@ class TestOllamaResourceManager:
 
     def test_get_status(self):
         """Should return status dictionary."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager(idle_timeout=300)
         manager._running = True
@@ -126,7 +126,7 @@ class TestOllamaResourceManager:
     @pytest.mark.asyncio
     async def test_check_and_unload_idle_no_models(self):
         """Should handle no active models."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager()
 
@@ -136,7 +136,7 @@ class TestOllamaResourceManager:
     @pytest.mark.asyncio
     async def test_check_and_unload_idle_recent_model(self):
         """Should not unload recently used models."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager(idle_timeout=300)
         manager.mark_model_used("qwen3:30b")
@@ -149,7 +149,7 @@ class TestOllamaResourceManager:
     @pytest.mark.asyncio
     async def test_check_and_unload_idle_old_model(self):
         """Should unload models past idle timeout."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager(idle_timeout=1)  # 1 second timeout
 
@@ -167,7 +167,7 @@ class TestOllamaResourceManager:
     @pytest.mark.asyncio
     async def test_unload_all_models(self):
         """Should unload all tracked models."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager()
         manager._active_models["qwen3:30b"] = datetime.now()
@@ -184,7 +184,7 @@ class TestOllamaResourceManager:
     @pytest.mark.asyncio
     async def test_unload_model_success(self):
         """Should unload model via Ollama API."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager()
 
@@ -205,7 +205,7 @@ class TestOllamaResourceManager:
     @pytest.mark.asyncio
     async def test_unload_model_failure(self):
         """Should handle unload failure gracefully."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager()
 
@@ -227,7 +227,7 @@ class TestGetResourceManager:
 
     def test_returns_manager_instance(self):
         """Should return OllamaResourceManager instance."""
-        from research_api.services.ollama_resource import (
+        from src.api.services.ollama_resource import (
             get_resource_manager,
             OllamaResourceManager,
             _resource_manager
@@ -246,7 +246,7 @@ class TestGetResourceManager:
 
     def test_returns_same_instance(self):
         """Should return same instance on multiple calls."""
-        from research_api.services.ollama_resource import get_resource_manager
+        from src.api.services.ollama_resource import get_resource_manager
         import research_api.services.ollama_resource as module
 
         # Reset global state
@@ -267,7 +267,7 @@ class TestStartupShutdown:
     @pytest.mark.asyncio
     async def test_startup_resource_manager(self):
         """Should start global resource manager."""
-        from research_api.services.ollama_resource import (
+        from src.api.services.ollama_resource import (
             startup_resource_manager,
             shutdown_resource_manager,
             get_resource_manager
@@ -287,7 +287,7 @@ class TestStartupShutdown:
     @pytest.mark.asyncio
     async def test_shutdown_resource_manager(self):
         """Should stop and clear resource manager."""
-        from research_api.services.ollama_resource import (
+        from src.api.services.ollama_resource import (
             startup_resource_manager,
             shutdown_resource_manager
         )
@@ -304,7 +304,7 @@ class TestStartupShutdown:
     @pytest.mark.asyncio
     async def test_shutdown_handles_no_manager(self):
         """Should handle shutdown when no manager exists."""
-        from research_api.services.ollama_resource import shutdown_resource_manager
+        from src.api.services.ollama_resource import shutdown_resource_manager
         import research_api.services.ollama_resource as module
 
         # Ensure no manager
@@ -320,7 +320,7 @@ class TestIdleCleanupLoop:
     @pytest.mark.asyncio
     async def test_cleanup_loop_runs(self):
         """Should run cleanup loop periodically."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager(idle_timeout=1)
 
@@ -338,7 +338,7 @@ class TestIdleCleanupLoop:
     @pytest.mark.asyncio
     async def test_cleanup_loop_handles_cancellation(self):
         """Should handle cancellation gracefully."""
-        from research_api.services.ollama_resource import OllamaResourceManager
+        from src.api.services.ollama_resource import OllamaResourceManager
 
         manager = OllamaResourceManager(idle_timeout=60)
 

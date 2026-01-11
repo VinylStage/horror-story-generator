@@ -19,14 +19,14 @@ class TestIsProcessRunning:
 
     def test_current_process_is_running(self):
         """Should detect current process as running."""
-        from job_monitor import is_process_running
+        from src.infra.job_monitor import is_process_running
 
         result = is_process_running(os.getpid())
         assert result is True
 
     def test_invalid_pid_not_running(self):
         """Should return False for invalid PIDs."""
-        from job_monitor import is_process_running
+        from src.infra.job_monitor import is_process_running
 
         assert is_process_running(None) is False
         assert is_process_running(0) is False
@@ -34,7 +34,7 @@ class TestIsProcessRunning:
 
     def test_nonexistent_pid_not_running(self):
         """Should return False for nonexistent PID."""
-        from job_monitor import is_process_running
+        from src.infra.job_monitor import is_process_running
 
         # Use a very high PID that's unlikely to exist
         result = is_process_running(999999999)
@@ -56,8 +56,8 @@ class TestCollectArtifacts:
 
     def test_collect_story_artifacts(self, temp_dirs):
         """Should collect story artifacts created after job start."""
-        from job_monitor import collect_story_artifacts
-        from job_manager import Job
+        from src.infra.job_monitor import collect_story_artifacts
+        from src.infra.job_manager import Job
 
         # Create a story file
         story_file = temp_dirs["stories"] / "story_001.json"
@@ -78,8 +78,8 @@ class TestCollectArtifacts:
 
     def test_collect_research_artifacts(self, temp_dirs):
         """Should collect research artifacts created after job start."""
-        from job_monitor import collect_research_artifacts
-        from job_manager import Job
+        from src.infra.job_monitor import collect_research_artifacts
+        from src.infra.job_manager import Job
 
         # Create a research file
         research_file = temp_dirs["research"] / "RC-001.json"
@@ -100,8 +100,8 @@ class TestCollectArtifacts:
 
     def test_no_artifacts_before_start(self, temp_dirs):
         """Should not collect artifacts created before job start."""
-        from job_monitor import collect_story_artifacts
-        from job_manager import Job
+        from src.infra.job_monitor import collect_story_artifacts
+        from src.infra.job_manager import Job
 
         # Create a story file
         story_file = temp_dirs["stories"] / "old_story.json"
@@ -125,8 +125,8 @@ class TestCollectArtifacts:
 
     def test_collect_artifacts_no_started_at(self):
         """Should return empty list if job has no started_at."""
-        from job_monitor import collect_story_artifacts
-        from job_manager import Job
+        from src.infra.job_monitor import collect_story_artifacts
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="test-no-start",
@@ -150,8 +150,8 @@ class TestCheckJobLogForErrors:
 
     def test_detect_traceback_error(self, temp_log_dir):
         """Should detect Python traceback in log."""
-        from job_monitor import check_job_log_for_errors
-        from job_manager import Job
+        from src.infra.job_monitor import check_job_log_for_errors
+        from src.infra.job_manager import Job
 
         log_file = temp_log_dir / "test.log"
         log_file.write_text("""
@@ -175,8 +175,8 @@ ValueError: Test error
 
     def test_no_error_in_clean_log(self, temp_log_dir):
         """Should return None for clean log."""
-        from job_monitor import check_job_log_for_errors
-        from job_manager import Job
+        from src.infra.job_monitor import check_job_log_for_errors
+        from src.infra.job_manager import Job
 
         log_file = temp_log_dir / "clean.log"
         log_file.write_text("""
@@ -198,8 +198,8 @@ Done!
 
     def test_no_log_path(self):
         """Should return None if no log path."""
-        from job_monitor import check_job_log_for_errors
-        from job_manager import Job
+        from src.infra.job_monitor import check_job_log_for_errors
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="no-log",
@@ -225,7 +225,7 @@ class TestMonitorJob:
 
     def test_monitor_nonexistent_job(self, temp_jobs_dir):
         """Should return error for nonexistent job."""
-        from job_monitor import monitor_job
+        from src.infra.job_monitor import monitor_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             with patch("job_monitor.load_job", return_value=None):
@@ -236,8 +236,8 @@ class TestMonitorJob:
 
     def test_monitor_running_job(self, temp_jobs_dir):
         """Should return running status for active job."""
-        from job_monitor import monitor_job
-        from job_manager import Job
+        from src.infra.job_monitor import monitor_job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="running-job",
@@ -255,8 +255,8 @@ class TestMonitorJob:
 
     def test_monitor_completed_job_with_artifacts(self, temp_jobs_dir):
         """Should detect completed job and collect artifacts."""
-        from job_monitor import monitor_job
-        from job_manager import Job
+        from src.infra.job_monitor import monitor_job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="completed-job",
@@ -290,7 +290,7 @@ class TestCancelJob:
 
     def test_cancel_nonexistent_job(self, temp_jobs_dir):
         """Should return error for nonexistent job."""
-        from job_monitor import cancel_job
+        from src.infra.job_monitor import cancel_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             with patch("job_monitor.load_job", return_value=None):
@@ -301,8 +301,8 @@ class TestCancelJob:
 
     def test_cancel_non_running_job(self, temp_jobs_dir):
         """Should return error for non-running job."""
-        from job_monitor import cancel_job
-        from job_manager import Job
+        from src.infra.job_monitor import cancel_job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="queued-job",
@@ -320,8 +320,8 @@ class TestCancelJob:
 
     def test_cancel_job_process_already_exited(self, temp_jobs_dir):
         """Should handle already exited process."""
-        from job_monitor import cancel_job
-        from job_manager import Job
+        from src.infra.job_monitor import cancel_job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="exited-job",
@@ -344,7 +344,7 @@ class TestMonitorAllRunningJobs:
 
     def test_monitor_empty_list(self):
         """Should handle no running jobs."""
-        from job_monitor import monitor_all_running_jobs
+        from src.infra.job_monitor import monitor_all_running_jobs
 
         with patch("job_monitor.get_running_jobs", return_value=[]):
             results = monitor_all_running_jobs()
@@ -353,8 +353,8 @@ class TestMonitorAllRunningJobs:
 
     def test_monitor_multiple_jobs(self):
         """Should monitor all running jobs."""
-        from job_monitor import monitor_all_running_jobs
-        from job_manager import Job
+        from src.infra.job_monitor import monitor_all_running_jobs
+        from src.infra.job_manager import Job
 
         jobs = [
             Job(job_id="job-1", type="story_generation", status="running", pid=os.getpid()),
@@ -374,7 +374,7 @@ class TestMonitorEndpoints:
     @pytest.fixture
     def client(self):
         """Create test client for API."""
-        from research_api.main import app
+        from src.api.main import app
         from fastapi.testclient import TestClient
         return TestClient(app)
 
@@ -388,7 +388,7 @@ class TestMonitorEndpoints:
 
     def test_cancel_endpoint(self, client, temp_jobs_dir):
         """Should call cancel via API."""
-        from job_manager import Job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="cancel-test",
@@ -420,7 +420,7 @@ class TestMonitorEndpoints:
 
     def test_monitor_single_endpoint(self, client, temp_jobs_dir):
         """Should monitor single job via API."""
-        from job_manager import Job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="single-test",

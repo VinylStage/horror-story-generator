@@ -16,7 +16,7 @@ class TestSeedRecord:
 
     def test_create_record(self):
         """Should create record with correct fields."""
-        from seed_registry import SeedRecord
+        from src.registry.seed_registry import SeedRecord
 
         record = SeedRecord(
             seed_id="SS-2026-01-11-001",
@@ -31,7 +31,7 @@ class TestSeedRecord:
 
     def test_to_dict(self):
         """Should convert to dictionary."""
-        from seed_registry import SeedRecord
+        from src.registry.seed_registry import SeedRecord
 
         record = SeedRecord(
             seed_id="SS-001",
@@ -54,7 +54,7 @@ class TestSeedRegistry:
     @pytest.fixture
     def temp_registry(self):
         """Create a temporary registry for testing."""
-        from seed_registry import SeedRegistry
+        from src.registry.seed_registry import SeedRegistry
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test_seed_registry.sqlite"
@@ -205,14 +205,14 @@ class TestGetSeedRegistry:
 
     def test_returns_registry_instance(self):
         """Should return SeedRegistry instance."""
-        from seed_registry import get_seed_registry, SeedRegistry
+        from src.registry.seed_registry import get_seed_registry, SeedRegistry
 
         registry = get_seed_registry()
         assert isinstance(registry, SeedRegistry)
 
     def test_returns_same_instance(self):
         """Should return same instance on multiple calls."""
-        from seed_registry import get_seed_registry
+        from src.registry.seed_registry import get_seed_registry
 
         registry1 = get_seed_registry()
         registry2 = get_seed_registry()
@@ -226,7 +226,7 @@ class TestSeedRegistryErrors:
     @pytest.fixture
     def temp_registry(self):
         """Create a temporary registry for testing."""
-        from seed_registry import SeedRegistry
+        from src.registry.seed_registry import SeedRegistry
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test_seed_registry.sqlite"

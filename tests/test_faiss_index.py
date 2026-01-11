@@ -43,7 +43,7 @@ class TestFaissIndexInit:
 
     def test_init_without_paths(self):
         """Should create index without paths."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -56,7 +56,7 @@ class TestFaissIndexInit:
 
     def test_init_with_nonexistent_paths(self):
         """Should handle nonexistent paths gracefully."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -76,7 +76,7 @@ class TestFaissIndexAdd:
 
     def test_add_empty_embedding(self):
         """Should fail for empty embedding."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -88,7 +88,7 @@ class TestFaissIndexAdd:
 
     def test_add_updates_dimension(self):
         """Should update dimension from first embedding."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -102,7 +102,7 @@ class TestFaissIndexAdd:
 
     def test_add_exception_handling(self):
         """Should handle add exception."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -122,7 +122,7 @@ class TestFaissIndexSearch:
 
     def test_search_without_faiss(self):
         """Should return empty when FAISS not available."""
-        from research_dedup.index import FaissIndex
+        from src.dedup.research.index import FaissIndex
 
         index = FaissIndex()
         index._index = None  # Simulate no FAISS
@@ -133,7 +133,7 @@ class TestFaissIndexSearch:
 
     def test_search_empty_index(self):
         """Should return empty for empty index."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -147,7 +147,7 @@ class TestFaissIndexSearch:
 
     def test_search_with_exclusion(self):
         """Should exclude specified card."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -163,7 +163,7 @@ class TestFaissIndexSearch:
 
     def test_search_handles_invalid_index(self):
         """Should handle invalid FAISS indices."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
         import numpy as np
 
         if not is_faiss_available():
@@ -186,7 +186,7 @@ class TestFaissIndexSearch:
 
     def test_search_handles_missing_card_id(self):
         """Should handle missing card ID in metadata."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
         import numpy as np
 
         if not is_faiss_available():
@@ -205,7 +205,7 @@ class TestFaissIndexSearch:
 
     def test_search_exception_handling(self):
         """Should handle search exception."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -224,7 +224,7 @@ class TestFaissIndexSave:
 
     def test_save_without_faiss(self):
         """Should fail when FAISS not available."""
-        from research_dedup.index import FaissIndex
+        from src.dedup.research.index import FaissIndex
 
         index = FaissIndex()
         index._index = None
@@ -235,7 +235,7 @@ class TestFaissIndexSave:
 
     def test_save_without_paths(self):
         """Should fail without configured paths."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -249,7 +249,7 @@ class TestFaissIndexSave:
 
     def test_save_creates_directories(self):
         """Should create parent directories."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -269,7 +269,7 @@ class TestFaissIndexSave:
 
     def test_save_exception_handling(self):
         """Should handle save exception."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -293,7 +293,7 @@ class TestFaissIndexLoad:
 
     def test_load_without_faiss(self):
         """Should fail when FAISS not available."""
-        from research_dedup.index import FaissIndex
+        from src.dedup.research.index import FaissIndex
 
         with patch("research_dedup.index.FAISS_AVAILABLE", False):
             index = FaissIndex()
@@ -303,7 +303,7 @@ class TestFaissIndexLoad:
 
     def test_load_without_paths(self):
         """Should fail without paths."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -315,7 +315,7 @@ class TestFaissIndexLoad:
 
     def test_load_exception_handling(self):
         """Should handle load exception and reset state."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -347,7 +347,7 @@ class TestGetIndex:
 
     def test_get_index_creates_global(self):
         """Should create global index instance."""
-        from research_dedup.index import get_index, is_faiss_available
+        from src.dedup.research.index import get_index, is_faiss_available
         import research_dedup.index as module
 
         if not is_faiss_available():
@@ -370,7 +370,7 @@ class TestGetIndex:
 
     def test_get_index_returns_same_instance(self):
         """Should return same global instance."""
-        from research_dedup.index import get_index, is_faiss_available
+        from src.dedup.research.index import get_index, is_faiss_available
         import research_dedup.index as module
 
         if not is_faiss_available():
@@ -393,7 +393,7 @@ class TestGetIndex:
 
     def test_get_index_uses_default_paths(self):
         """Should use default paths from data_paths."""
-        from research_dedup.index import get_index, is_faiss_available
+        from src.dedup.research.index import get_index, is_faiss_available
         import research_dedup.index as module
 
         if not is_faiss_available():
@@ -414,7 +414,7 @@ class TestGetIndex:
 
     def test_get_index_import_error(self):
         """Should handle ImportError for data_paths."""
-        from research_dedup.index import get_index, is_faiss_available
+        from src.dedup.research.index import get_index, is_faiss_available
         import research_dedup.index as module
 
         if not is_faiss_available():
@@ -437,7 +437,7 @@ class TestEnsureIndex:
 
     def test_ensure_index_not_available(self):
         """Should return False when FAISS not available."""
-        from research_dedup.index import FaissIndex
+        from src.dedup.research.index import FaissIndex
 
         index = FaissIndex()
 
@@ -448,7 +448,7 @@ class TestEnsureIndex:
 
     def test_ensure_index_uses_provided_dim(self):
         """Should use provided dimension."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -462,7 +462,7 @@ class TestEnsureIndex:
 
     def test_ensure_index_uses_default_dim(self):
         """Should use default dimension if not provided."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -480,7 +480,7 @@ class TestContainsAndSize:
 
     def test_contains_returns_false_for_missing(self):
         """Should return False for non-existent card."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -491,7 +491,7 @@ class TestContainsAndSize:
 
     def test_size_reflects_additions(self):
         """Should reflect number of added cards."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -512,7 +512,7 @@ class TestClear:
 
     def test_clear_resets_all(self):
         """Should reset all internal state."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")

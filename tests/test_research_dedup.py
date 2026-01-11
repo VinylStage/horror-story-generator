@@ -17,7 +17,7 @@ class TestDedupSignal:
 
     def test_signal_values(self):
         """Should have correct signal values."""
-        from research_dedup.dedup import DedupSignal
+        from src.dedup.research.dedup import DedupSignal
 
         assert DedupSignal.LOW.value == "LOW"
         assert DedupSignal.MEDIUM.value == "MEDIUM"
@@ -29,7 +29,7 @@ class TestGetDedupSignal:
 
     def test_low_signal_below_threshold(self):
         """Should return LOW for scores below 0.70."""
-        from research_dedup.dedup import get_dedup_signal, DedupSignal
+        from src.dedup.research.dedup import get_dedup_signal, DedupSignal
 
         assert get_dedup_signal(0.0) == DedupSignal.LOW
         assert get_dedup_signal(0.5) == DedupSignal.LOW
@@ -37,7 +37,7 @@ class TestGetDedupSignal:
 
     def test_medium_signal_in_range(self):
         """Should return MEDIUM for scores 0.70-0.85."""
-        from research_dedup.dedup import get_dedup_signal, DedupSignal
+        from src.dedup.research.dedup import get_dedup_signal, DedupSignal
 
         assert get_dedup_signal(0.70) == DedupSignal.MEDIUM
         assert get_dedup_signal(0.75) == DedupSignal.MEDIUM
@@ -45,7 +45,7 @@ class TestGetDedupSignal:
 
     def test_high_signal_above_threshold(self):
         """Should return HIGH for scores >= 0.85."""
-        from research_dedup.dedup import get_dedup_signal, DedupSignal
+        from src.dedup.research.dedup import get_dedup_signal, DedupSignal
 
         assert get_dedup_signal(0.85) == DedupSignal.HIGH
         assert get_dedup_signal(0.90) == DedupSignal.HIGH
@@ -57,7 +57,7 @@ class TestDedupResult:
 
     def test_create_result(self):
         """Should create DedupResult with correct fields."""
-        from research_dedup.dedup import DedupResult, DedupSignal
+        from src.dedup.research.dedup import DedupResult, DedupSignal
 
         result = DedupResult(
             similarity_score=0.75,
@@ -71,7 +71,7 @@ class TestDedupResult:
 
     def test_is_duplicate_property(self):
         """Should correctly identify duplicates."""
-        from research_dedup.dedup import DedupResult, DedupSignal
+        from src.dedup.research.dedup import DedupResult, DedupSignal
 
         low = DedupResult(0.5, None, DedupSignal.LOW)
         medium = DedupResult(0.75, "RC-001", DedupSignal.MEDIUM)
@@ -83,7 +83,7 @@ class TestDedupResult:
 
     def test_to_dict(self):
         """Should convert to dictionary correctly."""
-        from research_dedup.dedup import DedupResult, DedupSignal
+        from src.dedup.research.dedup import DedupResult, DedupSignal
 
         result = DedupResult(
             similarity_score=0.7512,
@@ -104,7 +104,7 @@ class TestCreateCardTextForEmbedding:
 
     def test_extracts_topic(self):
         """Should extract topic from card data."""
-        from research_dedup.embedder import create_card_text_for_embedding
+        from src.dedup.research.embedder import create_card_text_for_embedding
 
         card_data = {
             "input": {"topic": "Test Topic"}
@@ -115,7 +115,7 @@ class TestCreateCardTextForEmbedding:
 
     def test_extracts_output_fields(self):
         """Should extract output fields."""
-        from research_dedup.embedder import create_card_text_for_embedding
+        from src.dedup.research.embedder import create_card_text_for_embedding
 
         card_data = {
             "output": {
@@ -135,14 +135,14 @@ class TestCreateCardTextForEmbedding:
 
     def test_handles_empty_card(self):
         """Should handle empty card data."""
-        from research_dedup.embedder import create_card_text_for_embedding
+        from src.dedup.research.embedder import create_card_text_for_embedding
 
         result = create_card_text_for_embedding({})
         assert result == ""
 
     def test_handles_partial_card(self):
         """Should handle partial card data."""
-        from research_dedup.embedder import create_card_text_for_embedding
+        from src.dedup.research.embedder import create_card_text_for_embedding
 
         card_data = {
             "input": {"topic": "Only Topic"}
@@ -157,7 +157,7 @@ class TestFaissIndex:
 
     def test_create_index(self):
         """Should create empty index."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -167,7 +167,7 @@ class TestFaissIndex:
 
     def test_add_vector(self):
         """Should add vector to index."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -183,7 +183,7 @@ class TestFaissIndex:
 
     def test_add_duplicate_skipped(self):
         """Should skip duplicate card IDs."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -198,7 +198,7 @@ class TestFaissIndex:
 
     def test_search_empty_index(self):
         """Should return empty list for empty index."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -212,7 +212,7 @@ class TestFaissIndex:
 
     def test_search_returns_results(self):
         """Should return search results."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -232,7 +232,7 @@ class TestFaissIndex:
 
     def test_get_nearest(self):
         """Should get nearest card."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -248,7 +248,7 @@ class TestFaissIndex:
 
     def test_save_and_load(self):
         """Should save and load index."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -270,7 +270,7 @@ class TestFaissIndex:
 
     def test_clear_index(self):
         """Should clear all indexed data."""
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -289,7 +289,7 @@ class TestIsFaissAvailable:
 
     def test_returns_boolean(self):
         """Should return boolean."""
-        from research_dedup.index import is_faiss_available
+        from src.dedup.research.index import is_faiss_available
 
         result = is_faiss_available()
         assert isinstance(result, bool)
@@ -300,8 +300,8 @@ class TestCheckDuplicate:
 
     def test_check_with_empty_index(self):
         """Should return LOW signal for empty index."""
-        from research_dedup.dedup import check_duplicate, DedupSignal
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import check_duplicate, DedupSignal
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -317,8 +317,8 @@ class TestCheckDuplicate:
 
     def test_check_with_empty_text(self):
         """Should return LOW signal for empty card text."""
-        from research_dedup.dedup import check_duplicate, DedupSignal
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import check_duplicate, DedupSignal
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -334,8 +334,8 @@ class TestCheckDuplicate:
 
     def test_check_with_embedding_failure(self):
         """Should return LOW signal when embedding fails."""
-        from research_dedup.dedup import check_duplicate, DedupSignal
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import check_duplicate, DedupSignal
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -352,8 +352,8 @@ class TestCheckDuplicate:
 
     def test_check_finds_similar_card(self):
         """Should find similar card."""
-        from research_dedup.dedup import check_duplicate, DedupSignal
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import check_duplicate, DedupSignal
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -372,8 +372,8 @@ class TestCheckDuplicate:
 
     def test_check_excludes_self(self):
         """Should exclude self when card_id in metadata."""
-        from research_dedup.dedup import check_duplicate
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import check_duplicate
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -397,8 +397,8 @@ class TestCheckDuplicate:
 
     def test_check_no_nearest_found(self):
         """Should handle case when no nearest found."""
-        from research_dedup.dedup import check_duplicate, DedupSignal
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import check_duplicate, DedupSignal
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -421,8 +421,8 @@ class TestAddCardToIndex:
 
     def test_add_card_success(self):
         """Should add card to index."""
-        from research_dedup.dedup import add_card_to_index
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import add_card_to_index
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -439,8 +439,8 @@ class TestAddCardToIndex:
 
     def test_add_card_already_exists(self):
         """Should skip if card already indexed."""
-        from research_dedup.dedup import add_card_to_index
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import add_card_to_index
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -459,8 +459,8 @@ class TestAddCardToIndex:
 
     def test_add_card_empty_text(self):
         """Should fail for empty card text."""
-        from research_dedup.dedup import add_card_to_index
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import add_card_to_index
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -474,8 +474,8 @@ class TestAddCardToIndex:
 
     def test_add_card_embedding_failure(self):
         """Should fail when embedding generation fails."""
-        from research_dedup.dedup import add_card_to_index
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import add_card_to_index
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -490,8 +490,8 @@ class TestAddCardToIndex:
 
     def test_add_card_with_save(self):
         """Should save index after adding."""
-        from research_dedup.dedup import add_card_to_index
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import add_card_to_index
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -516,8 +516,8 @@ class TestBatchIndexCards:
 
     def test_batch_index_success(self):
         """Should index multiple cards."""
-        from research_dedup.dedup import batch_index_cards
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import batch_index_cards
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -541,8 +541,8 @@ class TestBatchIndexCards:
 
     def test_batch_index_missing_card_id(self):
         """Should skip cards without card_id."""
-        from research_dedup.dedup import batch_index_cards
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import batch_index_cards
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -561,8 +561,8 @@ class TestBatchIndexCards:
 
     def test_batch_index_empty_list(self):
         """Should handle empty list."""
-        from research_dedup.dedup import batch_index_cards
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import batch_index_cards
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -578,8 +578,8 @@ class TestGetSimilarCards:
 
     def test_get_similar_empty_index(self):
         """Should return empty list for empty index."""
-        from research_dedup.dedup import get_similar_cards
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import get_similar_cards
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -593,8 +593,8 @@ class TestGetSimilarCards:
 
     def test_get_similar_empty_text(self):
         """Should return empty list for empty card text."""
-        from research_dedup.dedup import get_similar_cards
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import get_similar_cards
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -610,8 +610,8 @@ class TestGetSimilarCards:
 
     def test_get_similar_embedding_failure(self):
         """Should return empty list when embedding fails."""
-        from research_dedup.dedup import get_similar_cards
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import get_similar_cards
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -628,8 +628,8 @@ class TestGetSimilarCards:
 
     def test_get_similar_returns_results(self):
         """Should return similar cards."""
-        from research_dedup.dedup import get_similar_cards
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import get_similar_cards
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -650,8 +650,8 @@ class TestGetSimilarCards:
 
     def test_get_similar_excludes_self(self):
         """Should exclude self from results."""
-        from research_dedup.dedup import get_similar_cards
-        from research_dedup.index import FaissIndex, is_faiss_available
+        from src.dedup.research.dedup import get_similar_cards
+        from src.dedup.research.index import FaissIndex, is_faiss_available
 
         if not is_faiss_available():
             pytest.skip("FAISS not available")
@@ -679,7 +679,7 @@ class TestModuleExports:
 
     def test_main_exports(self):
         """Should export main functions."""
-        from research_dedup import (
+        from src.dedup.research import (
             get_embedding,
             OllamaEmbedder,
             FaissIndex,

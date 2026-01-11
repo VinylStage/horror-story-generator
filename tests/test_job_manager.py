@@ -18,7 +18,7 @@ class TestJobDataclass:
 
     def test_create_job(self):
         """Should create job with correct fields."""
-        from job_manager import Job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="test-123",
@@ -37,7 +37,7 @@ class TestJobDataclass:
 
     def test_to_dict(self):
         """Should convert job to dictionary."""
-        from job_manager import Job
+        from src.infra.job_manager import Job
 
         job = Job(
             job_id="test-123",
@@ -55,7 +55,7 @@ class TestJobDataclass:
 
     def test_from_dict(self):
         """Should create job from dictionary."""
-        from job_manager import Job
+        from src.infra.job_manager import Job
 
         data = {
             "job_id": "test-456",
@@ -93,7 +93,7 @@ class TestJobOperations:
 
     def test_create_job(self, temp_jobs_dir):
         """Should create and save job."""
-        from job_manager import create_job, JOBS_DIR
+        from src.infra.job_manager import create_job, JOBS_DIR
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job(
@@ -111,7 +111,7 @@ class TestJobOperations:
 
     def test_save_job(self, temp_jobs_dir):
         """Should save job to disk."""
-        from job_manager import Job, save_job
+        from src.infra.job_manager import Job, save_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job = Job(
@@ -127,7 +127,7 @@ class TestJobOperations:
 
     def test_load_job(self, temp_jobs_dir):
         """Should load job from disk."""
-        from job_manager import Job, save_job, load_job
+        from src.infra.job_manager import Job, save_job, load_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             original = Job(
@@ -146,7 +146,7 @@ class TestJobOperations:
 
     def test_load_nonexistent_job(self, temp_jobs_dir):
         """Should return None for nonexistent job."""
-        from job_manager import load_job
+        from src.infra.job_manager import load_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             result = load_job("nonexistent")
@@ -155,7 +155,7 @@ class TestJobOperations:
 
     def test_update_job_status_to_running(self, temp_jobs_dir):
         """Should update job status to running with started_at."""
-        from job_manager import create_job, update_job_status, load_job
+        from src.infra.job_manager import create_job, update_job_status, load_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job("research", {})
@@ -169,7 +169,7 @@ class TestJobOperations:
 
     def test_update_job_status_to_succeeded(self, temp_jobs_dir):
         """Should update job status to succeeded with finished_at."""
-        from job_manager import create_job, update_job_status, load_job
+        from src.infra.job_manager import create_job, update_job_status, load_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job("story_generation", {})
@@ -190,7 +190,7 @@ class TestJobOperations:
 
     def test_update_job_status_to_failed(self, temp_jobs_dir):
         """Should update job status to failed with error."""
-        from job_manager import create_job, update_job_status, load_job
+        from src.infra.job_manager import create_job, update_job_status, load_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job("research", {})
@@ -209,7 +209,7 @@ class TestJobOperations:
 
     def test_update_nonexistent_job(self, temp_jobs_dir):
         """Should return False for nonexistent job."""
-        from job_manager import update_job_status
+        from src.infra.job_manager import update_job_status
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             result = update_job_status("nonexistent", "running")
@@ -218,7 +218,7 @@ class TestJobOperations:
 
     def test_list_jobs(self, temp_jobs_dir):
         """Should list all jobs."""
-        from job_manager import create_job, list_jobs
+        from src.infra.job_manager import create_job, list_jobs
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             create_job("story_generation", {"id": 1})
@@ -231,7 +231,7 @@ class TestJobOperations:
 
     def test_list_jobs_with_status_filter(self, temp_jobs_dir):
         """Should filter jobs by status."""
-        from job_manager import create_job, update_job_status, list_jobs
+        from src.infra.job_manager import create_job, update_job_status, list_jobs
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job1 = create_job("story_generation", {})
@@ -249,7 +249,7 @@ class TestJobOperations:
 
     def test_list_jobs_with_type_filter(self, temp_jobs_dir):
         """Should filter jobs by type."""
-        from job_manager import create_job, list_jobs
+        from src.infra.job_manager import create_job, list_jobs
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             create_job("story_generation", {})
@@ -264,7 +264,7 @@ class TestJobOperations:
 
     def test_list_jobs_with_limit(self, temp_jobs_dir):
         """Should respect limit parameter."""
-        from job_manager import create_job, list_jobs
+        from src.infra.job_manager import create_job, list_jobs
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             for i in range(10):
@@ -276,7 +276,7 @@ class TestJobOperations:
 
     def test_delete_job(self, temp_jobs_dir):
         """Should delete job from disk."""
-        from job_manager import create_job, delete_job, load_job
+        from src.infra.job_manager import create_job, delete_job, load_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job = create_job("research", {})
@@ -289,7 +289,7 @@ class TestJobOperations:
 
     def test_delete_nonexistent_job(self, temp_jobs_dir):
         """Should return False for nonexistent job."""
-        from job_manager import delete_job
+        from src.infra.job_manager import delete_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             result = delete_job("nonexistent")
@@ -298,7 +298,7 @@ class TestJobOperations:
 
     def test_get_running_jobs(self, temp_jobs_dir):
         """Should get all running jobs."""
-        from job_manager import create_job, update_job_status, get_running_jobs
+        from src.infra.job_manager import create_job, update_job_status, get_running_jobs
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job1 = create_job("story_generation", {})
@@ -313,7 +313,7 @@ class TestJobOperations:
 
     def test_get_queued_jobs(self, temp_jobs_dir):
         """Should get all queued jobs."""
-        from job_manager import create_job, update_job_status, get_queued_jobs
+        from src.infra.job_manager import create_job, update_job_status, get_queued_jobs
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job1 = create_job("story_generation", {})
@@ -340,7 +340,7 @@ class TestJobManagerErrorHandling:
 
     def test_save_job_handles_write_error(self, temp_jobs_dir):
         """Should handle write errors gracefully."""
-        from job_manager import Job, save_job
+        from src.infra.job_manager import Job, save_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             job = Job(job_id="error-test", type="research", status="queued")
@@ -352,7 +352,7 @@ class TestJobManagerErrorHandling:
 
     def test_load_job_handles_read_error(self, temp_jobs_dir):
         """Should handle read errors gracefully."""
-        from job_manager import load_job
+        from src.infra.job_manager import load_job
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             # Create a corrupted file
@@ -364,7 +364,7 @@ class TestJobManagerErrorHandling:
 
     def test_list_jobs_handles_corrupted_files(self, temp_jobs_dir):
         """Should skip corrupted files in listing."""
-        from job_manager import create_job, list_jobs
+        from src.infra.job_manager import create_job, list_jobs
 
         with patch("job_manager.JOBS_DIR", temp_jobs_dir):
             create_job("story_generation", {})
@@ -378,7 +378,7 @@ class TestJobManagerErrorHandling:
 
     def test_ensure_jobs_dir_creates_directory(self):
         """Should create jobs directory if missing."""
-        from job_manager import ensure_jobs_dir
+        from src.infra.job_manager import ensure_jobs_dir
 
         with tempfile.TemporaryDirectory() as tmpdir:
             new_dir = Path(tmpdir) / "new_jobs"

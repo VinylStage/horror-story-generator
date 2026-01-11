@@ -4,7 +4,7 @@ Tests for template_loader module.
 
 import pytest
 
-from template_loader import (
+from src.story.template_loader import (
     load_template_skeletons,
     select_random_template,
     compute_template_weights,

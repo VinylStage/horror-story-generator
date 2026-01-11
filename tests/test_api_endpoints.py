@@ -14,7 +14,7 @@ class TestHealthEndpoint:
     def test_health_check(self):
         """Should return health status."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
             with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
@@ -32,7 +32,7 @@ class TestResourceStatusEndpoint:
     def test_resource_status(self):
         """Should return resource manager status."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         mock_status = {
             "running": True,
@@ -61,7 +61,7 @@ class TestResearchRunEndpoint:
     def test_run_research_success(self):
         """Should execute research and return card info."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         mock_result = {
             "card_id": "RC-20260111-120000",
@@ -89,7 +89,7 @@ class TestResearchRunEndpoint:
     def test_run_research_error(self):
         """Should handle research execution error."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         mock_result = {
             "card_id": "",
@@ -117,7 +117,7 @@ class TestResearchRunEndpoint:
     def test_run_research_with_model_override(self):
         """Should pass model override to service."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
             with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
@@ -143,7 +143,7 @@ class TestResearchValidateEndpoint:
     def test_validate_success(self):
         """Should validate research card successfully."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         mock_result = {
             "card_id": "RC-20260111-001",
@@ -171,7 +171,7 @@ class TestResearchValidateEndpoint:
     def test_validate_not_found(self):
         """Should handle card not found."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         mock_result = {
             "card_id": "RC-NOTFOUND",
@@ -202,7 +202,7 @@ class TestResearchListEndpoint:
     def test_list_cards(self):
         """Should list research cards."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         mock_result = {
             "cards": [
@@ -242,7 +242,7 @@ class TestResearchListEndpoint:
     def test_list_cards_with_pagination(self):
         """Should respect pagination parameters."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
             with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
@@ -261,7 +261,7 @@ class TestResearchListEndpoint:
     def test_list_cards_with_quality_filter(self):
         """Should filter by quality."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
             with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
@@ -282,7 +282,7 @@ class TestDedupEvaluateEndpoint:
     def test_evaluate_dedup_low_signal(self):
         """Should return LOW signal for unique content."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         mock_result = {
             "signal": "LOW",
@@ -316,7 +316,7 @@ class TestDedupEvaluateEndpoint:
     def test_evaluate_dedup_high_signal(self):
         """Should return HIGH signal with similar stories."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         mock_result = {
             "signal": "HIGH",
@@ -358,7 +358,7 @@ class TestDedupEvaluateEndpoint:
     def test_evaluate_dedup_minimal_request(self):
         """Should handle request with minimal fields."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
             with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
@@ -380,7 +380,7 @@ class TestOpenAPISchema:
     def test_openapi_schema_exists(self):
         """Should generate OpenAPI schema."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
             with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):
@@ -395,7 +395,7 @@ class TestOpenAPISchema:
     def test_swagger_ui_available(self):
         """Should serve Swagger UI."""
         from fastapi.testclient import TestClient
-        from research_api.main import app
+        from src.api.main import app
 
         with patch("research_api.main.startup_resource_manager", new_callable=AsyncMock):
             with patch("research_api.main.shutdown_resource_manager", new_callable=AsyncMock):

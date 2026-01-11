@@ -18,7 +18,7 @@ class TestStorySeed:
 
     def test_create_seed(self):
         """Should create seed with correct fields."""
-        from story_seed import StorySeed
+        from src.story.story_seed import StorySeed
 
         seed = StorySeed(
             seed_id="SS-2026-01-11-001",
@@ -38,7 +38,7 @@ class TestStorySeed:
 
     def test_to_dict(self):
         """Should convert to dictionary."""
-        from story_seed import StorySeed
+        from src.story.story_seed import StorySeed
 
         seed = StorySeed(
             seed_id="SS-001",
@@ -61,7 +61,7 @@ class TestStorySeed:
 
     def test_from_dict(self):
         """Should create from dictionary."""
-        from story_seed import StorySeed
+        from src.story.story_seed import StorySeed
 
         data = {
             "seed_id": "SS-001",
@@ -82,7 +82,7 @@ class TestStorySeed:
 
     def test_from_dict_without_created_at(self):
         """Should handle missing created_at."""
-        from story_seed import StorySeed
+        from src.story.story_seed import StorySeed
 
         data = {
             "seed_id": "SS-001",
@@ -100,7 +100,7 @@ class TestGenerateSeedId:
 
     def test_format(self):
         """Should generate correct format."""
-        from story_seed import generate_seed_id
+        from src.story.story_seed import generate_seed_id
 
         seed_id = generate_seed_id()
 
@@ -110,7 +110,7 @@ class TestGenerateSeedId:
 
     def test_unique_ids(self):
         """Should generate unique IDs."""
-        from story_seed import generate_seed_id
+        from src.story.story_seed import generate_seed_id
 
         ids = [generate_seed_id() for _ in range(3)]
 
@@ -125,7 +125,7 @@ class TestExtractCardFields:
 
     def test_extracts_all_fields(self):
         """Should extract all relevant fields."""
-        from story_seed import extract_card_fields
+        from src.story.story_seed import extract_card_fields
 
         card_data = {
             "input": {"topic": "Test Topic"},
@@ -147,7 +147,7 @@ class TestExtractCardFields:
 
     def test_handles_empty_card(self):
         """Should handle empty card data."""
-        from story_seed import extract_card_fields
+        from src.story.story_seed import extract_card_fields
 
         fields = extract_card_fields({})
 
@@ -163,7 +163,7 @@ class TestParseSeedJson:
 
     def test_parses_clean_json(self):
         """Should parse clean JSON."""
-        from story_seed import parse_seed_json
+        from src.story.story_seed import parse_seed_json
 
         text = '{"key_themes": ["a", "b"], "atmosphere_tags": ["c"]}'
 
@@ -175,7 +175,7 @@ class TestParseSeedJson:
 
     def test_removes_thinking_tags(self):
         """Should remove thinking tags."""
-        from story_seed import parse_seed_json
+        from src.story.story_seed import parse_seed_json
 
         text = '<think>some thinking</think>{"key_themes": ["a"]}'
 
@@ -186,7 +186,7 @@ class TestParseSeedJson:
 
     def test_extracts_json_from_text(self):
         """Should extract JSON from surrounding text."""
-        from story_seed import parse_seed_json
+        from src.story.story_seed import parse_seed_json
 
         text = 'Here is the result: {"key_themes": ["a"]} Done.'
 
@@ -197,7 +197,7 @@ class TestParseSeedJson:
 
     def test_returns_none_for_invalid(self):
         """Should return None for invalid JSON."""
-        from story_seed import parse_seed_json
+        from src.story.story_seed import parse_seed_json
 
         text = "This is not JSON at all"
 
@@ -211,7 +211,7 @@ class TestSaveSeed:
 
     def test_saves_to_file(self):
         """Should save seed to JSON file."""
-        from story_seed import StorySeed, save_seed
+        from src.story.story_seed import StorySeed, save_seed
 
         with tempfile.TemporaryDirectory() as tmpdir:
             seed = StorySeed(
@@ -240,7 +240,7 @@ class TestLoadSeed:
 
     def test_loads_from_file(self):
         """Should load seed from JSON file."""
-        from story_seed import StorySeed, load_seed
+        from src.story.story_seed import StorySeed, load_seed
 
         with tempfile.TemporaryDirectory() as tmpdir:
             seed_path = Path(tmpdir) / "test_seed.json"
@@ -266,7 +266,7 @@ class TestLoadSeed:
 
     def test_returns_none_for_missing_file(self):
         """Should return None for missing file."""
-        from story_seed import load_seed
+        from src.story.story_seed import load_seed
 
         seed = load_seed(Path("/nonexistent/path.json"))
 
@@ -278,7 +278,7 @@ class TestListSeeds:
 
     def test_returns_list(self):
         """Should return a list."""
-        from story_seed import list_seeds
+        from src.story.story_seed import list_seeds
 
         result = list_seeds()
 
@@ -286,7 +286,7 @@ class TestListSeeds:
 
     def test_finds_seed_files(self):
         """Should find SS-*.json files."""
-        from story_seed import list_seeds
+        from src.story.story_seed import list_seeds
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -308,7 +308,7 @@ class TestGetRandomSeed:
 
     def test_returns_none_when_no_seeds(self):
         """Should return None when no seeds available."""
-        from story_seed import get_random_seed
+        from src.story.story_seed import get_random_seed
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = get_random_seed(seeds_dir=Path(tmpdir))
@@ -317,7 +317,7 @@ class TestGetRandomSeed:
 
     def test_returns_seed_when_available(self):
         """Should return a seed when available."""
-        from story_seed import get_random_seed, StorySeed
+        from src.story.story_seed import get_random_seed, StorySeed
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
