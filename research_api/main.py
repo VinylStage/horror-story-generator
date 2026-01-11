@@ -2,12 +2,37 @@
 FastAPI application entry point.
 
 Local-only server for research operations.
+
+Phase B+: Includes Ollama resource management with auto-cleanup.
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 from .routers import research, dedup
+from .services.ollama_resource import (
+    startup_resource_manager,
+    shutdown_resource_manager,
+    get_resource_manager,
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan manager.
+
+    Handles startup and shutdown of resources:
+    - Ollama resource manager for model lifecycle
+    """
+    # Startup
+    await startup_resource_manager()
+
+    yield
+
+    # Shutdown - cleanup Ollama models
+    await shutdown_resource_manager()
 
 # Tag metadata for Swagger UI
 tags_metadata = [
@@ -23,6 +48,7 @@ tags_metadata = [
 
 app = FastAPI(
     title="Horror Story Research API",
+    lifespan=lifespan,
     description="""
 ## Horror Story Research API
 
@@ -68,6 +94,17 @@ app.include_router(dedup.router, prefix="/dedup", tags=["dedup"])
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok", "version": "0.1.0"}
+
+
+@app.get("/resource/status")
+async def resource_status():
+    """
+    Get Ollama resource manager status.
+
+    Shows active models, idle timeout configuration, and cleanup status.
+    """
+    manager = get_resource_manager()
+    return manager.get_status()
 
 
 if __name__ == "__main__":

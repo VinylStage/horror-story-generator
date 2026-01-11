@@ -2,6 +2,8 @@
 Research service - business logic for research operations.
 
 Connects to research_executor CLI via subprocess.
+
+Phase B+: Integrates with Ollama resource manager for model lifecycle.
 """
 
 import asyncio
@@ -11,10 +13,16 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+from .ollama_resource import get_resource_manager
+
 logger = logging.getLogger(__name__)
 
 # Path to research_executor module
 RESEARCH_EXECUTOR_MODULE = "research_executor"
+
+
+# Default model from config
+DEFAULT_MODEL = "qwen3:30b"
 
 
 async def execute_research(
@@ -35,6 +43,11 @@ async def execute_research(
     Returns:
         Execution result dict with card_id, status, message, output_path
     """
+    # Track model usage for resource management
+    used_model = model or DEFAULT_MODEL
+    resource_manager = get_resource_manager()
+    resource_manager.mark_model_used(used_model)
+
     # Build command
     cmd = [sys.executable, "-m", RESEARCH_EXECUTOR_MODULE, "run", topic]
 
