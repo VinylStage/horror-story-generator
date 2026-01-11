@@ -59,42 +59,59 @@ python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
 ```
 horror-story-generator/
 ├── main.py                      # Story generation CLI entry point
-├── horror_story_generator.py    # Core generation logic
-├── api_client.py                # Claude API client
-├── prompt_builder.py            # Prompt construction
-├── ku_selector.py               # Knowledge Unit selection
-├── template_manager.py          # Template loading
-├── story_saver.py               # Story persistence
-├── story_registry.py            # Deduplication registry
-├── job_manager.py               # Job lifecycle management
-├── job_monitor.py               # Process monitoring
+├── src/                         # Main source package
+│   ├── infra/                   # Infrastructure modules
+│   │   ├── data_paths.py        # Centralized path management
+│   │   ├── job_manager.py       # Job lifecycle management
+│   │   ├── job_monitor.py       # Process monitoring
+│   │   └── logging_config.py    # Logging setup
+│   │
+│   ├── registry/                # Data persistence
+│   │   ├── story_registry.py    # Story dedup registry (SQLite)
+│   │   ├── seed_registry.py     # Seed usage tracking
+│   │   └── research_registry.py # Research card tracking
+│   │
+│   ├── dedup/                   # Deduplication logic
+│   │   ├── similarity.py        # Story similarity (in-memory)
+│   │   └── research/            # Research dedup (FAISS)
+│   │       ├── dedup.py         # Duplicate detection
+│   │       ├── embedder.py      # Ollama embeddings
+│   │       └── index.py         # FAISS index management
+│   │
+│   ├── story/                   # Story generation pipeline
+│   │   ├── generator.py         # Core generation orchestration
+│   │   ├── api_client.py        # Claude API client
+│   │   ├── prompt_builder.py    # Prompt construction
+│   │   ├── template_loader.py   # Template loading
+│   │   ├── story_seed.py        # Seed data structures
+│   │   └── seed_integration.py  # Seed injection
+│   │
+│   ├── research/                # Research generation
+│   │   ├── executor/            # CLI executor
+│   │   │   ├── cli.py           # Entry point
+│   │   │   ├── executor.py      # Ollama-based generation
+│   │   │   └── validator.py     # Output validation
+│   │   └── integration/         # Story-research bridge
+│   │       ├── loader.py        # Card loading
+│   │       └── selector.py      # Context selection
+│   │
+│   └── api/                     # FastAPI application
+│       ├── main.py              # API server
+│       ├── routers/             # HTTP endpoints
+│       ├── schemas/             # Pydantic models
+│       └── services/            # Business logic
 │
-├── research_executor/           # Research generation CLI
-│   ├── cli.py                   # Entry point: python -m research_executor run
-│   ├── research_generator.py    # Ollama-based generation
-│   └── validator.py             # Output validation
-│
-├── research_api/                # FastAPI trigger API
-│   ├── main.py                  # API server
-│   └── routers/jobs.py          # Job endpoints
-│
-├── research_integration/        # Research integration modules
-│   ├── story_seeds.py           # Seed management
-│   ├── faiss_index.py           # Vector similarity
-│   └── research_dedup_manager.py
-│
-├── phase1_foundation/           # Foundation assets [Active]
-│   ├── 01_knowledge_units/      # 52 Knowledge Units (JSON)
-│   └── 03_templates/            # 15 Templates (JSON)
+├── assets/                      # Static assets
+│   └── templates/               # 15 Template skeletons
 │
 ├── data/                        # Runtime data
-│   ├── stories/                 # Generated stories
-│   ├── research/                # Research cards
-│   ├── stories.db               # Story dedup registry
-│   └── research_registry.db     # Research dedup registry
+│   ├── research/                # Research cards (YYYY/MM/)
+│   ├── seeds/                   # Story seeds
+│   └── *.db                     # SQLite databases
 │
-├── jobs/                        # Job metadata (JSON)
+├── generated_stories/           # Output stories
 ├── logs/                        # Execution logs
+├── tests/                       # Test suite
 └── docs/                        # Documentation
 ```
 
@@ -119,7 +136,7 @@ Options:
 ### Research Generation
 
 ```bash
-python -m research_executor run TOPIC [OPTIONS]
+python -m src.research.executor run TOPIC [OPTIONS]
 
 Arguments:
   TOPIC                    Research topic (e.g., "Korean apartment horror")
@@ -133,7 +150,7 @@ Options:
 ### API Server
 
 ```bash
-uvicorn research_api.main:app --host 0.0.0.0 --port 8000
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 ```
 
 ---
