@@ -504,3 +504,6 @@ templates/*
 !templates/.empty
 !logs/.empty
 data/
+
+# Runtime job files (keep .gitkeep)
+jobs/*.json
