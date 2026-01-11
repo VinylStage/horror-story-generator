@@ -338,6 +338,9 @@ def build_user_prompt(custom_request: Optional[str] = None, template: Optional[D
         >>> user_prompt = build_user_prompt("1980년대 시골 마을 배경의 귀신 이야기")
     """
     if custom_request:
+        # Ensure custom_request is a string for proper handling
+        if not isinstance(custom_request, str):
+            custom_request = str(custom_request)
         logger.debug(f"커스텀 요청 프롬프트 사용: {custom_request[:50]}...")
         return custom_request
 
