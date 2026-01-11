@@ -1,0 +1,564 @@
+openapi: 3.2.0
+info:
+  title: Horror Story Research API
+  description: |
+    Local-only API server for research card management and deduplication signal evaluation.
+
+    ## Features
+    - **Research Cards**: Generate horror research cards using local Ollama LLM
+    - **Validation**: Validate existing research card quality
+    - **Listing**: Browse and filter research cards
+    - **Dedup Signals**: Evaluate story similarity (LOW/MEDIUM/HIGH)
+    - **Resource Management**: Monitor Ollama model lifecycle
+
+    ## Phase B+ Additions
+    - FAISS-based semantic deduplication
+    - Story seed generation and registry
+    - Ollama resource auto-cleanup
+
+    ## Usage
+    ```bash
+    # Start server
+    poetry run uvicorn research_api.main:app --host 127.0.0.1 --port 8000
+    ```
+
+    ## Note
+    This API is designed for **local use only**. All operations connect to local Ollama instance.
+  version: 0.2.0
+  contact:
+    name: VinylStage
+    email: mcpe9869@gmail.com
+  license:
+    name: Private
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+tags:
+  - name: research
+    description: Research card operations - generate, validate, and list research cards via Ollama LLM
+  - name: dedup
+    description: Deduplication signal evaluation - check story similarity against existing registry
+  - name: system
+    description: System health and resource management endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - system
+      summary: Health check
+      description: Returns API health status and version
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /resource/status:
+    get:
+      tags:
+        - system
+      summary: Resource manager status
+      description: |
+        Returns Ollama resource manager status including active models,
+        idle timeout configuration, and cleanup status.
+      operationId: resourceStatus
+      responses:
+        '200':
+          description: Resource status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceStatusResponse'
+
+  /research/run:
+    post:
+      tags:
+        - research
+      summary: Execute research generation
+      description: |
+        Triggers research generation via Ollama LLM.
+
+        This endpoint spawns a subprocess to execute the research_executor CLI.
+        The research card is generated and saved to disk.
+
+        **Note**: This operation may take 30-120 seconds depending on the model.
+      operationId: runResearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchRunRequest'
+            examples:
+              basic:
+                summary: Basic research request
+                value:
+                  topic: "한국 아파트 공포"
+                  tags: ["apartment", "korean"]
+              withModel:
+                summary: With model override
+                value:
+                  topic: "지하철 도시전설"
+                  tags: ["subway", "urban-legend"]
+                  model: "qwen3:30b"
+                  timeout: 300
+      responses:
+        '200':
+          description: Research execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchRunResponse'
+              examples:
+                success:
+                  summary: Successful generation
+                  value:
+                    card_id: "RC-20260111-123456"
+                    status: "complete"
+                    message: null
+                    output_path: "data/research/2026/01/RC-20260111-123456.json"
+                timeout:
+                  summary: Timeout error
+                  value:
+                    card_id: ""
+                    status: "timeout"
+                    message: "Research execution timed out after 300s"
+                    output_path: null
+
+  /research/validate:
+    post:
+      tags:
+        - research
+      summary: Validate research card
+      description: |
+        Validates an existing research card for quality and completeness.
+
+        Quality scores:
+        - **good**: All required fields present and valid
+        - **partial**: Some fields missing or incomplete
+        - **incomplete**: Major fields missing
+      operationId: validateResearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchValidateRequest'
+            example:
+              card_id: "RC-20260111-123456"
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchValidateResponse'
+              examples:
+                valid:
+                  summary: Valid card
+                  value:
+                    card_id: "RC-20260111-123456"
+                    is_valid: true
+                    quality_score: "good"
+                    message: "Validation passed"
+                notFound:
+                  summary: Card not found
+                  value:
+                    card_id: "RC-20260111-999999"
+                    is_valid: false
+                    quality_score: "not_found"
+                    message: "Card not found: data/research/2026/01/RC-20260111-999999.json"
+
+  /research/list:
+    get:
+      tags:
+        - research
+      summary: List research cards
+      description: |
+        Lists research cards with optional filtering and pagination.
+
+        Cards are sorted by creation date (newest first).
+      operationId: listResearch
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of cards to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: offset
+          in: query
+          description: Pagination offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: quality
+          in: query
+          description: Filter by quality score
+          schema:
+            type: string
+            enum:
+              - good
+              - partial
+              - incomplete
+      responses:
+        '200':
+          description: List of research cards
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchListResponse'
+
+  /dedup/evaluate:
+    post:
+      tags:
+        - dedup
+      summary: Evaluate deduplication signal
+      description: |
+        Evaluates similarity of a potential story against existing stories.
+
+        Returns a signal indicating the level of similarity:
+        - **LOW** (< 0.70): Unique content, proceed freely
+        - **MEDIUM** (0.70-0.85): Some overlap, consider adjustments
+        - **HIGH** (>= 0.85): Very similar, may want to reconsider
+
+        **Important**: This is advisory only - it does NOT block story generation.
+      operationId: evaluateDedup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DedupEvaluateRequest'
+            example:
+              template_id: "TMPL-abandoned-building"
+              canonical_core:
+                setting: "urban"
+                primary_fear: "isolation"
+                antagonist: "entity"
+                mechanism: "corruption"
+                twist: "identity"
+              title: "빈 건물의 속삭임"
+      responses:
+        '200':
+          description: Deduplication evaluation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DedupEvaluateResponse'
+              examples:
+                low:
+                  summary: Low similarity (unique)
+                  value:
+                    signal: "LOW"
+                    similarity_score: 0.45
+                    similar_stories: []
+                    message: null
+                high:
+                  summary: High similarity
+                  value:
+                    signal: "HIGH"
+                    similarity_score: 0.92
+                    similar_stories:
+                      - story_id: "20260110-142030"
+                        template_id: "TMPL-abandoned-building"
+                        similarity_score: 0.92
+                        matched_dimensions: ["setting", "primary_fear", "antagonist"]
+                    message: "High similarity detected with recent story"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+      properties:
+        status:
+          type: string
+          description: Health status
+          example: "ok"
+        version:
+          type: string
+          description: API version
+          example: "0.1.0"
+
+    ResourceStatusResponse:
+      type: object
+      required:
+        - running
+        - idle_timeout_seconds
+        - active_models
+        - model_count
+      properties:
+        running:
+          type: boolean
+          description: Whether resource manager is running
+        idle_timeout_seconds:
+          type: integer
+          description: Idle timeout before model unload (0 = disabled)
+          example: 300
+        active_models:
+          type: object
+          additionalProperties:
+            type: string
+            format: date-time
+          description: Map of model name to last used timestamp
+          example:
+            "qwen3:30b": "2026-01-11T12:00:00"
+        model_count:
+          type: integer
+          description: Number of active models
+
+    ResearchRunRequest:
+      type: object
+      required:
+        - topic
+      properties:
+        topic:
+          type: string
+          description: Research topic to analyze
+          minLength: 5
+          maxLength: 500
+          example: "한국 아파트 공포"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Optional tags for categorization
+          default: []
+          example: ["apartment", "korean"]
+        model:
+          type: string
+          description: Ollama model override
+          example: "qwen3:30b"
+        timeout:
+          type: integer
+          description: Timeout in seconds
+          minimum: 30
+          maximum: 600
+          default: 300
+
+    ResearchRunResponse:
+      type: object
+      required:
+        - card_id
+        - status
+      properties:
+        card_id:
+          type: string
+          description: Generated card ID (empty on error)
+          example: "RC-20260111-123456"
+        status:
+          type: string
+          description: Execution status
+          enum:
+            - complete
+            - error
+            - timeout
+        message:
+          type: string
+          nullable: true
+          description: Status message
+        output_path:
+          type: string
+          nullable: true
+          description: Path to output file
+
+    ResearchValidateRequest:
+      type: object
+      required:
+        - card_id
+      properties:
+        card_id:
+          type: string
+          description: Card ID to validate
+          pattern: "^RC-\\d{8}-\\d{6}$"
+          example: "RC-20260111-123456"
+
+    ResearchValidateResponse:
+      type: object
+      required:
+        - card_id
+        - is_valid
+        - quality_score
+      properties:
+        card_id:
+          type: string
+          description: Validated card ID
+        is_valid:
+          type: boolean
+          description: Whether card is valid
+        quality_score:
+          type: string
+          description: Quality score
+          enum:
+            - good
+            - partial
+            - incomplete
+            - not_found
+            - invalid_id
+            - error
+        message:
+          type: string
+          nullable: true
+          description: Validation details
+
+    ResearchCardSummary:
+      type: object
+      required:
+        - card_id
+        - title
+        - topic
+        - quality_score
+        - created_at
+      properties:
+        card_id:
+          type: string
+          description: Card identifier
+          example: "RC-20260111-123456"
+        title:
+          type: string
+          description: Research card title
+          example: "아파트 엘리베이터의 공포"
+        topic:
+          type: string
+          description: Original research topic
+        quality_score:
+          type: string
+          description: Quality assessment
+        created_at:
+          type: string
+          description: Creation date (YYYY-MM-DD)
+          example: "2026-01-11"
+
+    ResearchListResponse:
+      type: object
+      required:
+        - cards
+        - total
+        - limit
+        - offset
+      properties:
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResearchCardSummary'
+          description: List of research cards
+        total:
+          type: integer
+          description: Total number of cards returned
+        limit:
+          type: integer
+          description: Requested limit
+        offset:
+          type: integer
+          description: Requested offset
+        message:
+          type: string
+          nullable: true
+          description: Status message
+
+    CanonicalCore:
+      type: object
+      description: Canonical dimensions for story comparison
+      properties:
+        setting:
+          type: string
+          description: Setting type (urban, rural, institutional, etc.)
+          example: "urban"
+        primary_fear:
+          type: string
+          description: Primary fear type
+          example: "isolation"
+        antagonist:
+          type: string
+          description: Antagonist type
+          example: "entity"
+        mechanism:
+          type: string
+          description: Horror mechanism
+          example: "corruption"
+        twist:
+          type: string
+          description: Twist pattern
+          example: "identity"
+
+    DedupEvaluateRequest:
+      type: object
+      properties:
+        template_id:
+          type: string
+          nullable: true
+          description: Template ID being used
+        canonical_core:
+          $ref: '#/components/schemas/CanonicalCore'
+        title:
+          type: string
+          nullable: true
+          description: Story title for similarity check
+
+    SimilarStory:
+      type: object
+      required:
+        - story_id
+        - template_id
+        - similarity_score
+        - matched_dimensions
+      properties:
+        story_id:
+          type: string
+          description: Similar story identifier
+        template_id:
+          type: string
+          description: Template used by similar story
+        similarity_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Similarity score (0.0-1.0)
+        matched_dimensions:
+          type: array
+          items:
+            type: string
+          description: List of matching canonical dimensions
+
+    DedupEvaluateResponse:
+      type: object
+      required:
+        - signal
+        - similarity_score
+      properties:
+        signal:
+          type: string
+          description: Deduplication signal level
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+        similarity_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Maximum similarity score found
+        similar_stories:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimilarStory'
+          description: List of similar stories found
+          default: []
+        message:
+          type: string
+          nullable: true
+          description: Advisory message
