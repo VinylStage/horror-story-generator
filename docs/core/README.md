@@ -270,7 +270,7 @@ pytest tests/ -v
 - Type hints required
 - Google-style docstrings
 
-See `CONTRIBUTING.md` for development guidelines.
+See root `CONTRIBUTING.md` for development guidelines.
 
 ---
 
@@ -281,7 +281,7 @@ See `CONTRIBUTING.md` for development guidelines.
 | `docs/core/ARCHITECTURE.md` | System architecture details |
 | `docs/technical/TRIGGER_API.md` | API reference |
 | `docs/core/ROADMAP.md` | Future development plans |
-| `docs/core/CONTRIBUTING.md` | Development guidelines |
+| `CONTRIBUTING.md` | Development guidelines |
 | `docs/technical/canonical_enum.md` | Canonical dimension definitions |
 | `docs/technical/decision_log.md` | Design decision records |
 | `docs/technical/RESEARCH_DEDUP_SETUP.md` | Research embedding setup |
