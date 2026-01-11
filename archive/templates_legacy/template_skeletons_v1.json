@@ -1,0 +1,376 @@
+[
+    {
+      "template_id": "T-SYS-001",
+      "template_name": "Systemic Erosion",
+      "canonical_core": {
+        "setting": "abstract",
+        "primary_fear": "social_displacement",
+        "antagonist": "system",
+        "mechanism": "erosion",
+        "twist": "inevitability"
+      },
+      "required_ku_categories": [
+        "social_fear",
+        "horror_concept"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist operates within institutional structure, initially unaware of gradual exclusion mechanisms",
+        "act_2": "Systematic forces incrementally strip protagonist of social standing, community access, or institutional protection",
+        "act_3": "Complete displacement reveals itself as structural inevitability, not individual failure"
+      },
+      "variation_axes": [
+        "specific_institutional_context",
+        "rate_of_erosion",
+        "community_vs_individual_displacement"
+      ]
+    },
+    {
+      "template_id": "T-DOM-001",
+      "template_name": "Domestic Confinement",
+      "canonical_core": {
+        "setting": "domestic_space",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist": "system",
+        "mechanism": "confinement",
+        "twist": "inversion"
+      },
+      "required_ku_categories": [
+        "social_fear",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Domestic space presented as refuge or safety zone under protagonist control",
+        "act_2": "Systematic forces convert safety mechanisms into control apparatus, restricting protagonist movement or agency",
+        "act_3": "Sanctuary revealed as prison, protective systems exposed as confinement architecture"
+      },
+      "variation_axes": [
+        "nature_of_confinement",
+        "domestic_relationship_structure",
+        "physical_vs_psychological_barriers"
+      ]
+    },
+    {
+      "template_id": "T-MED-001",
+      "template_name": "Medical Debt Spiral",
+      "canonical_core": {
+        "setting": "hospital",
+        "primary_fear": "annihilation",
+        "antagonist": "system",
+        "mechanism": "debt",
+        "twist": "inversion"
+      },
+      "required_ku_categories": [
+        "social_fear",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Medical crisis necessitates institutional intervention for survival",
+        "act_2": "Financial obligations compound, institutional mechanisms shift from healing to extraction",
+        "act_3": "Survival costs destroy life, healthcare system revealed as existential threat"
+      },
+      "variation_axes": [
+        "medical_emergency_type",
+        "debt_enforcement_methods",
+        "family_vs_individual_burden"
+      ]
+    },
+    {
+      "template_id": "T-DIG-001",
+      "template_name": "Digital Impersonation",
+      "canonical_core": {
+        "setting": "digital",
+        "primary_fear": "identity_erasure",
+        "antagonist": "technology",
+        "mechanism": "impersonation",
+        "twist": "self_is_monster"
+      },
+      "required_ku_categories": [
+        "social_fear",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist identity functions normally within digital authentication systems",
+        "act_2": "Technological duplicate operates autonomously, authentic self becomes indistinguishable from copy",
+        "act_3": "Protagonist cannot prove authenticity, self becomes the false copy in social perception"
+      },
+      "variation_axes": [
+        "impersonation_technology_type",
+        "scope_of_identity_theft",
+        "social_vs_institutional_authentication"
+      ]
+    },
+    {
+      "template_id": "T-DOM-002",
+      "template_name": "Smart Home Surveillance",
+      "canonical_core": {
+        "setting": "domestic_space",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist": "technology",
+        "mechanism": "surveillance",
+        "twist": "inversion"
+      },
+      "required_ku_categories": [
+        "social_fear",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Domestic technology installed for convenience and security enhancement",
+        "act_2": "Surveillance apparatus monitors, records, and controls protagonist behavior within home",
+        "act_3": "Comfort technology revealed as surveillance infrastructure, home autonomy eliminated"
+      },
+      "variation_axes": [
+        "technology_control_vector",
+        "surveillance_agent_identity",
+        "awareness_timeline"
+      ]
+    },
+    {
+      "template_id": "T-BOD-001",
+      "template_name": "Bodily Contamination",
+      "canonical_core": {
+        "setting": "body",
+        "primary_fear": "contamination",
+        "antagonist": "body",
+        "mechanism": "infection",
+        "twist": "self_is_monster"
+      },
+      "required_ku_categories": [
+        "horror_concept",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist body functions as integrated self-system with clear boundaries",
+        "act_2": "Internal contamination spreads, boundary between self and foreign entity dissolves",
+        "act_3": "Body becomes threat vector, protagonist embodies the contamination source"
+      },
+      "variation_axes": [
+        "contamination_origin",
+        "infection_manifestation",
+        "boundary_collapse_rate"
+      ]
+    },
+    {
+      "template_id": "T-MED-002",
+      "template_name": "Medical Exploitation",
+      "canonical_core": {
+        "setting": "hospital",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist": "system",
+        "mechanism": "exploitation",
+        "twist": "revelation"
+      },
+      "required_ku_categories": [
+        "social_fear",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist enters medical system under presumption of care and consent",
+        "act_2": "Institutional mechanisms extract value, control bodily agency, or conduct unauthorized intervention",
+        "act_3": "Medical authority exposed as exploitation apparatus, consent revealed as illusion"
+      },
+      "variation_axes": [
+        "exploitation_method",
+        "institutional_vs_individual_actors",
+        "bodily_vs_financial_extraction"
+      ]
+    },
+    {
+      "template_id": "T-LIM-001",
+      "template_name": "Liminal Confinement",
+      "canonical_core": {
+        "setting": "liminal",
+        "primary_fear": "isolation",
+        "antagonist": "unknown",
+        "mechanism": "confinement",
+        "twist": "inevitability"
+      },
+      "required_ku_categories": [
+        "horror_concept",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist enters transitional space intended for temporary passage",
+        "act_2": "Spatial logic prevents exit, transitional environment extends indefinitely without destination",
+        "act_3": "Permanent confinement in purposeless space, escape architecturally impossible"
+      },
+      "variation_axes": [
+        "liminal_space_type",
+        "confinement_awareness_timing",
+        "spatial_logic_violation_pattern"
+      ]
+    },
+    {
+      "template_id": "T-RUR-001",
+      "template_name": "Rural Historical Possession",
+      "canonical_core": {
+        "setting": "rural",
+        "primary_fear": "isolation",
+        "antagonist": "ghost",
+        "mechanism": "possession",
+        "twist": "revelation"
+      },
+      "required_ku_categories": [
+        "horror_theme",
+        "social_fear"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist enters rural space with buried historical trauma or cultural memory",
+        "act_2": "Historical entities possess landscape, structures, or protagonist behavior patterns",
+        "act_3": "Buried historical violence revealed through possession, past trauma inescapable in space"
+      },
+      "variation_axes": [
+        "historical_trauma_type",
+        "possession_target",
+        "cultural_specificity"
+      ]
+    },
+    {
+      "template_id": "T-APT-001",
+      "template_name": "Apartment Social Surveillance",
+      "canonical_core": {
+        "setting": "apartment",
+        "primary_fear": "social_displacement",
+        "antagonist": "system",
+        "mechanism": "surveillance",
+        "twist": "inevitability"
+      },
+      "required_ku_categories": [
+        "social_fear",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist occupies communal housing structure with class or social positioning stakes",
+        "act_2": "Behavior monitoring by neighbors or institution enforces conformity, violations recorded and escalated",
+        "act_3": "Social displacement becomes inevitable, surveillance system cannot be escaped within housing structure"
+      },
+      "variation_axes": [
+        "surveillance_mechanism",
+        "class_positioning",
+        "violation_type"
+      ]
+    },
+    {
+      "template_id": "T-COL-001",
+      "template_name": "Collective Exploitation",
+      "canonical_core": {
+        "setting": "abstract",
+        "primary_fear": "identity_erasure",
+        "antagonist": "collective",
+        "mechanism": "exploitation",
+        "twist": "revelation"
+      },
+      "required_ku_categories": [
+        "social_fear",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist joins collective organization presented as beneficial community or opportunity",
+        "act_2": "Group mechanisms extract value, isolate protagonist from external identity, enforce conformity",
+        "act_3": "Exploitation structure revealed, collective identity shown as erasure mechanism"
+      },
+      "variation_axes": [
+        "collective_organization_type",
+        "exploitation_vector",
+        "isolation_method"
+      ]
+    },
+    {
+      "template_id": "T-INF-001",
+      "template_name": "Infrastructure Isolation",
+      "canonical_core": {
+        "setting": "infrastructure",
+        "primary_fear": "isolation",
+        "antagonist": "system",
+        "mechanism": "confinement",
+        "twist": "inevitability"
+      },
+      "required_ku_categories": [
+        "social_fear",
+        "horror_theme"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist relies on infrastructure systems for communication, mobility, or resource access",
+        "act_2": "Systematic infrastructure failure eliminates connection vectors, confinement increases with each system collapse",
+        "act_3": "Complete isolation through infrastructure decay, systemic restoration impossible"
+      },
+      "variation_axes": [
+        "infrastructure_type",
+        "failure_cascade_pattern",
+        "geographic_scope"
+      ]
+    },
+    {
+      "template_id": "T-DIG-002",
+      "template_name": "Digital Collective Infection",
+      "canonical_core": {
+        "setting": "digital",
+        "primary_fear": "identity_erasure",
+        "antagonist": "collective",
+        "mechanism": "infection",
+        "twist": "circularity"
+      },
+      "required_ku_categories": [
+        "horror_theme",
+        "horror_concept"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist participates in digital collective creation or transmission",
+        "act_2": "Collective narrative spreads virally, individual authorship erased through collaborative iteration",
+        "act_3": "Protagonist becomes subject of own collective creation, transmission loop completes"
+      },
+      "variation_axes": [
+        "digital_collective_form",
+        "transmission_vector",
+        "authorship_attribution"
+      ]
+    },
+    {
+      "template_id": "T-ECO-001",
+      "template_name": "Economic Annihilation",
+      "canonical_core": {
+        "setting": "abstract",
+        "primary_fear": "annihilation",
+        "antagonist": "system",
+        "mechanism": "erosion",
+        "twist": "inevitability"
+      },
+      "required_ku_categories": [
+        "social_fear"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist maintains survival through economic participation in systematic structure",
+        "act_2": "Economic forces incrementally eliminate survival resources, each loss compounds vulnerability",
+        "act_3": "Complete economic annihilation revealed as systemic function, survival structurally impossible"
+      },
+      "variation_axes": [
+        "economic_threat_vector",
+        "erosion_rate",
+        "resource_type"
+      ]
+    },
+    {
+      "template_id": "T-DOM-003",
+      "template_name": "Domestic Trauma Possession",
+      "canonical_core": {
+        "setting": "domestic_space",
+        "primary_fear": "identity_erasure",
+        "antagonist": "unknown",
+        "mechanism": "possession",
+        "twist": "circularity"
+      },
+      "required_ku_categories": [
+        "horror_theme",
+        "horror_concept"
+      ],
+      "story_skeleton": {
+        "act_1": "Protagonist inhabits domestic space with inherited or unresolved historical trauma",
+        "act_2": "Past trauma patterns possess current behavior, protagonist identity consumed by historical repetition",
+        "act_3": "Protagonist enacts trauma origin, generational cycle completes and restarts"
+      },
+      "variation_axes": [
+        "trauma_origin",
+        "possession_manifestation",
+        "generational_distance"
+      ]
+    }
+]
