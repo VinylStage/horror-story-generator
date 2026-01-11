@@ -1,238 +1,190 @@
-# STEP 4-C Documentation Alignment Report (Final)
+# STEP 4-C Documentation Alignment Report (Final v2)
 
 **Date:** 2026-01-12
-**Status:** COMPLETED (Full Audit + Legacy Elimination)
+**Status:** COMPLETED (Phase 1 + Phase 2)
 
 ---
 
 ## Executive Summary
 
-This report documents the complete documentation audit and legacy reference elimination performed as part of STEP 4-C. All official documentation has been scanned, reviewed semantically, and corrected to reflect the current canonical baseline.
+This report documents:
+1. **Phase 1**: Complete documentation audit with legacy reference elimination
+2. **Phase 2**: Architecture diagram conversion to Mermaid
 
 ---
 
-## Audit Scope
+## Phase 1: Documentation Reality Alignment
 
-### Scan Commands Used
+### A) Scan Commands Used
 
 ```bash
-# List all official markdown files
-find . -type f -name "*.md" ! -path "./docs/archive/*" ! -path "./.git/*" | sort
+# List all official markdown/yaml files (excluding archive)
+find . -type f \( -name "*.md" -o -name "*.yaml" \) ! -path "*/archive/*" ! -path "*/.git/*" | sort
 
-# Verify no legacy references remain
-grep -r "horror_story_prompt_template\|from horror_story_generator\|templates/horror\|templates/sample" \
-  --include="*.md" docs/core docs/technical docs/analysis README.md
+# Verify no legacy references remain in official docs
+grep -rn "horror_story_prompt_template\|from horror_story_generator\|templates/horror\|templates/sample\|python horror_story_generator\|python -m research_executor\|uvicorn research_api\|template_path\|load_prompt_template" \
+  --include="*.md" --include="*.yaml" \
+  README.md CONTRIBUTING.md docs/core docs/technical docs/analysis assets/canonical
 ```
 
-### Counts (Final)
-- **Total official docs scanned:** 15
-- **Major rewrites:** 1 (README.md)
-- **Updated:** 3 (README.md, docs/core/README.md, docs/core/CONTRIBUTING.md)
-- **Archived (prior pass):** 2
-- **Unchanged (confirmed):** 10
+### B) Full Document Inventory Table
 
----
+| # | Path | Status | Rationale |
+|---|------|--------|-----------|
+| 1 | `README.md` | CONFIRMED OK | Fully rewritten in prior pass - correct entry points |
+| 2 | `CONTRIBUTING.md` | CONFIRMED OK | Moved to root, legacy template section removed |
+| 3 | `docs/core/API.md` | CONFIRMED OK | Correct `uvicorn src.api.main:app`, `python -m src.research.executor` |
+| 4 | `docs/core/ARCHITECTURE.md` | **UPDATED (Phase 2)** | Diagrams converted to Mermaid |
+| 5 | `docs/core/README.md` | CONFIRMED OK | Correct paths and structure |
+| 6 | `docs/core/ROADMAP.md` | CONFIRMED OK | No legacy references |
+| 7 | `docs/technical/canonical_enum.md` | CONFIRMED OK | Reference doc, no code paths |
+| 8 | `docs/technical/decision_log.md` | CONFIRMED OK | Design decisions, no code paths |
+| 9 | `docs/technical/FUTURE_VECTOR_BACKEND_NOTE.md` | CONFIRMED OK | Future reference only |
+| 10 | `docs/technical/openapi.yaml` | CONFIRMED OK | Correct API schema |
+| 11 | `docs/technical/RESEARCH_DEDUP_SETUP.md` | **UPDATED (Phase 2)** | Diagram converted to Mermaid |
+| 12 | `docs/technical/runbook_24h_test.md` | CONFIRMED OK | Correct `python main.py` commands |
+| 13 | `docs/technical/TRIGGER_API.md` | **UPDATED (Phase 2)** | Diagrams converted to Mermaid |
+| 14 | `docs/analysis/STEP4B_FINAL_REPORT.md` | CONFIRMED OK | Historical record |
+| 15 | `docs/analysis/STEP4B_VALIDATION_REPORT.md` | CONFIRMED OK | Historical record |
+| 16 | `assets/canonical/canonical_enum.md` | CONFIRMED OK | Same as docs/technical version |
 
-## A) Legacy Reference Zero Evidence
+### C) Legacy Reference Verification
 
-### Full Document Inventory Table
+**Grep Results (Official Docs Only):**
+```
+$ grep -rn "horror_story_prompt_template\|from horror_story_generator\|templates/horror" \
+    README.md CONTRIBUTING.md docs/core docs/technical
 
-| Path | Status | Rationale |
-|------|--------|-----------|
-| `README.md` | **REWRITTEN** | Removed all legacy template/Flask/n8n sections |
-| `docs/core/API.md` | CONFIRMED | Already corrected in prior pass |
-| `docs/core/ARCHITECTURE.md` | CONFIRMED | Already corrected in prior pass |
-| `CONTRIBUTING.md` | **MOVED TO ROOT** | Removed legacy template section, moved to repo root for GitHub recognition |
-| `docs/core/README.md` | **UPDATED** | Fixed ARCHITECTURE path, removed DOCUMENT_MAP |
-| `docs/core/ROADMAP.md` | CONFIRMED | Already corrected in prior pass |
-| `docs/technical/canonical_enum.md` | CONFIRMED | Reference doc, no code paths |
-| `docs/technical/decision_log.md` | CONFIRMED | Already corrected in prior pass |
-| `docs/technical/FUTURE_VECTOR_BACKEND_NOTE.md` | CONFIRMED | Future reference only |
-| `docs/technical/RESEARCH_DEDUP_SETUP.md` | CONFIRMED | Current system doc |
-| `docs/technical/runbook_24h_test.md` | CONFIRMED | CLI commands correct |
-| `docs/technical/TRIGGER_API.md` | CONFIRMED | Already corrected in prior pass |
-| `docs/technical/openapi.yaml` | CONFIRMED | Already corrected in prior pass |
-| `docs/analysis/STEP4B_FINAL_REPORT.md` | CONFIRMED | Historical record |
-| `docs/analysis/STEP4B_VALIDATION_REPORT.md` | CONFIRMED | Historical record |
-
-### Legacy References Found and Removed
-
-| Location | Legacy Reference | Action |
-|----------|-----------------|--------|
-| README.md:13 | "templates 디렉토리" | Removed - replaced with skeleton system |
-| README.md:14 | "JSON 기반 프롬프트 커스터마이즈" | Removed - not supported |
-| README.md:91-114 | Template customization section | Removed entirely |
-| README.md:116-148 | Advanced usage with load_prompt_template | Removed entirely |
-| README.md:150-197 | horror_story_prompt_template.json structure | Removed entirely |
-| README.md:203 | ".txt" output | Fixed to ".md" |
-| README.md:206-240 | Legacy function reference | Removed entirely |
-| README.md:242-315 | Extension examples (Flask, horror_story_generator) | Removed entirely |
-| README.md:326 | horror_story_prompt_template.json reference | Removed |
-| README.md:366-379 | templates/ directory selection | Removed entirely |
-| CONTRIBUTING.md:248-255 | Template modification section | Removed entirely |
-
-### Grep Verification (Final)
-
-```bash
-$ grep -r "horror_story_prompt_template" docs/core docs/technical docs/analysis README.md
-# No output - CLEAN
-
-$ grep -r "from horror_story_generator" docs/core docs/technical docs/analysis README.md
-# No output - CLEAN
-
-$ grep -r "templates/horror\|templates/sample" docs/core docs/technical docs/analysis README.md
 # No output - CLEAN
 ```
 
----
+**Note:** Legacy references in `docs/analysis/STEP4C_DOCUMENTATION_ALIGNMENT_REPORT.md` are historical quotes documenting what was removed, not active usage.
 
-## B) README Fix Verification
+### D) Counts
 
-### Sections Removed
-
-**1. Legacy Features (Line 13-14):**
-```markdown
-# REMOVED:
-- **다중 템플릿 지원**: templates 디렉토리에서 다양한 장르/스타일의 템플릿 선택 가능
-- **JSON 기반 프롬프트**: 소설의 모든 요소를 JSON 포맷으로 관리하여 커스터마이즈가 용이합니다
-
-# REPLACED WITH:
-- **템플릿 스켈레톤 시스템**: 15개의 사전 정의된 호러 템플릿으로 다양한 공포 패턴 생성
-- **Canonical 중복 검사**: 5차원 fingerprint로 유사 스토리 방지
-```
-
-**2. Template Customization Section (Lines 91-114):**
-```markdown
-# REMOVED ENTIRELY:
-### 템플릿 커스터마이즈
-```python
-from src.story.template_loader import load_template, customize_template
-...
-```
-
-**3. Advanced Usage Section (Lines 116-148):**
-```markdown
-# REMOVED ENTIRELY:
-### 고급 사용: 개별 함수 활용
-template = load_prompt_template("horror_story_prompt_template.json")
-...
-```
-
-**4. Prompt Template Structure Section (Lines 150-197):**
-```markdown
-# REMOVED ENTIRELY:
-## 프롬프트 템플릿 구조
-`horror_story_prompt_template.json` 파일은 다음과 같은 구조로 이루어져 있습니다:
-...
-```
-
-**5. Extension Examples (Lines 242-315):**
-```markdown
-# REMOVED ENTIRELY:
-### 1. 배치 생성
-from horror_story_generator import generate_horror_story
-...
-
-### 3. 웹 API 서버
-from flask import Flask, request, jsonify
-from horror_story_generator import generate_horror_story
-...
-```
-
-**6. n8n Template Selection (Lines 366-379):**
-```markdown
-# REMOVED ENTIRELY:
-### 템플릿 선택
-generate_horror_story(template_path='templates/horror_story_prompt_template.json')
-...
-```
-
-### README Now Contains Only
-
-- Current entry points: `python main.py`, `python -m src.research.executor`, `uvicorn src.api.main:app`
-- Current programmatic API: `from src.story.generator import generate_horror_story`
-- Current project structure with `src/` package
-- Current dedup system documentation
-- Correct output file format (`.md`)
-
-### Confirmation
-
-**README has NO legacy template statements remaining:** ✅ VERIFIED
+| Metric | Count |
+|--------|-------|
+| Total official docs scanned | 16 |
+| Updated (Phase 2 - Mermaid) | 3 |
+| Confirmed OK | 13 |
+| Legacy references found | 0 |
 
 ---
 
-## C) Commits
+## Phase 2: Mermaid Diagram Conversion
+
+### Files Updated
+
+| File | Diagrams Converted |
+|------|-------------------|
+| `docs/core/ARCHITECTURE.md` | 4 diagrams |
+| `docs/technical/TRIGGER_API.md` | 2 diagrams |
+| `docs/technical/RESEARCH_DEDUP_SETUP.md` | 1 diagram |
+
+### Diagram Details
+
+#### docs/core/ARCHITECTURE.md
+
+**1. High-Level Architecture** (flowchart TB)
+- Entry points → Core generators → External APIs → Infrastructure → Storage
+- Shows complete system topology
+
+**2. Story Generation Flow** (flowchart LR)
+- Template selection → Prompt → API → Dedup check → Save
+- Includes retry logic branching
+
+**3. Research Generation Flow** (flowchart LR)
+- Topic → Ollama → Validation → FAISS → Save
+
+**4. Job Lifecycle** (stateDiagram-v2)
+- queued → running → succeeded/failed/cancelled
+
+#### docs/technical/TRIGGER_API.md
+
+**1. Sequence Diagram** (sequenceDiagram)
+- Client ↔ API ↔ JobStore ↔ CLI interactions
+- Full polling loop visualization
+
+**2. n8n Integration Pattern** (flowchart LR)
+- Trigger → Wait → Poll → Check → Process
+
+#### docs/technical/RESEARCH_DEDUP_SETUP.md
+
+**1. Architecture Flow** (flowchart LR)
+- Research Card → Embedder → FAISS → Similarity → Signal
+
+---
+
+## Canonical Baseline (Verified Consistent)
+
+### Entry Points
+
+| Entry Point | Command | Files Documenting |
+|-------------|---------|-------------------|
+| Story CLI | `python main.py` | README, docs/core/README, ARCHITECTURE, runbook_24h_test |
+| Research CLI | `python -m src.research.executor` | README, docs/core/README, ARCHITECTURE, API |
+| API Server | `uvicorn src.api.main:app` | README, docs/core/README, API, TRIGGER_API |
+
+### Dedup Thresholds (Consistent)
+
+**Story Dedup:**
+| Signal | Score | All Docs |
+|--------|-------|----------|
+| LOW | < 0.3 | ✅ Consistent |
+| MEDIUM | 0.3-0.6 | ✅ Consistent |
+| HIGH | > 0.6 | ✅ Consistent |
+
+**Research Dedup:**
+| Signal | Score | All Docs |
+|--------|-------|----------|
+| LOW | < 0.70 | ✅ Consistent |
+| MEDIUM | 0.70-0.85 | ✅ Consistent |
+| HIGH | ≥ 0.85 | ✅ Consistent |
+
+**Embedding Model:** `nomic-embed-text` (768 dimensions) - ✅ Consistent
+
+---
+
+## Commits
 
 | Commit | Description |
 |--------|-------------|
 | `5d49252` | docs: full STEP 4-C documentation audit and alignment |
 | `101df6a` | docs: eliminate all legacy references and align canonical baseline |
-
----
-
-## Canonical Baseline Verification
-
-### Current Canonical Entry Points
-
-| Entry Point | Command | Documented In |
-|-------------|---------|---------------|
-| Story CLI | `python main.py` | README, docs/core/README |
-| Research CLI | `python -m src.research.executor` | README, docs/core/README |
-| API Server | `uvicorn src.api.main:app` | README, docs/core/README |
-
-### Current Canonical Module Structure
-
-```
-src/
-├── story/          # Story generation
-├── research/       # Research generation
-├── dedup/          # Deduplication
-├── registry/       # Data persistence
-├── infra/          # Infrastructure
-└── api/            # FastAPI server
-```
-
-### Current Canonical Dedup Behavior
-
-**Story Dedup:**
-- Method: Canonical fingerprint matching (5 dimensions)
-- Thresholds: LOW < 0.3, MEDIUM 0.3-0.6, HIGH > 0.6
-
-**Research Dedup:**
-- Method: FAISS semantic embedding
-- Model: nomic-embed-text (768 dim)
-- Thresholds: LOW < 0.70, MEDIUM 0.70-0.85, HIGH ≥ 0.85
+| `d4474bb` | docs: move CONTRIBUTING.md to repository root for GitHub recognition |
+| (pending) | docs: convert architecture diagrams to Mermaid |
 
 ---
 
 ## Strict Completion Confirmation
 
-I hereby confirm:
+### Phase 1 ✅
 
-1. **README is fully aligned with the current running system** ✅
-   - All legacy template claims removed
-   - All legacy function references removed
-   - All legacy Flask/n8n examples removed
+1. **README is accurate and runnable for new users** ✅
    - Only current entry points documented
+   - No legacy template/Flask/n8n claims
+   - Correct output format (.md)
 
-2. **No official documents contain legacy references** ✅
+2. **No official docs contain legacy references** ✅
    - Zero `horror_story_prompt_template.json` references
    - Zero `from horror_story_generator` imports
    - Zero `templates/` directory claims
    - Zero Flask API examples
 
-3. **Canonical baseline is consistent across all official docs** ✅
-   - Same entry points in README and docs/core/README
-   - Same dedup thresholds documented
-   - Same project structure documented
+3. **Canonical baseline is consistent across all active docs** ✅
+   - Same entry points
+   - Same dedup thresholds
+   - Same embedding model
 
-4. **Evidence table and commits provided** ✅
-   - Full inventory table with all 15 official docs
-   - Specific legacy references listed with actions
-   - Two commits with clear descriptions
+### Phase 2 ✅
+
+4. **All architecture diagrams converted to Mermaid** ✅
+   - 7 total diagrams converted
+   - 3 files updated
+   - All diagrams reflect current `src/` structure
 
 ---
 
-**Alignment Status:** COMPLETE (Full Audit + Legacy Elimination)
+**Final Status:** COMPLETE (Phase 1 + Phase 2)
 **Legacy Reference Count:** 0
-**Canonical Consistency:** VERIFIED
+**Mermaid Diagrams Added:** 7

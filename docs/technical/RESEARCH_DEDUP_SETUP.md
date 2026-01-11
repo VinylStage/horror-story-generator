@@ -13,8 +13,12 @@ The research deduplication system uses FAISS (Facebook AI Similarity Search) wit
 
 ## Architecture
 
-```
-Research Card → Embedder (Ollama) → FAISS Index → Similarity Score → Signal
+```mermaid
+flowchart LR
+    A["Research Card"] --> B["Embedder<br/>(Ollama)"]
+    B --> C["FAISS Index"]
+    C --> D["Similarity Score"]
+    D --> E["Signal<br/>(LOW/MED/HIGH)"]
 ```
 
 ### Components

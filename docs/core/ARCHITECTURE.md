@@ -20,41 +20,53 @@ All pipelines share common infrastructure for deduplication, storage, and monito
 
 ## High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              Entry Points                                │
-├─────────────────────┬──────────────────────┬────────────────────────────┤
-│  python main.py     │  python -m src.      │  uvicorn src.api.main:app  │
-│  (Story CLI)        │  research.executor   │  (Trigger API)             │
-└─────────┬───────────┴──────────┬───────────┴──────────────┬─────────────┘
-          │                      │                          │
-          ▼                      ▼                          ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────┐
-│ HorrorStory     │    │ Research        │    │ FastAPI Router          │
-│ Generator       │    │ Generator       │    │ (jobs.py)               │
-└────────┬────────┘    └────────┬────────┘    └───────────┬─────────────┘
-         │                      │                         │
-         ▼                      ▼                         ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────┐
-│ Claude API      │    │ Ollama API      │    │ subprocess.Popen        │
-│ (api_client)    │    │ (ollama_client) │    │ (CLI execution)         │
-└────────┬────────┘    └────────┬────────┘    └───────────┬─────────────┘
-         │                      │                         │
-         ▼                      ▼                         ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        Shared Infrastructure                             │
-├─────────────────┬──────────────────────┬────────────────────────────────┤
-│ Story Registry  │ Research Dedup       │ Job Manager                    │
-│ (SQLite)        │ (FAISS + SQLite)     │ (File-based JSON)              │
-└─────────────────┴──────────────────────┴────────────────────────────────┘
-         │                      │                         │
-         ▼                      ▼                         ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           Storage Layer                                  │
-├─────────────────┬──────────────────────┬────────────────────────────────┤
-│ data/stories/   │ data/research/       │ jobs/                          │
-│ stories.db      │ research_registry.db │ logs/                          │
-└─────────────────┴──────────────────────┴────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Entry["Entry Points"]
+        CLI1["python main.py<br/>(Story CLI)"]
+        CLI2["python -m src.research.executor<br/>(Research CLI)"]
+        API["uvicorn src.api.main:app<br/>(Trigger API)"]
+    end
+
+    subgraph Core["Core Generators"]
+        SG["HorrorStory<br/>Generator"]
+        RG["Research<br/>Generator"]
+        Router["FastAPI Router<br/>(jobs.py)"]
+    end
+
+    subgraph External["External APIs"]
+        Claude["Claude API<br/>(api_client)"]
+        Ollama["Ollama API<br/>(ollama_client)"]
+        Subprocess["subprocess.Popen<br/>(CLI execution)"]
+    end
+
+    subgraph Infra["Shared Infrastructure"]
+        StoryReg["Story Registry<br/>(SQLite)"]
+        ResDedup["Research Dedup<br/>(FAISS + SQLite)"]
+        JobMgr["Job Manager<br/>(File-based JSON)"]
+    end
+
+    subgraph Storage["Storage Layer"]
+        DS["data/stories/<br/>stories.db"]
+        DR["data/research/<br/>research_registry.db"]
+        Jobs["jobs/<br/>logs/"]
+    end
+
+    CLI1 --> SG
+    CLI2 --> RG
+    API --> Router
+
+    SG --> Claude
+    RG --> Ollama
+    Router --> Subprocess
+
+    Claude --> StoryReg
+    Ollama --> ResDedup
+    Subprocess --> JobMgr
+
+    StoryReg --> DS
+    ResDedup --> DR
+    JobMgr --> Jobs
 ```
 
 ---
@@ -63,26 +75,19 @@ All pipelines share common infrastructure for deduplication, storage, and monito
 
 ### Flow
 
-```
-1. Template Selection
-   └─> src/story/template_loader.py loads from assets/templates/
-
-2. Research Context (optional)
-   └─> src/research/integration/ selects matching research cards
-
-3. Prompt Construction
-   └─> src/story/prompt_builder.py combines template + research context
-
-4. API Call
-   └─> src/story/api_client.py calls Claude API (claude-sonnet-4-5)
-
-5. Deduplication Check (if enabled)
-   └─> src/registry/story_registry.py computes canonical fingerprint similarity
-   └─> HIGH signal triggers regeneration (max 2 retries)
-
-6. Storage
-   └─> src/story/generator.py saves to generated_stories/
-   └─> src/registry/story_registry.py records in SQLite
+```mermaid
+flowchart LR
+    A["Template Selection<br/>template_loader.py"] --> B["Research Context<br/>(optional)"]
+    B --> C["Prompt Construction<br/>prompt_builder.py"]
+    C --> D["Claude API Call<br/>api_client.py"]
+    D --> E{"Dedup Check<br/>enabled?"}
+    E -->|No| G["Save Story<br/>generator.py"]
+    E -->|Yes| F{"Signal?"}
+    F -->|LOW/MED| G
+    F -->|HIGH| H{"Retry<br/>< 2?"}
+    H -->|Yes| C
+    H -->|No| I["Skip"]
+    G --> J["Record in SQLite<br/>story_registry.py"]
 ```
 
 ### Key Modules
@@ -127,28 +132,15 @@ canonical_core = {
 
 ### Flow
 
-```
-1. Topic Input
-   └─> CLI receives topic and tags
-
-2. Prompt Construction
-   └─> src/research/executor/prompt_template.py builds research prompt
-
-3. LLM Generation
-   └─> src/research/executor/executor.py calls local Ollama (qwen3:30b)
-
-4. Validation
-   └─> src/research/executor/validator.py parses JSON, checks required fields
-
-5. FAISS Indexing
-   └─> src/dedup/research/embedder.py creates embedding (nomic-embed-text)
-   └─> src/dedup/research/index.py adds to FAISS index
-
-6. Deduplication Check
-   └─> src/dedup/research/dedup.py computes vector similarity
-
-7. Storage
-   └─> Research card saved to data/research/YYYY/MM/
+```mermaid
+flowchart LR
+    A["Topic Input<br/>CLI"] --> B["Prompt Construction<br/>prompt_template.py"]
+    B --> C["Ollama Generation<br/>executor.py"]
+    C --> D["Validation<br/>validator.py"]
+    D --> E["Create Embedding<br/>embedder.py"]
+    E --> F["Add to FAISS<br/>index.py"]
+    F --> G["Dedup Check<br/>dedup.py"]
+    G --> H["Save to<br/>data/research/"]
 ```
 
 ### Research Card Schema
@@ -209,33 +201,29 @@ The API does not contain business logic. It triggers CLI commands via subprocess
 
 ### Flow
 
-```
-1. HTTP Request
-   └─> POST /jobs/story/trigger or /jobs/research/trigger
-
-2. Job Creation
-   └─> job_manager.py creates Job record (JSON file)
-
-3. CLI Launch
-   └─> subprocess.Popen executes main.py or research_executor
-
-4. Immediate Response
-   └─> 202 Accepted with job_id
-
-5. Background Monitoring
-   └─> job_monitor.py polls PID status
-
-6. Completion Detection
-   └─> Process exit triggers status update
-   └─> Artifacts collected from data/ directory
+```mermaid
+flowchart LR
+    A["HTTP Request<br/>POST /jobs/*/trigger"] --> B["Job Creation<br/>job_manager.py"]
+    B --> C["CLI Launch<br/>subprocess.Popen"]
+    C --> D["202 Accepted<br/>return job_id"]
+    D --> E["Background Monitor<br/>job_monitor.py"]
+    E --> F{"Process<br/>running?"}
+    F -->|Yes| E
+    F -->|No| G["Update Status<br/>Collect Artifacts"]
 ```
 
 ### Job Lifecycle
 
-```
-queued → running → succeeded
-                 → failed
-                 → cancelled
+```mermaid
+stateDiagram-v2
+    [*] --> queued
+    queued --> running
+    running --> succeeded
+    running --> failed
+    running --> cancelled
+    succeeded --> [*]
+    failed --> [*]
+    cancelled --> [*]
 ```
 
 ### Key Modules

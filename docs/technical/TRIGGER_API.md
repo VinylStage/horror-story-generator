@@ -41,47 +41,34 @@ Trigger API는 비동기 작업 실행을 위한 API 레이어입니다. CLI를 
 
 ## 시퀀스 다이어그램 (Sequence Diagram)
 
-```
-┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
-│  Client  │     │   API    │     │ Job Store│     │   CLI    │
-└────┬─────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
-     │                │                │                │
-     │ POST /trigger  │                │                │
-     │───────────────>│                │                │
-     │                │ create job     │                │
-     │                │───────────────>│                │
-     │                │                │                │
-     │                │ subprocess     │                │
-     │                │───────────────────────────────>│
-     │                │                │                │
-     │ 202 Accepted   │                │                │
-     │<───────────────│                │                │
-     │ {job_id, pid}  │                │                │
-     │                │                │                │
-     ├────── polling loop ────────────────────────────>│
-     │                │                │                │
-     │ GET /jobs/{id} │                │                │
-     │───────────────>│                │                │
-     │                │ load job       │                │
-     │                │<───────────────│                │
-     │                │                │                │
-     │ status:running │                │                │
-     │<───────────────│                │                │
-     │                │                │                │
-     │     ...        │                │   (process)    │
-     │                │                │       │        │
-     │ POST /monitor  │                │       │        │
-     │───────────────>│                │       ▼        │
-     │                │ check PID      │   (exit)       │
-     │                │───────────────────────────────>│
-     │                │ collect artifacts              │
-     │                │ update status  │                │
-     │                │───────────────>│                │
-     │                │                │                │
-     │ status:done    │                │                │
-     │<───────────────│                │                │
-     │ {artifacts}    │                │                │
-     └────────────────┴────────────────┴────────────────┘
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant JobStore as Job Store
+    participant CLI
+
+    Client->>API: POST /trigger
+    API->>JobStore: create job
+    API->>CLI: subprocess.Popen
+    API-->>Client: 202 Accepted {job_id, pid}
+
+    loop Polling
+        Client->>API: GET /jobs/{id}
+        API->>JobStore: load job
+        JobStore-->>API: job data
+        API-->>Client: status: running
+    end
+
+    Note over CLI: Process executes...
+    CLI->>CLI: (exit)
+
+    Client->>API: POST /monitor
+    API->>CLI: check PID
+    CLI-->>API: process exited
+    API->>API: collect artifacts
+    API->>JobStore: update status
+    API-->>Client: status: done {artifacts}
 ```
 
 ## Job 스키마 (Job Schema)
@@ -253,12 +240,13 @@ n8n 워크플로우와의 통합을 위한 권장 패턴:
 3. **Poll Node**: GET /jobs/{job_id}로 상태 확인
 4. **Branch Node**: status에 따른 분기 처리
 
-```
-[Trigger] → [Wait 30s] → [Poll Status] → [Check Status]
-                              ↓                ↓
-                         [running?]      [succeeded/failed]
-                              ↓                ↓
-                         [Loop Back]     [Process Result]
+```mermaid
+flowchart LR
+    A["Trigger"] --> B["Wait 30s"]
+    B --> C["Poll Status"]
+    C --> D{"Check Status"}
+    D -->|running| B
+    D -->|succeeded/failed| E["Process Result"]
 ```
 
 ### 배치 작업
