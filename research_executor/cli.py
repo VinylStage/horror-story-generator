@@ -439,7 +439,7 @@ def cmd_seed_gen(args: argparse.Namespace) -> int:
     logger.info(f"[SeedGen] Generating seed from: {card_id}")
 
     try:
-        from story_seed import generate_and_save_seed
+        from src.story.story_seed import generate_and_save_seed
         from src.registry.seed_registry import get_seed_registry
 
         print(f"Generating seed from: {card_id}")
@@ -489,7 +489,7 @@ def cmd_seed_list(args: argparse.Namespace) -> int:
     """
     try:
         from src.registry.seed_registry import get_seed_registry
-        from story_seed import list_seeds
+        from src.story.story_seed import list_seeds
 
         registry = get_seed_registry()
         stats = registry.get_stats()

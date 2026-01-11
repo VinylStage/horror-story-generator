@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from src.infra.data_paths import get_seeds_root
-from story_seed import StorySeed, load_seed, list_seeds
+from .story_seed import StorySeed, load_seed, list_seeds
 from src.registry.seed_registry import get_seed_registry, SeedRegistry
 
 logger = logging.getLogger("horror_story_generator")

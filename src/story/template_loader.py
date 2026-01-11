@@ -14,7 +14,8 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger("horror_story_generator")
 
 # Phase 2A: Template skeleton configuration
-TEMPLATE_SKELETONS_PATH = Path(__file__).parent / "phase1_foundation" / "03_templates" / "template_skeletons_v1.json"
+# Path updated after STEP 4-A restructuring (phase1_foundation → assets)
+TEMPLATE_SKELETONS_PATH = Path(__file__).parent.parent.parent / "assets" / "templates" / "template_skeletons_v1.json"
 
 # Phase 2A: In-memory state for back-to-back prevention (process-scoped only, not persisted)
 _last_template_id: Optional[str] = None

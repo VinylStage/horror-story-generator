@@ -17,22 +17,22 @@ from dotenv import load_dotenv
 
 # Extracted modules
 from src.infra.logging_config import setup_logging, DailyRotatingFileHandler
-from api_client import call_claude_api, generate_semantic_summary
+from .api_client import call_claude_api, generate_semantic_summary
 from src.dedup.similarity import (
     GenerationRecord, observe_similarity, add_to_generation_memory,
     load_past_stories_into_memory, get_similarity_signal, should_accept_story
 )
-from template_loader import (
+from .template_loader import (
     load_template_skeletons, select_random_template,
     SYSTEMIC_INEVITABILITY_CLUSTER, PHASE3B_LOOKBACK_WINDOW
 )
 
 # Prompt builder module (extracted for modularity)
-from prompt_builder import build_system_prompt, build_user_prompt
+from .prompt_builder import build_system_prompt, build_user_prompt
 
-# Phase A: Research integration module
+# Phase A: Research integration module (will be moved to src/research)
 try:
-    from research_integration import select_research_for_template, get_research_context_for_prompt
+    from src.research.integration import select_research_for_template, get_research_context_for_prompt
     RESEARCH_INTEGRATION_AVAILABLE = True
 except ImportError:
     RESEARCH_INTEGRATION_AVAILABLE = False

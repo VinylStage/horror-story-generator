@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
-from horror_story_generator import (
+from src.story.generator import (
     generate_horror_story, customize_template,
     generate_with_dedup_control
 )
