@@ -5,16 +5,10 @@ Uses story_registry.py for similarity checks against existing stories.
 """
 
 import logging
-import sys
-from pathlib import Path
 from typing import Dict, Any, Optional, List
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
-from story_registry import StoryRegistry
+# Import story registry from src.registry
+from src.registry.story_registry import StoryRegistry
 
 logger = logging.getLogger(__name__)
 

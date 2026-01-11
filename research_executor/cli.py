@@ -348,7 +348,7 @@ def cmd_index(args: argparse.Namespace) -> int:
             # Rebuild index from all cards
             logger.info("[Index] Rebuilding index from all cards...")
 
-            from data_paths import find_all_research_cards
+            from src.infra.data_paths import find_all_research_cards
             card_paths = find_all_research_cards()
 
             if not card_paths:
@@ -440,7 +440,7 @@ def cmd_seed_gen(args: argparse.Namespace) -> int:
 
     try:
         from story_seed import generate_and_save_seed
-        from seed_registry import get_seed_registry
+        from src.registry.seed_registry import get_seed_registry
 
         print(f"Generating seed from: {card_id}")
         print("This may take a moment...")
@@ -451,7 +451,7 @@ def cmd_seed_gen(args: argparse.Namespace) -> int:
         if seed:
             # Register in seed registry
             registry = get_seed_registry()
-            from data_paths import get_seeds_root
+            from src.infra.data_paths import get_seeds_root
             seed_path = get_seeds_root() / f"{seed.seed_id}.json"
             registry.register(seed.seed_id, card_id, str(seed_path))
 
@@ -488,7 +488,7 @@ def cmd_seed_list(args: argparse.Namespace) -> int:
         Exit code
     """
     try:
-        from seed_registry import get_seed_registry
+        from src.registry.seed_registry import get_seed_registry
         from story_seed import list_seeds
 
         registry = get_seed_registry()

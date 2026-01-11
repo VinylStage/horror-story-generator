@@ -23,9 +23,9 @@ from horror_story_generator import (
     generate_horror_story, customize_template,
     generate_with_dedup_control
 )
-from logging_config import setup_logging
+from src.infra.logging_config import setup_logging
 from similarity import load_past_stories_into_memory
-from story_registry import init_registry, get_registry, close_registry
+from src.registry.story_registry import init_registry, get_registry, close_registry
 
 
 # Phase 1: Graceful shutdown support

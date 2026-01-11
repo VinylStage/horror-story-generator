@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from job_manager import (
+from src.infra.job_manager import (
     load_job,
     update_job_status,
     get_running_jobs,
@@ -19,7 +19,7 @@ from job_manager import (
 
 
 # Artifact directories to scan for story/research outputs
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 STORY_OUTPUT_DIR = PROJECT_ROOT / "data" / "stories"
 RESEARCH_OUTPUT_DIR = PROJECT_ROOT / "data" / "research"
 

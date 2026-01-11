@@ -318,7 +318,7 @@ def get_index(
     # Use default paths if not provided
     if index_path is None or metadata_path is None:
         try:
-            from data_paths import get_faiss_index_path, get_vector_metadata_path
+            from src.infra.data_paths import get_faiss_index_path, get_vector_metadata_path
             index_path = index_path or get_faiss_index_path()
             metadata_path = metadata_path or get_vector_metadata_path()
         except ImportError:

@@ -18,9 +18,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-from data_paths import get_seeds_root
+from src.infra.data_paths import get_seeds_root
 from story_seed import StorySeed, load_seed, list_seeds
-from seed_registry import get_seed_registry, SeedRegistry
+from src.registry.seed_registry import get_seed_registry, SeedRegistry
 
 logger = logging.getLogger("horror_story_generator")
 

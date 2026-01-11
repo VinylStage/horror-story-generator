@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Generator, List, Optional
 
-from data_paths import get_research_registry_path
+from src.infra.data_paths import get_research_registry_path
 
 logger = logging.getLogger("horror_story_generator")
 

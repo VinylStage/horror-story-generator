@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from data_paths import get_seeds_root
+from src.infra.data_paths import get_seeds_root
 
 logger = logging.getLogger("horror_story_generator")
 

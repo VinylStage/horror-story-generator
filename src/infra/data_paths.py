@@ -35,11 +35,12 @@ def get_project_root() -> Path:
     Get the project root directory.
 
     Uses the location of this file as reference.
+    File is now at src/infra/data_paths.py, so project root is 2 levels up.
 
     Returns:
         Path: Project root directory
     """
-    return Path(__file__).parent.resolve()
+    return Path(__file__).parent.parent.parent.resolve()
 
 
 def get_data_root() -> Path:

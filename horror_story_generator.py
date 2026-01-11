@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Any, Union
 from dotenv import load_dotenv
 
 # Extracted modules
-from logging_config import setup_logging, DailyRotatingFileHandler
+from src.infra.logging_config import setup_logging, DailyRotatingFileHandler
 from api_client import call_claude_api, generate_semantic_summary
 from similarity import (
     GenerationRecord, observe_similarity, add_to_generation_memory,

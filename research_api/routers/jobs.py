@@ -34,15 +34,14 @@ from ..schemas.jobs import (
     JobDedupCheckResponse,
 )
 
-# Import job manager from project root
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from job_manager import (
+# Import job manager from src.infra
+from src.infra.job_manager import (
     create_job,
     load_job,
     update_job_status,
     list_jobs as list_jobs_func,
 )
-from job_monitor import (
+from src.infra.job_monitor import (
     monitor_job,
     monitor_all_running_jobs,
     cancel_job as cancel_job_func,
@@ -150,7 +149,7 @@ async def trigger_story_generation(request: StoryTriggerRequest):
         job_data = load_job(job.job_id)
         if job_data:
             job_data.log_path = str(log_path)
-            from job_manager import save_job
+            from src.infra.job_manager import save_job
             save_job(job_data)
 
         return JobTriggerResponse(
@@ -207,7 +206,7 @@ async def trigger_research_generation(request: ResearchTriggerRequest):
         job_data = load_job(job.job_id)
         if job_data:
             job_data.log_path = str(log_path)
-            from job_manager import save_job
+            from src.infra.job_manager import save_job
             save_job(job_data)
 
         return JobTriggerResponse(

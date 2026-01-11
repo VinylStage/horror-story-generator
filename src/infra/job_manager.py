@@ -18,8 +18,8 @@ from typing import Optional, Literal
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 JobType = Literal["story_generation", "research"]
 
-# Jobs directory
-JOBS_DIR = Path(__file__).parent / "jobs"
+# Jobs directory (project_root/jobs/)
+JOBS_DIR = Path(__file__).parent.parent.parent / "jobs"
 
 
 @dataclass
