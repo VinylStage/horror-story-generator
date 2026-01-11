@@ -2,13 +2,21 @@
 Embedding generation via Ollama local models.
 
 Phase B+: Uses Ollama's embedding API for semantic vectors.
+Supports both sync (urllib) and async (httpx) operations.
 """
 
+import asyncio
 import json
 import logging
 import urllib.request
 import urllib.error
 from typing import List, Optional
+
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
 
 logger = logging.getLogger("horror_story_generator")
 
@@ -112,7 +120,7 @@ class OllamaEmbedder:
 
     def get_embeddings_batch(self, texts: List[str]) -> List[Optional[List[float]]]:
         """
-        Get embeddings for multiple texts.
+        Get embeddings for multiple texts (sync).
 
         Args:
             texts: List of texts to embed
@@ -126,18 +134,121 @@ class OllamaEmbedder:
             results.append(embedding)
         return results
 
+    async def get_embedding_async(self, text: str) -> Optional[List[float]]:
+        """
+        Get embedding vector for text asynchronously.
+
+        Requires httpx to be installed.
+
+        Args:
+            text: Text to embed
+
+        Returns:
+            List of floats (embedding vector), or None on failure
+        """
+        if not HTTPX_AVAILABLE:
+            # Fallback to sync in thread pool
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self.get_embedding, text)
+
+        if not text or not text.strip():
+            logger.warning("[Embedder] Empty text provided")
+            return None
+
+        url = f"{self.base_url}{OLLAMA_EMBED_ENDPOINT}"
+
+        payload = {
+            "model": self.model,
+            "input": text.strip()
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(url, json=payload)
+                response.raise_for_status()
+                result = response.json()
+
+            # Ollama returns embeddings in 'embeddings' field (array of arrays)
+            embeddings = result.get("embeddings", [])
+            if not embeddings:
+                # Fallback: try 'embedding' field (single vector)
+                embedding = result.get("embedding", [])
+                if embedding:
+                    embeddings = [embedding]
+
+            if embeddings and len(embeddings) > 0:
+                embedding = embeddings[0]
+                self._dimension = len(embedding)
+                logger.debug(f"[Embedder] Generated async embedding: dim={self._dimension}")
+                return embedding
+
+            logger.error(f"[Embedder] No embedding in response: {result}")
+            return None
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"[Embedder] HTTP error: {e}")
+            return None
+        except httpx.RequestError as e:
+            logger.error(f"[Embedder] Request error: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"[Embedder] Async embedding failed: {e}")
+            return None
+
+    async def get_embeddings_batch_async(
+        self,
+        texts: List[str],
+        max_concurrent: int = 5
+    ) -> List[Optional[List[float]]]:
+        """
+        Get embeddings for multiple texts concurrently.
+
+        Uses asyncio.Semaphore to limit concurrent requests.
+
+        Args:
+            texts: List of texts to embed
+            max_concurrent: Maximum concurrent requests
+
+        Returns:
+            List of embedding vectors (None for failed items)
+        """
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def get_with_semaphore(text: str) -> Optional[List[float]]:
+            async with semaphore:
+                return await self.get_embedding_async(text)
+
+        tasks = [get_with_semaphore(text) for text in texts]
+        return await asyncio.gather(*tasks)
+
     @property
     def dimension(self) -> Optional[int]:
         """Get embedding dimension (detected from first successful embedding)."""
         return self._dimension
 
     def is_available(self) -> bool:
-        """Check if Ollama is available and model is loaded."""
+        """Check if Ollama is available and model is loaded (sync)."""
         try:
             url = f"{self.base_url}/api/tags"
             req = urllib.request.Request(url, method="GET")
             with urllib.request.urlopen(req, timeout=5) as response:
                 result = json.loads(response.read().decode("utf-8"))
+                models = [m.get("name", "") for m in result.get("models", [])]
+                return self.model in models or any(self.model in m for m in models)
+        except Exception:
+            return False
+
+    async def is_available_async(self) -> bool:
+        """Check if Ollama is available and model is loaded (async)."""
+        if not HTTPX_AVAILABLE:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self.is_available)
+
+        try:
+            url = f"{self.base_url}/api/tags"
+            async with httpx.AsyncClient(timeout=5) as client:
+                response = await client.get(url)
+                result = response.json()
                 models = [m.get("name", "") for m in result.get("models", [])]
                 return self.model in models or any(self.model in m for m in models)
         except Exception:
@@ -166,7 +277,7 @@ def get_embedder(model: str = DEFAULT_EMBED_MODEL) -> OllamaEmbedder:
 
 def get_embedding(text: str, model: str = DEFAULT_EMBED_MODEL) -> Optional[List[float]]:
     """
-    Convenience function to get embedding for text.
+    Convenience function to get embedding for text (sync).
 
     Args:
         text: Text to embed
@@ -177,6 +288,24 @@ def get_embedding(text: str, model: str = DEFAULT_EMBED_MODEL) -> Optional[List[
     """
     embedder = get_embedder(model)
     return embedder.get_embedding(text)
+
+
+async def get_embedding_async(
+    text: str,
+    model: str = DEFAULT_EMBED_MODEL
+) -> Optional[List[float]]:
+    """
+    Convenience function to get embedding for text (async).
+
+    Args:
+        text: Text to embed
+        model: Ollama model name
+
+    Returns:
+        Embedding vector or None
+    """
+    embedder = get_embedder(model)
+    return await embedder.get_embedding_async(text)
 
 
 def create_card_text_for_embedding(card_data: dict) -> str:

@@ -11,6 +11,51 @@ Phase B+는 연구 카드 중복 제거, 스토리 시드 생성, 리소스 관�
 
 ---
 
+## Requirements
+
+### Python Version
+
+**권장 버전:** Python 3.11.x 또는 3.12.x
+
+```bash
+# pyenv 설치 (macOS)
+brew install pyenv
+
+# Python 3.11 설치
+pyenv install 3.11.11
+
+# 프로젝트 디렉토리에서 로컬 버전 설정
+cd horror-story-generator
+pyenv local 3.11.11
+
+# 버전 확인
+python --version  # Python 3.11.11
+```
+
+### 의존성 설치
+
+```bash
+# Poetry 설치 (권장)
+curl -sSL https://install.python-poetry.org | python3 -
+
+# 의존성 설치
+poetry install
+
+# 개발 의존성 포함 설치
+poetry install --with dev
+```
+
+### 주요 의존성
+
+| 패키지 | 버전 | 용도 |
+|--------|------|------|
+| `faiss-cpu` | >=1.7.0 | 벡터 유사도 검색 |
+| `httpx` | >=0.27.0 | 비동기 HTTP 클라이언트 |
+| `fastapi` | ^0.115.0 | REST API 프레임워크 |
+| `anthropic` | >=0.40.0 | Claude API 클라이언트 |
+
+---
+
 ## Architecture
 
 ```
@@ -346,10 +391,81 @@ poetry run python -m research_executor seed-list
 
 ---
 
+## Async Optimization
+
+### 비동기 임베딩 API
+
+`httpx`를 사용한 비동기 HTTP 클라이언트로 성능 최적화:
+
+```python
+from research_dedup import get_embedding_async, OllamaEmbedder
+
+# 단일 비동기 임베딩
+embedding = await get_embedding_async("한국 아파트 공포")
+
+# 배치 비동기 임베딩 (동시 요청 제어)
+embedder = OllamaEmbedder()
+texts = ["text1", "text2", "text3", "text4", "text5"]
+embeddings = await embedder.get_embeddings_batch_async(texts, max_concurrent=3)
+
+# 비동기 Ollama 가용성 확인
+is_ready = await embedder.is_available_async()
+```
+
+### 성능 특징
+
+| 기능 | 동기 | 비동기 |
+|------|------|--------|
+| 단일 임베딩 | `get_embedding()` | `get_embedding_async()` |
+| 배치 임베딩 | 순차 처리 | `asyncio.gather()` 병렬 처리 |
+| HTTP 클라이언트 | `urllib` | `httpx` (권장) |
+| 동시 요청 제어 | N/A | `asyncio.Semaphore` |
+
+### httpx 없이 동작
+
+`httpx`가 설치되지 않은 경우 자동 폴백:
+- `run_in_executor`를 통해 동기 코드를 스레드풀에서 실행
+- 기능은 동일하나 성능 이점 감소
+
+---
+
 ## Testing
 
+### 전체 테스트 실행
+
 ```bash
-# 모듈 임포트 테스트
+# 모든 테스트 실행 (coverage 포함)
+poetry run pytest tests/ --cov --cov-report=term-missing
+
+# Phase B+ 테스트만 실행
+poetry run pytest tests/test_data_paths.py tests/test_research_dedup.py \
+    tests/test_research_registry.py tests/test_story_seed.py \
+    tests/test_seed_registry.py tests/test_seed_integration.py \
+    tests/test_prompt_builder.py tests/test_ollama_resource.py \
+    tests/test_api_endpoints.py tests/test_embedder_mock.py \
+    tests/test_story_seed_mock.py -v
+```
+
+### 테스트 파일 구성
+
+| 테스트 파일 | 테스트 대상 | 유형 |
+|------------|------------|------|
+| `test_data_paths.py` | 경로 관리 | Unit |
+| `test_research_dedup.py` | FAISS 인덱스 | Unit |
+| `test_research_registry.py` | 연구 레지스트리 | Unit |
+| `test_story_seed.py` | 스토리 시드 기본 | Unit |
+| `test_seed_registry.py` | 시드 레지스트리 | Unit |
+| `test_seed_integration.py` | 시드 통합 | Unit |
+| `test_prompt_builder.py` | 프롬프트 빌더 | Unit |
+| `test_ollama_resource.py` | Ollama 리소스 | Unit/Async |
+| `test_api_endpoints.py` | FastAPI 엔드포인트 | Integration (Mock) |
+| `test_embedder_mock.py` | 임베딩 생성 | Unit (Mock) |
+| `test_story_seed_mock.py` | 시드 생성 | Unit (Mock) |
+
+### 모듈 임포트 확인
+
+```bash
+# 개별 모듈 임포트 테스트
 poetry run python -c "from research_dedup import check_duplicate; print('OK')"
 poetry run python -c "from story_seed import StorySeed; print('OK')"
 poetry run python -c "from seed_integration import select_seed_for_generation; print('OK')"
@@ -360,6 +476,12 @@ poetry run python -c "from research_dedup.index import is_faiss_available; print
 # 리소스 매니저 테스트
 poetry run python -c "from research_api.services.ollama_resource import OllamaResourceManager; print('OK')"
 ```
+
+### Coverage 목표
+
+- **전체:** 70% 이상
+- **핵심 모듈:** 80% 이상 (`data_paths`, `prompt_builder`, `seed_integration`)
+- **API 라우터:** 100% (mock 테스트)
 
 ---
 

@@ -7,6 +7,7 @@ Features:
 - Auto-cleanup on server shutdown
 - Idle timeout for model unloading (configurable)
 - Track model usage and last activity time
+- Async HTTP via httpx for better performance
 
 Configuration:
 - OLLAMA_IDLE_TIMEOUT_SECONDS: Time before unloading idle model (default: 300s = 5 minutes)
@@ -14,13 +15,19 @@ Configuration:
 """
 
 import asyncio
-import json
 import logging
 import os
-import urllib.request
-import urllib.error
 from datetime import datetime, timedelta
 from typing import Optional
+
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    import json
+    import urllib.request
+    import urllib.error
+    HTTPX_AVAILABLE = False
 
 logger = logging.getLogger("horror_story_generator")
 
@@ -157,32 +164,39 @@ class OllamaResourceManager:
         Returns:
             True if successful, False otherwise
         """
+        url = f"{self.base_url}/api/generate"
+        payload = {
+            "model": model,
+            "prompt": "",
+            "keep_alive": 0,  # This tells Ollama to unload the model
+        }
+
         try:
-            # Ollama unloads models by setting keep_alive to 0
-            url = f"{self.base_url}/api/generate"
-            payload = {
-                "model": model,
-                "prompt": "",
-                "keep_alive": 0,  # This tells Ollama to unload the model
-            }
+            if HTTPX_AVAILABLE:
+                # Use httpx for async HTTP (preferred)
+                async with httpx.AsyncClient(timeout=10) as client:
+                    response = await client.post(url, json=payload)
+                    result = response.status_code < 400
+            else:
+                # Fallback to urllib in thread pool
+                import json as json_module
 
-            def _do_request():
-                data = json.dumps(payload).encode("utf-8")
-                req = urllib.request.Request(
-                    url,
-                    data=data,
-                    headers={"Content-Type": "application/json"},
-                    method="POST"
-                )
-                try:
-                    with urllib.request.urlopen(req, timeout=10) as response:
-                        return True
-                except Exception:
-                    return False
+                def _do_request():
+                    data = json_module.dumps(payload).encode("utf-8")
+                    req = urllib.request.Request(
+                        url,
+                        data=data,
+                        headers={"Content-Type": "application/json"},
+                        method="POST"
+                    )
+                    try:
+                        with urllib.request.urlopen(req, timeout=10) as response:
+                            return True
+                    except Exception:
+                        return False
 
-            # Run in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, _do_request)
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(None, _do_request)
 
             if result:
                 logger.info(f"[OllamaResource] Unloaded model: {model}")

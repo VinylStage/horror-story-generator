@@ -12,7 +12,7 @@ All operations are LOCAL-FIRST and non-blocking.
 High similarity does NOT block - only warns and logs.
 """
 
-from .embedder import get_embedding, OllamaEmbedder
+from .embedder import get_embedding, get_embedding_async, OllamaEmbedder
 from .index import FaissIndex
 from .dedup import (
     check_duplicate,
@@ -23,6 +23,7 @@ from .dedup import (
 
 __all__ = [
     "get_embedding",
+    "get_embedding_async",
     "OllamaEmbedder",
     "FaissIndex",
     "check_duplicate",

@@ -132,7 +132,7 @@ class ResearchRegistry:
                     (card_id, topic, file_path, status, created_at)
                     VALUES (?, ?, ?, ?, ?)
                     """,
-                    (card_id, topic, file_path, status, datetime.now())
+                    (card_id, topic, file_path, status, datetime.now().isoformat())
                 )
             logger.debug(f"[ResearchRegistry] Registered {card_id}")
             return True

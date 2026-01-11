@@ -127,7 +127,7 @@ class SeedRegistry:
                     (seed_id, source_card_id, file_path, created_at)
                     VALUES (?, ?, ?, ?)
                     """,
-                    (seed_id, source_card_id, file_path, datetime.now())
+                    (seed_id, source_card_id, file_path, datetime.now().isoformat())
                 )
             logger.debug(f"[SeedRegistry] Registered {seed_id}")
             return True
@@ -153,7 +153,7 @@ class SeedRegistry:
                     SET times_used = times_used + 1, last_used_at = ?
                     WHERE seed_id = ?
                     """,
-                    (datetime.now(), seed_id)
+                    (datetime.now().isoformat(), seed_id)
                 )
             logger.debug(f"[SeedRegistry] Marked {seed_id} as used")
             return True
