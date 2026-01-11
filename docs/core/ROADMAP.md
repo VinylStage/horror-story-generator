@@ -1,8 +1,7 @@
 # Development Roadmap
 
 **Status:** Active
-**Last Updated:** 2026-01-12
-**Version:** Post STEP 4-B
+**Baseline:** Post–STEP 4-C canonical baseline
 
 ---
 

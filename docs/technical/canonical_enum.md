@@ -1,25 +1,9 @@
+# Canonical Enum 정의서 (Horror Template System)
 
-아주 좋은 타이밍이야.
-
-이건 **네가 “운영자·설계자”로서 반드시 이해하고 있어야 하는 문서**고,
-
-나중에 **Claude / 다른 LLM / 협업자 / 미래의 너**에게 그대로 던져줄 수 있는 **정식 정의서**가 되어야 한다.
-
-  
-
-아래는 **Canonical Enum 정의서 v1.0**이다.
-
-(설명 중심, 사람 기준 / 기계용 스키마는 뒤에 따로 있음)
-
----
-
-# **📕 Canonical Enum 정의서 (Horror Template System)**
-
-  
+> **Baseline:** Post–STEP 4-C canonical baseline
 
 **Version:** 1.0
-
-**Status:** Stable (확장 가능, 의미 변경 금지)
+**Status:** FROZEN (value additions only, semantic changes forbidden)
 
 **Purpose:**
 
