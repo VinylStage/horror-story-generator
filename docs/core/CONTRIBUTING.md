@@ -245,14 +245,6 @@ def new_feature(param: str) -> Dict[str, Any]:
         raise
 ```
 
-#### 템플릿 수정 시
-
-`horror_story_prompt_template.json`을 수정할 때는:
-
-1. JSON 형식 유효성 검증
-2. 기존 구조와 호환성 유지
-3. 새 필드 추가 시 문서화
-
 ### 3. 테스트 작성
 
 `main.py`에 테스트 케이스를 추가하거나, 별도의 테스트 함수를 작성합니다.
