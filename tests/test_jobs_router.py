@@ -235,9 +235,11 @@ class TestBuildCommands:
 
         assert "-m" in cmd
         assert "research_executor" in cmd
-        assert "--topic" in cmd
+        assert "run" in cmd
         assert "Korean horror" in cmd
-        assert "--tag" in cmd
+        assert "--tags" in cmd
+        assert "urban" in cmd
+        assert "psychological" in cmd
         assert "--model" in cmd
 
     def test_build_story_command_minimal(self):
@@ -257,8 +259,9 @@ class TestBuildCommands:
         params = {"topic": "test", "tags": []}
         cmd = build_research_command(params)
 
-        assert "--topic" in cmd
-        assert "--tag" not in cmd
+        assert "run" in cmd
+        assert "test" in cmd
+        assert "--tags" not in cmd
 
 
 class TestDedupCheckEndpoint:

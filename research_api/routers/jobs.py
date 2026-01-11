@@ -88,12 +88,16 @@ def build_story_command(params: dict) -> list[str]:
 
 def build_research_command(params: dict) -> list[str]:
     """Build CLI command for research generation."""
-    cmd = [sys.executable, "-m", "research_executor"]
+    cmd = [sys.executable, "-m", "research_executor", "run"]
 
-    cmd.extend(["--topic", params["topic"]])
+    # Topic is positional argument
+    cmd.append(params["topic"])
 
-    for tag in params.get("tags", []):
-        cmd.extend(["--tag", tag])
+    # Tags use --tags with multiple values
+    tags = params.get("tags", [])
+    if tags:
+        cmd.append("--tags")
+        cmd.extend(tags)
 
     if params.get("model"):
         cmd.extend(["--model", params["model"]])

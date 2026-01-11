@@ -28,19 +28,34 @@ def is_process_running(pid: int) -> bool:
     """
     Check if a process is running by PID.
 
-    Uses os.kill with signal 0 (no actual signal sent).
+    Uses os.kill with signal 0, but also checks for zombie processes.
 
     Args:
         pid: Process ID to check
 
     Returns:
-        True if process is running, False otherwise
+        True if process is running (not zombie), False otherwise
     """
     if pid is None or pid <= 0:
         return False
 
     try:
         os.kill(pid, 0)
+        # Process exists, but might be zombie - check state
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["ps", "-o", "state=", "-p", str(pid)],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            state = result.stdout.strip()
+            # Z = zombie, check first character
+            if state and state[0] == 'Z':
+                return False
+        except Exception:
+            pass  # If we can't check state, assume running
         return True
     except OSError:
         return False
