@@ -1,0 +1,271 @@
+"""
+Jobs router for trigger-based API.
+
+Phase B+: Non-blocking job execution via CLI subprocess.
+
+Endpoints:
+- POST /jobs/story/trigger - Trigger story generation
+- POST /jobs/research/trigger - Trigger research generation
+- GET /jobs/{job_id} - Get job status
+- GET /jobs - List all jobs
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import JSONResponse
+
+from ..schemas.jobs import (
+    StoryTriggerRequest,
+    ResearchTriggerRequest,
+    JobTriggerResponse,
+    JobStatusResponse,
+    JobListResponse,
+)
+
+# Import job manager from project root
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from job_manager import (
+    create_job,
+    load_job,
+    update_job_status,
+    list_jobs as list_jobs_func,
+)
+
+router = APIRouter()
+
+# Project root for subprocess execution
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+LOGS_DIR = PROJECT_ROOT / "logs"
+
+
+def ensure_logs_dir() -> Path:
+    """Ensure logs directory exists."""
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    return LOGS_DIR
+
+
+def build_story_command(params: dict) -> list[str]:
+    """Build CLI command for story generation."""
+    cmd = [sys.executable, str(PROJECT_ROOT / "main.py")]
+
+    if params.get("max_stories"):
+        cmd.extend(["--max-stories", str(params["max_stories"])])
+
+    if params.get("duration_seconds"):
+        cmd.extend(["--duration-seconds", str(params["duration_seconds"])])
+
+    if params.get("interval_seconds"):
+        cmd.extend(["--interval-seconds", str(params["interval_seconds"])])
+
+    if params.get("enable_dedup"):
+        cmd.append("--enable-dedup")
+
+    if params.get("db_path"):
+        cmd.extend(["--db-path", params["db_path"]])
+
+    if params.get("load_history"):
+        cmd.append("--load-history")
+
+    return cmd
+
+
+def build_research_command(params: dict) -> list[str]:
+    """Build CLI command for research generation."""
+    cmd = [sys.executable, "-m", "research_executor"]
+
+    cmd.extend(["--topic", params["topic"]])
+
+    for tag in params.get("tags", []):
+        cmd.extend(["--tag", tag])
+
+    if params.get("model"):
+        cmd.extend(["--model", params["model"]])
+
+    if params.get("timeout"):
+        cmd.extend(["--timeout", str(params["timeout"])])
+
+    return cmd
+
+
+@router.post("/story/trigger", response_model=JobTriggerResponse, status_code=202)
+async def trigger_story_generation(request: StoryTriggerRequest):
+    """
+    Trigger story generation job.
+
+    Launches `python main.py` as background subprocess.
+    Returns immediately with job_id for status tracking.
+    """
+    ensure_logs_dir()
+
+    # Create job
+    params = request.model_dump()
+    job = create_job(job_type="story_generation", params=params)
+
+    log_path = LOGS_DIR / f"story_{job.job_id}.log"
+    update_job_status(job.job_id, "queued")
+
+    # Build command
+    cmd = build_story_command(params)
+
+    try:
+        # Launch subprocess
+        with open(log_path, "w") as log_file:
+            process = subprocess.Popen(
+                cmd,
+                cwd=PROJECT_ROOT,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+
+        # Update job with pid
+        update_job_status(
+            job.job_id,
+            "running",
+            pid=process.pid,
+        )
+
+        # Update log path
+        job_data = load_job(job.job_id)
+        if job_data:
+            job_data.log_path = str(log_path)
+            from job_manager import save_job
+            save_job(job_data)
+
+        return JobTriggerResponse(
+            job_id=job.job_id,
+            type="story_generation",
+            status="running",
+            message=f"Story generation job started with PID {process.pid}",
+        )
+
+    except Exception as e:
+        update_job_status(job.job_id, "failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to start job: {e}")
+
+
+@router.post("/research/trigger", response_model=JobTriggerResponse, status_code=202)
+async def trigger_research_generation(request: ResearchTriggerRequest):
+    """
+    Trigger research generation job.
+
+    Launches `python -m research_executor` as background subprocess.
+    Returns immediately with job_id for status tracking.
+    """
+    ensure_logs_dir()
+
+    # Create job
+    params = request.model_dump()
+    job = create_job(job_type="research", params=params)
+
+    log_path = LOGS_DIR / f"research_{job.job_id}.log"
+    update_job_status(job.job_id, "queued")
+
+    # Build command
+    cmd = build_research_command(params)
+
+    try:
+        # Launch subprocess
+        with open(log_path, "w") as log_file:
+            process = subprocess.Popen(
+                cmd,
+                cwd=PROJECT_ROOT,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+
+        # Update job with pid
+        update_job_status(
+            job.job_id,
+            "running",
+            pid=process.pid,
+        )
+
+        # Update log path
+        job_data = load_job(job.job_id)
+        if job_data:
+            job_data.log_path = str(log_path)
+            from job_manager import save_job
+            save_job(job_data)
+
+        return JobTriggerResponse(
+            job_id=job.job_id,
+            type="research",
+            status="running",
+            message=f"Research job started with PID {process.pid}",
+        )
+
+    except Exception as e:
+        update_job_status(job.job_id, "failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to start job: {e}")
+
+
+@router.get("/{job_id}", response_model=JobStatusResponse)
+async def get_job_status(job_id: str):
+    """
+    Get job status by ID.
+
+    Returns full job details including pid, artifacts, and error info.
+    """
+    job = load_job(job_id)
+
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+    return JobStatusResponse(
+        job_id=job.job_id,
+        type=job.type,
+        status=job.status,
+        params=job.params,
+        pid=job.pid,
+        log_path=job.log_path,
+        artifacts=job.artifacts,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+        exit_code=job.exit_code,
+        error=job.error,
+    )
+
+
+@router.get("", response_model=JobListResponse)
+async def list_jobs(
+    status: Optional[str] = Query(default=None, description="Filter by status"),
+    type: Optional[str] = Query(default=None, description="Filter by job type"),
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum jobs to return"),
+):
+    """
+    List jobs with optional filtering.
+
+    Supports filtering by status and job type.
+    """
+    jobs = list_jobs_func(status=status, job_type=type, limit=limit)
+
+    job_responses = [
+        JobStatusResponse(
+            job_id=j.job_id,
+            type=j.type,
+            status=j.status,
+            params=j.params,
+            pid=j.pid,
+            log_path=j.log_path,
+            artifacts=j.artifacts,
+            created_at=j.created_at,
+            started_at=j.started_at,
+            finished_at=j.finished_at,
+            exit_code=j.exit_code,
+            error=j.error,
+        )
+        for j in jobs
+    ]
+
+    return JobListResponse(
+        jobs=job_responses,
+        total=len(job_responses),
+        message=f"Found {len(job_responses)} jobs",
+    )

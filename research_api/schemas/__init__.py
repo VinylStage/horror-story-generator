@@ -15,6 +15,13 @@ from .dedup import (
     DedupEvaluateRequest,
     DedupEvaluateResponse,
 )
+from .jobs import (
+    StoryTriggerRequest,
+    ResearchTriggerRequest,
+    JobTriggerResponse,
+    JobStatusResponse,
+    JobListResponse,
+)
 
 __all__ = [
     "ResearchRunRequest",
@@ -24,4 +31,9 @@ __all__ = [
     "ResearchListResponse",
     "DedupEvaluateRequest",
     "DedupEvaluateResponse",
+    "StoryTriggerRequest",
+    "ResearchTriggerRequest",
+    "JobTriggerResponse",
+    "JobStatusResponse",
+    "JobListResponse",
 ]

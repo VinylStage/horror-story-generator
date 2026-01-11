@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
-from .routers import research, dedup
+from .routers import research, dedup, jobs
 from .services.ollama_resource import (
     startup_resource_manager,
     shutdown_resource_manager,
@@ -36,6 +36,10 @@ async def lifespan(app: FastAPI):
 
 # Tag metadata for Swagger UI
 tags_metadata = [
+    {
+        "name": "jobs",
+        "description": "Trigger-based job execution - non-blocking story and research generation via CLI subprocess",
+    },
     {
         "name": "research",
         "description": "Research card operations - generate, validate, and list research cards via Ollama LLM",
@@ -86,6 +90,7 @@ This API is designed for **local use only**. All operations connect to local Oll
 )
 
 # Include routers
+app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(research.router, prefix="/research", tags=["research"])
 app.include_router(dedup.router, prefix="/dedup", tags=["dedup"])
 

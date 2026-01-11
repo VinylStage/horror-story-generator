@@ -2,6 +2,6 @@
 API Routers package.
 """
 
-from . import research, dedup
+from . import research, dedup, jobs
 
-__all__ = ["research", "dedup"]
+__all__ = ["research", "dedup", "jobs"]
