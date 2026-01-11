@@ -2,6 +2,10 @@
 
 A research-grounded Korean horror story generation system using Claude API with deduplication control and research integration.
 
+> **Documentation Version:** Post STEP 4-B (2026-01-12)
+>
+> All documentation reflects the current `src/` package structure.
+
 ---
 
 ## Features
@@ -165,9 +169,12 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 | GET | `/jobs` | List all jobs |
 | POST | `/jobs/{job_id}/cancel` | Cancel running job |
 | POST | `/jobs/monitor` | Update all running job statuses |
-| POST | `/jobs/{job_id}/dedup_check` | Check research card deduplication |
+| POST | `/jobs/{job_id}/dedup_check` | Check canonical deduplication |
+| POST | `/research/run` | Run research generation (sync) |
+| GET | `/research/list` | List research cards |
+| POST | `/research/dedup` | Check semantic similarity (FAISS) |
 
-See `docs/API_DRAFT.md` for detailed API documentation.
+See `docs/technical/TRIGGER_API.md` for detailed API documentation.
 
 ---
 
@@ -201,11 +208,23 @@ See `docs/ARCHITECTURE_DRAFT.md` for detailed architecture documentation.
 
 ### Signal Levels
 
+**Story Dedup (Canonical Matching):**
+
 | Signal | Score Range | Behavior |
 |--------|-------------|----------|
 | LOW | < 0.3 | Accept story |
 | MEDIUM | 0.3 - 0.6 | Accept story (logged) |
 | HIGH | > 0.6 | Regenerate (max 2 retries), then skip |
+
+**Research Dedup (Semantic Embedding via FAISS):**
+
+| Signal | Score Range | Behavior |
+|--------|-------------|----------|
+| LOW | < 0.70 | Unique topic |
+| MEDIUM | 0.70 - 0.85 | Some overlap (logged) |
+| HIGH | ≥ 0.85 | Likely duplicate |
+
+Research embeddings use `nomic-embed-text` model via Ollama (768 dimensions).
 
 ### Canonical Dimensions
 
@@ -259,12 +278,13 @@ See `CONTRIBUTING.md` for development guidelines.
 
 | Document | Description |
 |----------|-------------|
-| `docs/ARCHITECTURE_DRAFT.md` | System architecture details |
-| `docs/API_DRAFT.md` | API reference |
-| `docs/roadmap_DRAFT.md` | Future development plans |
-| `docs/DOCUMENT_MAP.md` | Documentation index |
-| `docs/canonical_enum.md` | Canonical dimension definitions |
-| `docs/decision_log.md` | Design decision records |
+| `docs/core/ARCHITECTURE.md` | System architecture details |
+| `docs/technical/TRIGGER_API.md` | API reference |
+| `docs/core/ROADMAP.md` | Future development plans |
+| `docs/core/DOCUMENT_MAP.md` | Documentation index |
+| `docs/technical/canonical_enum.md` | Canonical dimension definitions |
+| `docs/technical/decision_log.md` | Design decision records |
+| `docs/technical/RESEARCH_DEDUP_SETUP.md` | Research embedding setup |
 
 ---
 
@@ -280,6 +300,3 @@ MIT License
 - Built with Claude API (Anthropic)
 - Research generation powered by Ollama
 
----
-
-**Note:** This is a draft document. See `docs/DOCUMENT_MAP.md` for documentation status.

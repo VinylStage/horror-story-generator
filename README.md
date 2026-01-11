@@ -2,6 +2,11 @@
 
 Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시스템입니다.
 
+> **문서 버전:** Post STEP 4-B (2026-01-12)
+>
+> 모든 문서는 현재 `src/` 패키지 구조를 기준으로 작성되었습니다.
+> 상세 문서는 `docs/core/README.md`를 참조하세요.
+
 ## 특징
 
 - **함수형 설계**: 각 기능이 독립적인 함수로 구현되어 확장 및 재사용이 쉽습니다
@@ -42,13 +47,33 @@ TEMPERATURE=0.8
 ### 기본 실행
 
 ```bash
-python horror_story_generator.py
+# 스토리 1개 생성
+python main.py
+
+# 5개 스토리 생성 (dedup 활성화)
+python main.py --max-stories 5 --enable-dedup --interval-seconds 60
+
+# 24시간 연속 실행
+python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
+```
+
+### 연구 카드 생성
+
+```bash
+# 연구 주제 실행
+python -m src.research.executor run "한국 아파트 공포" --tags horror korean apartment
+```
+
+### API 서버 실행
+
+```bash
+uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 ```
 
 ### 프로그래밍 방식 사용
 
 ```python
-from horror_story_generator import generate_horror_story
+from src.story.generator import generate_horror_story
 
 # 기본 실행
 result = generate_horror_story()
@@ -66,7 +91,8 @@ result = generate_horror_story(save_output=False)
 ### 템플릿 커스터마이즈
 
 ```python
-from horror_story_generator import customize_template, generate_horror_story
+from src.story.template_loader import load_template, customize_template
+from src.story.generator import generate_horror_story
 import json
 
 # 템플릿 커스터마이즈
@@ -90,7 +116,7 @@ result = generate_horror_story(
 ### 고급 사용: 개별 함수 활용
 
 ```python
-from horror_story_generator import (
+from src.story import (
     load_environment,
     load_prompt_template,
     build_system_prompt,
@@ -323,10 +349,10 @@ if __name__ == "__main__":
 ### n8n 연동 문서
 
 **1단계 (필수) - 기본 연동:**
-- 📖 [Execute Command 연동 가이드](docs/n8n_execute_command_guide.md)
-- 📖 [출력 검증 및 에러 처리](docs/n8n_output_validation.md)
-- 📖 [워크플로 Import 가이드](docs/n8n_workflow_import_guide.md)
-- 📖 [환경 설정 및 보안](docs/n8n_environment_setup.md)
+- 📖 [Execute Command 연동 가이드](docs/archive/n8n_guides/n8n_execute_command_guide.md)
+- 📖 [출력 검증 및 에러 처리](docs/archive/n8n_guides/n8n_output_validation.md)
+- 📖 [워크플로 Import 가이드](docs/archive/n8n_guides/n8n_workflow_import_guide.md)
+- 📖 [환경 설정 및 보안](docs/archive/n8n_guides/n8n_environment_setup.md)
 
 **2단계 (권장) - 활용 및 확장:**
 - 출력 파일 활용 (블로그 자동 업로드, 클라우드 저장)
@@ -357,7 +383,8 @@ n8n에서는 Set 노드로 템플릿을 변수로 설정 가능합니다.
 ### 프로젝트 인수인계
 
 새 채팅에서 작업을 이어가려면:
-- 📋 [인수인계 문서](docs/PROJECT_HANDOFF.md) 참조
+- 📋 [인수인계 문서](docs/archive/phase_docs/PROJECT_HANDOFF.md) 참조
+- 📖 [상세 문서](docs/core/README.md) 참조
 
 ---
 
