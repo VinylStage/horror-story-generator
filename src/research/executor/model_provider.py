@@ -361,24 +361,12 @@ class GeminiDeepResearchProvider(ResearchModelProvider):
         try:
             # Import google-genai
             from google import genai
-            from google.genai import types
 
             client = genai.Client(api_key=self.api_key)
 
-            logger.info("[GeminiDeepResearch] Creating interaction...")
-
-            # Create interaction with deep research agent
-            # The Interactions API runs in background mode
-            interaction = client.aio.live.interact(
-                model=self.model_name,
-                config=types.LiveConnectConfig(
-                    response_modalities=["TEXT"],
-                )
-            )
-
-            # For synchronous execution with the deep research agent,
-            # we use the standard generate_content with the deep research model
+            # Deep Research agent uses standard generate_content API
             # The model handles the research agent behavior internally
+            # Note: This may take longer than standard models due to research process
             logger.info("[GeminiDeepResearch] Executing deep research query...")
 
             response = client.models.generate_content(
