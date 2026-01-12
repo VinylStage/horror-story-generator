@@ -583,6 +583,9 @@ optional arguments:
 | `STORY_DEDUP_STRICT` | `false` | true 시 중복 감지 즉시 중단 |
 | `OLLAMA_HOST` | `localhost` | Ollama 서버 호스트 |
 | `OLLAMA_PORT` | `11434` | Ollama 서버 포트 |
+| `GEMINI_ENABLED` | `false` | Gemini API 활성화 (연구 생성용) |
+| `GEMINI_API_KEY` | - | Gemini API 키 |
+| `GEMINI_MODEL` | `deep-research-pro-preview-12-2025` | 기본 Gemini 모델 |
 
 **Examples:**
 
@@ -608,6 +611,20 @@ python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup -
 
 # Infinite mode with strict dedup (stop with Ctrl+C)
 STORY_DEDUP_STRICT=true python main.py --max-stories 999999 --interval-seconds 600 --enable-dedup
+```
+
+**Research CLI Examples:**
+
+```bash
+# 연구 카드 생성 (기본 Ollama)
+python -m src.research.executor run "한국 공포 문화" --tags horror korean
+
+# Gemini Deep Research Agent로 연구 (권장)
+# API: Google AI Studio, 모델: deep-research-pro-preview-12-2025
+python -m src.research.executor run "한국 공포 문화" --model deep-research
+
+# 표준 Gemini API로 연구
+python -m src.research.executor run "한국 공포 문화" --model gemini
 ```
 
 ---

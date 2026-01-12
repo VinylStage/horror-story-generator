@@ -99,8 +99,8 @@ Trigger a research generation job.
 |-------|------|----------|---------|-------------|
 | `topic` | string | **Yes** | - | Research topic |
 | `tags` | array | No | [] | Classification tags |
-| `model` | string | No | "qwen3:30b" | Model name. Ollama: `qwen3:30b`, `qwen:14b`. Gemini: `gemini` (requires GEMINI_ENABLED=true) |
-| `timeout` | integer | No | 60 | Generation timeout |
+| `model` | string | No | "qwen3:30b" | Model name. Ollama: `qwen3:30b`. Gemini: `gemini` or `deep-research` (Deep Research Agent, requires GEMINI_ENABLED=true) |
+| `timeout` | integer | No | 60 | Generation timeout (deep-research supports up to 600s) |
 
 **Response:** `202 Accepted`
 
@@ -426,7 +426,7 @@ python -m src.research.executor run {topic} \
 
 | Parameter | Description |
 |-----------|-------------|
-| `--model` | Model selection. Default: Ollama qwen3:30b. Format: `qwen:14b`, `gemini` (requires GEMINI_ENABLED=true) |
+| `--model` | Model selection. Default: Ollama qwen3:30b. Formats: `qwen:14b` (Ollama), `gemini` (standard), `deep-research` (Deep Research Agent). Gemini requires GEMINI_ENABLED=true |
 
 ---
 

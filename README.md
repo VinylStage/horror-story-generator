@@ -14,7 +14,7 @@ Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시�
 
 - **템플릿 스켈레톤 시스템**: 15개의 사전 정의된 호러 템플릿으로 다양한 공포 패턴 생성
 - **Canonical 중복 검사**: 5차원 fingerprint로 유사 스토리 방지
-- **연구 카드 통합**: Ollama 기반 연구 생성 및 FAISS 시맨틱 중복 검사
+- **연구 카드 통합**: Ollama/Gemini Deep Research 기반 연구 생성 및 FAISS 시맨틱 중복 검사
 - **스토리 레벨 중복 검사**: SHA256 시그니처 기반 구조적 중복 방지
 - **자동 백업**: 스키마 마이그레이션 전 레지스트리 자동 백업
 - **24시간 연속 운영**: Graceful shutdown 및 자동 재시도 지원
@@ -58,9 +58,11 @@ ENABLE_STORY_DEDUP=true          # 스토리 시그니처 기반 중복 검사 �
 STORY_DEDUP_STRICT=false         # true 시 중복 감지되면 생성 중단
 
 # Gemini API 설정 (선택 - 연구 생성 전용)
+# API: Google AI Studio (not Vertex AI)
+# 모드: gemini (표준) 또는 deep-research (Deep Research Agent)
 GEMINI_ENABLED=false             # Gemini 활성화 (true로 설정 시 사용 가능)
 GEMINI_API_KEY=your_gemini_key   # Gemini API 키
-GEMINI_MODEL=gemini-2.5-flash    # Gemini 모델
+GEMINI_MODEL=deep-research-pro-preview-12-2025  # 기본 모델
 
 # Ollama 설정 (선택 - 로컬 모델)
 OLLAMA_HOST=localhost            # Ollama 호스트
@@ -109,6 +111,10 @@ python -m src.research.executor run "병원 공포" --model qwen:14b
 
 # Gemini API로 연구 (GEMINI_ENABLED=true 필요)
 python -m src.research.executor run "도시 전설" --model gemini
+
+# Gemini Deep Research Agent로 연구 (권장, GEMINI_ENABLED=true 필요)
+# API: Google AI Studio, 모델: deep-research-pro-preview-12-2025
+python -m src.research.executor run "한국 공포 문화" --model deep-research
 
 # 연구 카드 목록 조회
 python -m src.research.executor list

@@ -491,11 +491,14 @@ python -m src.research.executor run "topic"
 # Different Ollama model
 python -m src.research.executor run "topic" --model qwen:14b
 
-# Gemini (requires GEMINI_ENABLED=true)
+# Gemini standard (requires GEMINI_ENABLED=true)
 python -m src.research.executor run "topic" --model gemini
+
+# Gemini Deep Research Agent (requires GEMINI_ENABLED=true)
+python -m src.research.executor run "topic" --model deep-research
 ```
 
-**Metadata Recording:**
+**Metadata Recording (Ollama):**
 ```json
 {
   "model": "qwen3:30b",
@@ -503,16 +506,35 @@ python -m src.research.executor run "topic" --model gemini
 }
 ```
 
+**Metadata Recording (Deep Research):**
+```json
+{
+  "model": "deep-research-pro-preview-12-2025",
+  "provider": "gemini",
+  "execution_mode": "deep_research",
+  "interaction_id": "<interaction_id>"
+}
+```
+
 ### Gemini API (Research Only)
 
 Gemini is **feature-flagged** and only available for research generation.
+
+**Two Execution Modes:**
+
+| Mode | Model Spec | API | Use Case |
+|------|-----------|-----|----------|
+| Standard | `gemini` | models.generate_content | Quick research |
+| Deep Research | `deep-research` | Interactions API | Comprehensive research |
 
 **Configuration:**
 ```env
 GEMINI_ENABLED=false          # Must be true to use Gemini
 GEMINI_API_KEY=your_key       # Required when enabled
-GEMINI_MODEL=gemini-2.5-flash # Default model
+GEMINI_MODEL=deep-research-pro-preview-12-2025  # Default model
 ```
+
+**API Provider:** Google AI Studio (not Vertex AI)
 
 **Requirements:**
 ```bash
@@ -525,9 +547,33 @@ pip install google-genai
 GEMINI_ENABLED=true
 GEMINI_API_KEY=your_api_key
 
-# Run research with Gemini
+# Run research with Gemini standard
 python -m src.research.executor run "Korean horror themes" --model gemini
+
+# Run research with Gemini Deep Research Agent (recommended)
+python -m src.research.executor run "Korean horror themes" --model deep-research
 ```
+
+### Gemini Deep Research Agent
+
+The Deep Research mode uses the Gemini Interactions API with background execution and polling.
+
+**Agent:** `deep-research-pro-preview-12-2025`
+
+**Execution Flow:**
+```mermaid
+flowchart LR
+    A["Create<br/>Interaction"] --> B["Execute<br/>Query"]
+    B --> C["Poll for<br/>Completion"]
+    C --> D["Extract<br/>Response"]
+    D --> E["Build<br/>Metadata"]
+```
+
+**Features:**
+- Asynchronous interaction with polling
+- Longer timeout support (up to 10 minutes)
+- Detailed research output
+- Compatible with existing dedup and canonical pipelines
 
 ---
 
