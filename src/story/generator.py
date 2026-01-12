@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 
 # Extracted modules
 from src.infra.logging_config import setup_logging, DailyRotatingFileHandler
-from .api_client import call_claude_api, generate_semantic_summary
+from .api_client import call_claude_api, call_llm_api, generate_semantic_summary
+from .model_provider import get_model_info
 from src.dedup.similarity import (
     GenerationRecord, observe_similarity, add_to_generation_memory,
     load_past_stories_into_memory, get_similarity_signal, should_accept_story
@@ -362,7 +363,8 @@ temperature: {metadata.get('config', {}).get('temperature', 0.8)}
 def generate_horror_story(
     template_path: Optional[str] = None,
     custom_request: Optional[str] = None,
-    save_output: bool = True
+    save_output: bool = True,
+    model_spec: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     호러 소설 생성의 전체 파이프라인을 실행합니다.
@@ -374,6 +376,8 @@ def generate_horror_story(
         template_path (Optional[str]): 프롬프트 템플릿 파일 경로. None이면 기본 심리 공포 프롬프트 사용
         custom_request (Optional[str]): 사용자 커스텀 요청. None이면 기본 프롬프트 사용
         save_output (bool): 결과를 파일로 저장할지 여부. 기본값 True
+        model_spec (Optional[str]): 모델 선택. None이면 기본 Claude 모델 사용.
+            형식: "ollama:llama3", "ollama:qwen", 또는 Claude 모델명
 
     Returns:
         Dict[str, Any]: 생성 결과 및 메타데이터
@@ -461,8 +465,16 @@ def generate_horror_story(
     user_prompt = build_user_prompt(custom_request, template)
     logger.info("프롬프트 생성 완료")
 
-    # 4. API 호출
-    api_result = call_claude_api(system_prompt, user_prompt, config)
+    # 4. API 호출 (model_spec이 있으면 call_llm_api 사용)
+    if model_spec:
+        api_result = call_llm_api(system_prompt, user_prompt, config, model_spec)
+        actual_model = api_result.get("model", model_spec)
+        actual_provider = api_result.get("provider", "unknown")
+    else:
+        api_result = call_claude_api(system_prompt, user_prompt, config)
+        actual_model = config["model"]
+        actual_provider = "anthropic"
+
     story_text = api_result["story_text"]
     usage = api_result["usage"]
 
@@ -480,7 +492,8 @@ def generate_horror_story(
         "story": story_text,
         "metadata": {
             "generated_at": datetime.now().isoformat(),
-            "model": config["model"],
+            "model": actual_model,
+            "provider": actual_provider,
             "template_used": template_path,
             "skeleton_template": skeleton_info,  # Phase 2A
             "custom_request": custom_request,
@@ -565,7 +578,8 @@ def generate_horror_story(
 def generate_with_dedup_control(
     registry: Any,  # StoryRegistry instance
     max_attempts: int = 3,
-    save_output: bool = True
+    save_output: bool = True,
+    model_spec: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Phase 2C: HIGH-only 중복 제어가 적용된 스토리 생성.
@@ -674,8 +688,16 @@ def generate_with_dedup_control(
         system_prompt = build_system_prompt(template=None, skeleton=skeleton, research_context=research_context)
         user_prompt = build_user_prompt(custom_request=None, template=None)
 
-        # Call API
-        api_result = call_claude_api(system_prompt, user_prompt, config)
+        # Call API (model_spec이 있으면 call_llm_api 사용)
+        if model_spec:
+            api_result = call_llm_api(system_prompt, user_prompt, config, model_spec)
+            actual_model = api_result.get("model", model_spec)
+            actual_provider = api_result.get("provider", "unknown")
+        else:
+            api_result = call_claude_api(system_prompt, user_prompt, config)
+            actual_model = config["model"]
+            actual_provider = "anthropic"
+
         story_text = api_result["story_text"]
         usage = api_result["usage"]
 
@@ -735,7 +757,8 @@ def generate_with_dedup_control(
                 "story": story_text,
                 "metadata": {
                     "generated_at": datetime.now().isoformat(),
-                    "model": config["model"],
+                    "model": actual_model,
+                    "provider": actual_provider,
                     "template_used": None,
                     "skeleton_template": skeleton_info,
                     "custom_request": None,

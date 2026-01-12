@@ -55,17 +55,22 @@ def signal_handler(signum, frame):
     shutdown_requested = True
 
 
-def run_basic_generation() -> Dict[str, Any]:
+def run_basic_generation(model_spec: Optional[str] = None) -> Dict[str, Any]:
     """
     기본 호러 소설 생성 테스트.
 
     템플릿을 그대로 사용하여 소설을 생성하고 결과를 반환합니다.
 
+    Args:
+        model_spec: 모델 선택. None이면 기본 Claude 모델 사용.
+
     Returns:
         Dict[str, Any]: 생성 결과 (story, metadata, file_path 포함)
     """
     logger.info("기본 호러 소설 생성 테스트 시작")
-    result = generate_horror_story()
+    if model_spec:
+        logger.info(f"사용 모델: {model_spec}")
+    result = generate_horror_story(model_spec=model_spec)
     logger.info(f"생성 완료 - 파일: {result.get('file_path', 'N/A')}")
     return result
 
@@ -257,6 +262,13 @@ def parse_args():
         default=False,
         help="Phase 2C: 연구 카드 스텁 생성 (테스트용)"
     )
+    # Model selection
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="모델 선택. 기본=Claude Sonnet. 형식: 'ollama:llama3', 'ollama:qwen', 또는 Claude 모델명"
+    )
     return parser.parse_args()
 
 
@@ -341,6 +353,7 @@ def main() -> None:
     logger.info(f"  - 최대 생성 개수: {args.max_stories}개" if args.max_stories else "  - 최대 생성 개수: 무제한")
     logger.info(f"  - 생성 간격: {args.interval_seconds}초")
     logger.info(f"  - 중복 제어: {'활성화 (HIGH만 거부)' if args.enable_dedup else '비활성화'}")
+    logger.info(f"  - 모델: {args.model or '기본 Claude Sonnet'}")
     logger.info("=" * 80)
 
     # 통계 추적
@@ -378,7 +391,7 @@ def main() -> None:
 
             # Phase 2C: 중복 제어 모드에 따른 생성
             if args.enable_dedup and registry:
-                result = generate_with_dedup_control(registry=registry)
+                result = generate_with_dedup_control(registry=registry, model_spec=args.model)
                 if result is None:
                     # SKIP - story was too similar after all attempts
                     stories_skipped += 1
@@ -387,7 +400,7 @@ def main() -> None:
                     logger.info(f"✓ 소요 시간: {iteration_duration:.1f}초")
                     continue  # Move to next iteration without counting as generated
             else:
-                result = run_basic_generation()
+                result = run_basic_generation(model_spec=args.model)
 
             # 통계 업데이트
             stories_generated += 1

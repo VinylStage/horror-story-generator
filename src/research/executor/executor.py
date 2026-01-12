@@ -201,6 +201,7 @@ def execute_research(
     metadata = {
         "generation_time_ms": elapsed_ms,
         "model": response_json.get("model", model),
+        "provider": "ollama",
         "prompt_tokens_est": len(prompt) // 4,  # Rough estimate
         "output_tokens_est": len(raw_response) // 4,
         "status": "complete"
@@ -260,3 +261,86 @@ def unload_model(model: str = DEFAULT_MODEL, timeout: int = 10) -> bool:
     except (socket.error, socket.timeout, HTTPException, OSError) as e:
         logger.warning(f"[ResearchExec] Failed to unload model: {e}")
         return False
+
+
+def execute_research_with_provider(
+    topic: str,
+    model_spec: Optional[str] = None,
+    timeout: int = DEFAULT_TIMEOUT
+) -> Tuple[str, Dict[str, Any]]:
+    """
+    Execute research using the model provider abstraction.
+
+    Supports multiple providers:
+    - Ollama (default): model_spec=None or "ollama:qwen3:30b"
+    - Gemini: model_spec="gemini" or "gemini:model-name"
+
+    Args:
+        topic: Research topic to analyze
+        model_spec: Model specification (e.g., "gemini", "ollama:qwen3:30b")
+        timeout: Request timeout in seconds
+
+    Returns:
+        Tuple of (raw_response_text, metadata_dict)
+
+    Raises:
+        OllamaConnectionError: If Ollama server is not reachable
+        ValueError: If Gemini is not configured or enabled
+        Exception: On other generation failures
+    """
+    from .model_provider import (
+        get_research_provider,
+        get_research_model_info,
+        is_gemini_available
+    )
+    from .prompt_template import build_prompt
+
+    # Parse model spec
+    model_info = get_research_model_info(model_spec)
+    logger.info(f"[ResearchExec] Provider: {model_info.provider}")
+    logger.info(f"[ResearchExec] Model: {model_info.model_name}")
+
+    # Check Gemini availability if requested
+    if model_info.provider == "gemini" and not is_gemini_available():
+        raise ValueError(
+            "Gemini is not available. Set GEMINI_ENABLED=true and GEMINI_API_KEY in environment."
+        )
+
+    # Build prompt
+    prompt = build_prompt(topic)
+    logger.debug(f"[ResearchExec] Prompt length: {len(prompt)} chars")
+
+    # Get provider and execute
+    start_time = time.time()
+    provider = get_research_provider(model_spec)
+
+    try:
+        result = provider.generate(prompt, timeout)
+        elapsed_ms = int((time.time() - start_time) * 1000)
+
+        # Build metadata
+        metadata = {
+            "generation_time_ms": elapsed_ms,
+            "model": result.model,
+            "provider": result.provider,
+            "prompt_tokens_est": len(prompt) // 4,
+            "output_tokens_est": len(result.text) // 4,
+            "status": "complete"
+        }
+
+        # Merge provider-specific metadata
+        if result.metadata:
+            metadata.update(result.metadata)
+
+        return result.text, metadata
+
+    except Exception as e:
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        logger.error(f"[ResearchExec] Generation failed: {e}")
+        return "", {
+            "generation_time_ms": elapsed_ms,
+            "model": model_info.model_name,
+            "provider": model_info.provider,
+            "status": "error",
+            "error": str(e)
+        }

@@ -17,6 +17,10 @@ class StoryTriggerRequest(BaseModel):
     enable_dedup: bool = Field(default=False, description="Enable deduplication check")
     db_path: Optional[str] = Field(default=None, description="Custom database path")
     load_history: bool = Field(default=False, description="Load story history on startup")
+    model: Optional[str] = Field(
+        default=None,
+        description="Model selection. Default: Claude Sonnet. Format: 'ollama:llama3', 'ollama:qwen', or Claude model name"
+    )
 
 
 class ResearchTriggerRequest(BaseModel):

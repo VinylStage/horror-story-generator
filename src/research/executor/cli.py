@@ -718,7 +718,7 @@ def create_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "-m", "--model",
         default=DEFAULT_MODEL,
-        help=f"Ollama model to use (default: {DEFAULT_MODEL})"
+        help=f"Model to use. Default: {DEFAULT_MODEL}. Formats: 'qwen3:30b' (Ollama), 'gemini' or 'gemini:model-name' (Gemini API)"
     )
     run_parser.add_argument(
         "-t", "--tags",

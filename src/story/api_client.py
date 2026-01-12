@@ -1,13 +1,16 @@
 """
-Claude API client module.
+LLM API client module.
 
-Handles all Claude API interactions for story generation.
+Handles all LLM API interactions for story generation.
+Supports multiple providers: Claude (Anthropic), Ollama.
 """
 
 import logging
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import anthropic
+
+from .model_provider import get_provider, get_model_info, GenerationResult
 
 logger = logging.getLogger("horror_story_generator")
 
@@ -91,6 +94,58 @@ def call_claude_api(
     except Exception as e:
         logger.error(f"Claude API 호출 중 오류 발생: {str(e)}", exc_info=True)
         raise Exception(f"Claude API 호출 중 오류 발생: {str(e)}")
+
+
+def call_llm_api(
+    system_prompt: str,
+    user_prompt: str,
+    config: Dict[str, Union[str, int, float]],
+    model_spec: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Call LLM API to generate a story using the specified model.
+
+    Supports multiple providers:
+    - Claude (Anthropic) - default
+    - Ollama (local models) - prefix with "ollama:"
+
+    Args:
+        system_prompt (str): System prompt (writer role and guidelines)
+        user_prompt (str): User prompt (specific request)
+        config (Dict): API configuration with api_key, max_tokens, temperature
+        model_spec (Optional[str]): Model specification
+            - None: use default Claude model from CLAUDE_MODEL env var
+            - "claude-sonnet-4-5-20250929": explicit Claude model
+            - "ollama:llama3": Ollama model
+            - "ollama:qwen": Ollama model
+
+    Returns:
+        Dict[str, Any]: Generation result
+            - story_text (str): Generated text
+            - usage (Dict): Token usage info
+            - provider (str): "anthropic" or "ollama"
+            - model (str): Model name used
+    """
+    # Get model info for logging
+    model_info = get_model_info(model_spec)
+    logger.info(f"[LLM] Using provider={model_info.provider}, model={model_info.model_name}")
+
+    # Get provider and generate
+    provider = get_provider(model_spec)
+
+    try:
+        result = provider.generate(system_prompt, user_prompt, config)
+
+        return {
+            "story_text": result.text,
+            "usage": result.usage,
+            "provider": result.provider,
+            "model": result.model
+        }
+
+    except Exception as e:
+        logger.error(f"[LLM] Generation failed: {e}", exc_info=True)
+        raise Exception(f"LLM generation failed: {e}")
 
 
 def generate_semantic_summary(

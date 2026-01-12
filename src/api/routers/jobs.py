@@ -83,6 +83,9 @@ def build_story_command(params: dict) -> list[str]:
     if params.get("load_history"):
         cmd.append("--load-history")
 
+    if params.get("model"):
+        cmd.extend(["--model", params["model"]])
+
     return cmd
 
 
