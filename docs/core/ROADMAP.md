@@ -1,7 +1,7 @@
 # Development Roadmap
 
 **Status:** Active
-**Baseline:** Post–STEP 4-C canonical baseline
+**Version:** v1.1.0 (Operationally Sealed)
 
 ---
 

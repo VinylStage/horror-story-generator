@@ -1,7 +1,7 @@
 # KU → Canonical Key Generation Rules
 
-> **Baseline:** Post–STEP 4-C canonical baseline
-> **Version:** 1.0
+> **Version:** v1.1.0 (Operationally Sealed)
+> **Enum Version:** 1.0
 > **Status:** Active
 
 ---

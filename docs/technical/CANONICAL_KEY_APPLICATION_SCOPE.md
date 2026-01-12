@@ -1,6 +1,6 @@
 # Canonical Key Application Scope
 
-> **Baseline:** Post–STEP 4-C canonical baseline
+> **Version:** v1.1.0 (Operationally Sealed)
 
 **Date:** 2026-01-12
 **Status:** ACTIVE

@@ -1,8 +1,8 @@
 # 24-Hour Continuous Operation Test - Runbook
 
-**Version:** 1.1
+**Version:** 1.1.0
 **Date:** 2026-01-12
-**Phase:** Phase 1 Operational Verification (Post–STEP 4-C)
+**Phase:** Operational Verification (v1.1.0 Sealed)
 
 ---
 
@@ -53,6 +53,21 @@ This runbook provides procedures to verify that the horror story generator can r
    |-----------|--------|------|
    | `ENABLE_STORY_DEDUP` | `true` | 스토리 레벨 중복 검사 활성화 |
    | `STORY_DEDUP_STRICT` | `false` | true 시 중복 감지되면 생성 중단 |
+
+5. **Registry Backup Verification:**
+   ```bash
+   # 기존 백업 파일 확인
+   ls -la data/*.backup.*.db 2>/dev/null || echo "백업 파일 없음 (정상)"
+
+   # 레지스트리 버전 확인
+   sqlite3 data/story_registry.db "SELECT value FROM meta WHERE key='schema_version';"
+   # 예상 출력: 1.1.0
+   ```
+
+   **백업 생성 조건:**
+   - 스키마 버전 불일치 시 자동 생성
+   - 정상 v1.1.0 운영 시 백업 생성 안함
+   - 자세한 내용: [REGISTRY_BACKUP_GUIDE.md](REGISTRY_BACKUP_GUIDE.md)
 
 ---
 

@@ -2,9 +2,11 @@
 
 Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시스템입니다.
 
-> **Baseline:** Post–STEP 4-C canonical baseline
+> **Version:** v1.1.0 (Operationally Sealed)
 >
 > 모든 문서는 현재 `src/` 패키지 구조와 Canonical Enum v1.0을 기준으로 작성되었습니다.
+>
+> 운영 상태: [docs/OPERATIONAL_STATUS.md](docs/OPERATIONAL_STATUS.md)
 
 ---
 
@@ -13,6 +15,8 @@ Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시�
 - **템플릿 스켈레톤 시스템**: 15개의 사전 정의된 호러 템플릿으로 다양한 공포 패턴 생성
 - **Canonical 중복 검사**: 5차원 fingerprint로 유사 스토리 방지
 - **연구 카드 통합**: Ollama 기반 연구 생성 및 FAISS 시맨틱 중복 검사
+- **스토리 레벨 중복 검사**: SHA256 시그니처 기반 구조적 중복 방지
+- **자동 백업**: 스키마 마이그레이션 전 레지스트리 자동 백업
 - **24시간 연속 운영**: Graceful shutdown 및 자동 재시도 지원
 - **한국어 최적화**: 한국적 정서와 호러 요소를 반영한 프롬프트 설계
 
@@ -217,10 +221,12 @@ horror-story-generator/
 
 | 문서 | 설명 |
 |------|------|
+| [docs/OPERATIONAL_STATUS.md](docs/OPERATIONAL_STATUS.md) | 운영 상태 선언 |
 | [docs/core/README.md](docs/core/README.md) | 상세 기술 문서 |
 | [docs/core/ARCHITECTURE.md](docs/core/ARCHITECTURE.md) | 시스템 아키텍처 |
 | [docs/technical/TRIGGER_API.md](docs/technical/TRIGGER_API.md) | API 레퍼런스 |
-| [docs/core/ROADMAP.md](docs/core/ROADMAP.md) | 개발 로드맵 |
+| [docs/technical/REGISTRY_BACKUP_GUIDE.md](docs/technical/REGISTRY_BACKUP_GUIDE.md) | 백업 및 복구 가이드 |
+| [docs/technical/runbook_24h_test.md](docs/technical/runbook_24h_test.md) | 24시간 테스트 절차 |
 
 ---
 

@@ -1,7 +1,7 @@
 # API Reference
 
 **Status:** Active
-**Baseline:** Post–STEP 4-C canonical baseline
+**Version:** v1.1.0 (Operationally Sealed)
 **Base URL:** `http://localhost:8000`
 
 ---

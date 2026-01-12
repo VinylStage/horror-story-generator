@@ -1,8 +1,8 @@
 # Canonical Enum 정의서 (Horror Template System)
 
-> **Baseline:** Post–STEP 4-C canonical baseline
+> **Version:** v1.1.0 (Operationally Sealed)
 
-**Version:** 1.0
+**Enum Version:** 1.0
 **Status:** FROZEN (value additions only, semantic changes forbidden)
 
 **Purpose:**

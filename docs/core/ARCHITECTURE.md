@@ -1,7 +1,7 @@
 # System Architecture
 
 **Status:** Active
-**Baseline:** Post–STEP 4-C canonical baseline
+**Version:** v1.1.0 (Operationally Sealed)
 
 ---
 
@@ -437,6 +437,35 @@ The story generator supports graceful shutdown via SIGINT/SIGTERM:
 
 ---
 
+## Registry Backup
+
+The story registry automatically creates a backup before schema migration:
+
+```mermaid
+flowchart LR
+    A["Registry Init"] --> B{"Version<br/>Mismatch?"}
+    B -->|No| C["Continue"]
+    B -->|Yes| D["Create Backup"]
+    D --> E["Run Migration"]
+    E --> F["Update Version"]
+    F --> C
+```
+
+**Backup Details:**
+- **Trigger:** Schema version mismatch (e.g., 1.0.0 → 1.1.0)
+- **Location:** Same directory as original DB
+- **Naming:** `{db}.backup.{version}.{timestamp}.db`
+- **Method:** `shutil.copy2` (preserves metadata)
+
+**Example:**
+```
+data/story_registry.backup.1.0.0.20260112_130012.db
+```
+
+**See also:** [Registry Backup Guide](../technical/REGISTRY_BACKUP_GUIDE.md)
+
+---
+
 ## Unified Research Context Module
 
 Located at `src/infra/research_context/`, this module provides a single source of truth for research card selection and injection, used by both CLI and API.
@@ -511,4 +540,4 @@ Key architectural decisions are documented in `docs/technical/decision_log.md`:
 
 ---
 
-**Note:** All documentation reflects the current `src/` package structure with unified research context module (Post STEP 4-C + unified pipeline).
+**Note:** All documentation reflects v1.1.0 (Operationally Sealed) with unified research context module and complete deduplication pipeline.
