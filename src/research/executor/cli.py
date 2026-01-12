@@ -36,9 +36,15 @@ from .executor import (
     check_model_available,
     execute_research,
     unload_model,
+    execute_research_with_provider,
     OllamaConnectionError,
     OllamaModelNotFoundError,
     OllamaTimeoutError,
+)
+from .model_provider import (
+    parse_research_model_spec,
+    is_gemini_available,
+    is_deep_research_available,
 )
 from .validator import process_llm_response
 from .output_writer import (
@@ -167,9 +173,17 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"Error: {error}", file=sys.stderr)
         return EXIT_INVALID_INPUT
 
+    # Parse model spec to determine provider
+    model_info = parse_research_model_spec(model)
+    is_ollama = model_info.provider == "ollama"
+    is_deep_research = model_info.execution_mode == "deep_research"
+
     logger.info(f"[ResearchExec] === Research Execution Started ===")
     logger.info(f"[ResearchExec] Topic: \"{topic}\"")
-    logger.info(f"[ResearchExec] Model: {model}")
+    logger.info(f"[ResearchExec] Model: {model_info.model_name}")
+    logger.info(f"[ResearchExec] Provider: {model_info.provider}")
+    if is_deep_research:
+        logger.info(f"[ResearchExec] Execution Mode: deep_research (Interactions API)")
     logger.info(f"[ResearchExec] Tags: {tags}")
 
     # Dry run mode
@@ -180,34 +194,56 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("=== END DRY RUN ===")
         return EXIT_SUCCESS
 
-    # Preflight checks
-    logger.info("[ResearchExec] Running preflight checks...")
+    # Preflight checks - only for Ollama provider
+    if is_ollama:
+        logger.info("[ResearchExec] Running Ollama preflight checks...")
 
-    if not check_ollama_available():
-        logger.error("[ResearchExec] Ollama server is not running")
-        print("Error: Ollama server is not running at localhost:11434", file=sys.stderr)
-        print("Start Ollama with: ollama serve", file=sys.stderr)
-        return EXIT_OLLAMA_NOT_RUNNING
+        if not check_ollama_available():
+            logger.error("[ResearchExec] Ollama server is not running")
+            print("Error: Ollama server is not running at localhost:11434", file=sys.stderr)
+            print("Start Ollama with: ollama serve", file=sys.stderr)
+            return EXIT_OLLAMA_NOT_RUNNING
 
-    if not check_model_available(model):
-        logger.error(f"[ResearchExec] Model not found: {model}")
-        print(f"Error: Model '{model}' is not available", file=sys.stderr)
-        print(f"Pull the model with: ollama pull {model}", file=sys.stderr)
-        return EXIT_MODEL_NOT_FOUND
+        if not check_model_available(model_info.model_name):
+            logger.error(f"[ResearchExec] Model not found: {model_info.model_name}")
+            print(f"Error: Model '{model_info.model_name}' is not available", file=sys.stderr)
+            print(f"Pull the model with: ollama pull {model_info.model_name}", file=sys.stderr)
+            return EXIT_MODEL_NOT_FOUND
 
-    logger.info("[ResearchExec] Preflight checks passed")
+        logger.info("[ResearchExec] Ollama preflight checks passed")
+    else:
+        # Gemini / Deep Research preflight
+        logger.info("[ResearchExec] Running Gemini preflight checks...")
+        if not is_gemini_available():
+            logger.error("[ResearchExec] Gemini is not available")
+            print("Error: Gemini is not enabled or GEMINI_API_KEY is not set", file=sys.stderr)
+            print("Set GEMINI_ENABLED=true and GEMINI_API_KEY in .env", file=sys.stderr)
+            return EXIT_INVALID_INPUT
+        logger.info("[ResearchExec] Gemini preflight checks passed")
 
-    # Track model for cleanup on exit
+    # Track model for cleanup on exit (only for Ollama)
     global _active_model
-    _active_model = model
+    if is_ollama:
+        _active_model = model_info.model_name
+    else:
+        _active_model = None
 
     # Execute research
     try:
-        raw_response, metadata = execute_research(
-            topic=topic,
-            model=model,
-            timeout=args.timeout
-        )
+        if is_ollama:
+            # Use direct Ollama execution for local models
+            raw_response, metadata = execute_research(
+                topic=topic,
+                model=model_info.model_name,
+                timeout=args.timeout
+            )
+        else:
+            # Use provider abstraction for Gemini/Deep Research
+            raw_response, metadata = execute_research_with_provider(
+                topic=topic,
+                model_spec=model,
+                timeout=args.timeout
+            )
     except OllamaConnectionError as e:
         logger.error(f"[ResearchExec] Connection error: {e}")
         print(f"Error: {e}", file=sys.stderr)
@@ -222,6 +258,15 @@ def cmd_run(args: argparse.Namespace) -> int:
         logger.error(f"[ResearchExec] Timeout: {e}")
         print(f"Error: {e}", file=sys.stderr)
         return EXIT_TIMEOUT
+    except ValueError as e:
+        # Gemini configuration errors
+        logger.error(f"[ResearchExec] Configuration error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
+    except Exception as e:
+        logger.error(f"[ResearchExec] Execution error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_INVALID_INPUT
 
     # Process response
     output, validation = process_llm_response(raw_response)
@@ -269,12 +314,13 @@ def cmd_run(args: argparse.Namespace) -> int:
         logger.warning(f"[ResearchExec] Dedup check failed: {e}")
 
     # Write output with canonical_core and dedup metadata
+    # Use model_info for consistent model name recording
     try:
         paths = write_output(
             card_id=card_id,
             topic=topic,
             tags=tags,
-            model=model,
+            model=model_info.model_name,
             output=output,
             validation=validation,
             metadata=metadata,
@@ -303,12 +349,17 @@ def cmd_run(args: argparse.Namespace) -> int:
         logger.warning(f"[ResearchExec] Failed to add to index: {e}")
 
     # Update last run
-    update_last_run(card_id, topic, model, output_dir)
+    update_last_run(card_id, topic, model_info.model_name, output_dir)
 
     # Print summary
     print(f"Card ID: {card_id}")
     print(f"Title: {output.get('title', 'Untitled')}")
     print(f"Quality: {validation.get('quality_score', 'unknown')}")
+    print(f"Provider: {metadata.get('provider', model_info.provider)}")
+    if is_deep_research:
+        print(f"Execution Mode: deep_research")
+        if metadata.get("interaction_id"):
+            print(f"Interaction ID: {metadata.get('interaction_id')}")
     if dedup_result:
         print(f"Dedup: {dedup_result.get('signal', 'N/A')} (score={dedup_result.get('similarity_score', 0):.2f})")
 
@@ -319,10 +370,11 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     logger.info(f"[ResearchExec] === Research Execution Complete ===")
 
-    # Cleanup: unload model from Ollama memory
-    logger.info(f"[ResearchExec] Cleaning up model: {model}")
-    unload_model(model)
-    _active_model = None
+    # Cleanup: unload model from Ollama memory (only for Ollama provider)
+    if is_ollama and _active_model:
+        logger.info(f"[ResearchExec] Cleaning up Ollama model: {_active_model}")
+        unload_model(_active_model)
+        _active_model = None
 
     return EXIT_SUCCESS
 
@@ -718,7 +770,7 @@ def create_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "-m", "--model",
         default=DEFAULT_MODEL,
-        help=f"Model to use. Default: {DEFAULT_MODEL}. Formats: 'qwen3:30b' (Ollama), 'gemini' or 'gemini:model-name' (Gemini API)"
+        help=f"Model to use. Default: {DEFAULT_MODEL}. Formats: 'qwen3:30b' (Ollama), 'gemini' (Gemini API), 'deep-research' (Gemini Deep Research Agent)"
     )
     run_parser.add_argument(
         "-t", "--tags",

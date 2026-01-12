@@ -92,17 +92,32 @@ def build_json_output(
     """
     now = datetime.now()
 
+    # Build metadata section with provider info
+    result_metadata = {
+        "created_at": now.isoformat(),
+        "model": model,
+        "generation_time_ms": metadata.get("generation_time_ms", 0),
+        "prompt_tokens_est": metadata.get("prompt_tokens_est", 0),
+        "output_tokens_est": metadata.get("output_tokens_est", 0),
+        "status": metadata.get("status", "unknown")
+    }
+
+    # Add provider info (from metadata if available)
+    if metadata.get("provider"):
+        result_metadata["provider"] = metadata["provider"]
+
+    # Add deep research specific metadata
+    if metadata.get("execution_mode") == "deep_research":
+        result_metadata["execution_mode"] = "deep_research"
+        if metadata.get("interaction_id"):
+            result_metadata["interaction_id"] = metadata["interaction_id"]
+        if metadata.get("elapsed_seconds"):
+            result_metadata["elapsed_seconds"] = metadata["elapsed_seconds"]
+
     result = {
         "card_id": card_id,
         "version": SCHEMA_VERSION,
-        "metadata": {
-            "created_at": now.isoformat(),
-            "model": model,
-            "generation_time_ms": metadata.get("generation_time_ms", 0),
-            "prompt_tokens_est": metadata.get("prompt_tokens_est", 0),
-            "output_tokens_est": metadata.get("output_tokens_est", 0),
-            "status": metadata.get("status", "unknown")
-        },
+        "metadata": result_metadata,
         "input": {
             "topic": topic,
             "tags": tags
