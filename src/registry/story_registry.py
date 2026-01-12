@@ -13,6 +13,7 @@ Design principles:
 
 import logging
 import os
+import shutil
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
@@ -92,6 +93,34 @@ class StoryRegistry:
             db_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"[Phase2C][CONTROL] 디렉토리 생성: {db_dir}")
 
+    def _backup_before_migration(self, from_version: str) -> Optional[str]:
+        """
+        Create a one-time backup before schema migration.
+
+        Only called when migration is needed. Uses shutil.copy2 to preserve metadata.
+
+        Args:
+            from_version: Version being migrated from
+
+        Returns:
+            Backup file path if created, None otherwise
+        """
+        db_path = Path(self.db_path)
+        if not db_path.exists():
+            return None
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_name = f"{db_path.stem}.backup.{from_version}.{timestamp}{db_path.suffix}"
+        backup_path = db_path.parent / backup_name
+
+        try:
+            shutil.copy2(self.db_path, backup_path)
+            logger.info(f"[RegistryBackup] Backup created at {backup_path}")
+            return str(backup_path)
+        except Exception as e:
+            logger.warning(f"[RegistryBackup] Backup failed: {e}")
+            return None
+
     def _get_connection(self) -> sqlite3.Connection:
         """Get or create database connection."""
         if self._conn is None:
@@ -126,6 +155,8 @@ class StoryRegistry:
             )
             logger.info(f"[Phase2C][CONTROL] 스키마 생성 완료 (v{SCHEMA_VERSION})")
         elif current_version != SCHEMA_VERSION:
+            # Backup before migration
+            self._backup_before_migration(current_version)
             # Handle migrations
             self._migrate_schema(cursor, current_version)
             cursor.execute(
