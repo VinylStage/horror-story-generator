@@ -559,6 +559,7 @@ usage: main.py [-h] [--duration-seconds DURATION_SECONDS]
                [--max-stories MAX_STORIES]
                [--interval-seconds INTERVAL_SECONDS]
                [--enable-dedup] [--db-path DB_PATH]
+               [--model MODEL]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -571,6 +572,7 @@ optional arguments:
                         소설 생성 간 대기 시간(초). 기본값=0 (대기 없음)
   --enable-dedup        중복 검사 활성화 (canonical + story-level)
   --db-path DB_PATH     SQLite DB 경로. 기본값=data/story_registry.db
+  --model MODEL         모델 선택. 기본=Claude Sonnet. 형식: 'ollama:llama3', 'ollama:qwen'
 ```
 
 **Environment Variables:**
@@ -579,21 +581,30 @@ optional arguments:
 |------|--------|------|
 | `ENABLE_STORY_DEDUP` | `true` | 스토리 레벨 중복 검사 활성화 |
 | `STORY_DEDUP_STRICT` | `false` | true 시 중복 감지 즉시 중단 |
+| `OLLAMA_HOST` | `localhost` | Ollama 서버 호스트 |
+| `OLLAMA_PORT` | `11434` | Ollama 서버 포트 |
 
 **Examples:**
 
 ```bash
-# Single generation (default, backward compatible)
+# Single generation (default Claude, backward compatible)
 python main.py
 
 # Generate 5 stories immediately
 python main.py --max-stories 5
+
+# Generate with local Ollama model
+python main.py --model ollama:llama3
+python main.py --model ollama:qwen
 
 # Run for 1 hour, 15min intervals (with dedup)
 python main.py --duration-seconds 3600 --interval-seconds 900 --enable-dedup
 
 # Run for 24 hours, 30min intervals (with dedup)
 python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
+
+# 24h with Ollama local model
+python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup --model ollama:llama3
 
 # Infinite mode with strict dedup (stop with Ctrl+C)
 STORY_DEDUP_STRICT=true python main.py --max-stories 999999 --interval-seconds 600 --enable-dedup

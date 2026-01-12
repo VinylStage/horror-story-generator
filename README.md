@@ -56,6 +56,15 @@ RESEARCH_INJECT_EXCLUDE_DUP_LEVEL=HIGH  # 제외할 중복 레벨 (HIGH/MEDIUM)
 # 스토리 레벨 중복 검사 설정 (선택)
 ENABLE_STORY_DEDUP=true          # 스토리 시그니처 기반 중복 검사 활성화
 STORY_DEDUP_STRICT=false         # true 시 중복 감지되면 생성 중단
+
+# Gemini API 설정 (선택 - 연구 생성 전용)
+GEMINI_ENABLED=false             # Gemini 활성화 (true로 설정 시 사용 가능)
+GEMINI_API_KEY=your_gemini_key   # Gemini API 키
+GEMINI_MODEL=gemini-2.5-flash    # Gemini 모델
+
+# Ollama 설정 (선택 - 로컬 모델)
+OLLAMA_HOST=localhost            # Ollama 호스트
+OLLAMA_PORT=11434                # Ollama 포트
 ```
 
 ---
@@ -65,7 +74,7 @@ STORY_DEDUP_STRICT=false         # true 시 중복 감지되면 생성 중단
 ### 스토리 생성 (CLI)
 
 ```bash
-# 스토리 1개 생성
+# 스토리 1개 생성 (기본 Claude Sonnet)
 python main.py
 
 # 5개 스토리 생성 (중복 검사 활성화)
@@ -73,6 +82,10 @@ python main.py --max-stories 5 --enable-dedup --interval-seconds 60
 
 # 24시간 연속 실행
 python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
+
+# 로컬 Ollama 모델로 스토리 생성
+python main.py --model ollama:llama3
+python main.py --model ollama:qwen
 ```
 
 **CLI 옵션:**
@@ -83,12 +96,19 @@ python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
 | `--interval-seconds N` | 생성 간 대기 시간 (초) | 0 |
 | `--enable-dedup` | 중복 검사 활성화 | False |
 | `--db-path PATH` | SQLite DB 경로 | data/story_registry.db |
+| `--model MODEL` | 모델 선택 (`ollama:model`, Claude 모델명) | Claude Sonnet |
 
 ### 연구 카드 생성 (CLI)
 
 ```bash
-# 연구 주제 실행
+# 연구 주제 실행 (기본 Ollama qwen3:30b)
 python -m src.research.executor run "한국 아파트 공포" --tags horror korean apartment
+
+# 다른 Ollama 모델로 연구
+python -m src.research.executor run "병원 공포" --model qwen:14b
+
+# Gemini API로 연구 (GEMINI_ENABLED=true 필요)
+python -m src.research.executor run "도시 전설" --model gemini
 
 # 연구 카드 목록 조회
 python -m src.research.executor list

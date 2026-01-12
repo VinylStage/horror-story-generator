@@ -52,7 +52,8 @@ Trigger a story generation job.
   "interval_seconds": 30,
   "enable_dedup": true,
   "db_path": "/path/to/stories.db",
-  "load_history": true
+  "load_history": true,
+  "model": "ollama:llama3"
 }
 ```
 
@@ -64,6 +65,7 @@ Trigger a story generation job.
 | `enable_dedup` | boolean | No | false | Enable deduplication |
 | `db_path` | string | No | null | SQLite database path |
 | `load_history` | boolean | No | false | Load existing stories |
+| `model` | string | No | null | Model selection. Format: `ollama:llama3`, `ollama:qwen`, or Claude model name |
 
 **Response:** `202 Accepted`
 
@@ -97,7 +99,7 @@ Trigger a research generation job.
 |-------|------|----------|---------|-------------|
 | `topic` | string | **Yes** | - | Research topic |
 | `tags` | array | No | [] | Classification tags |
-| `model` | string | No | "qwen3:30b" | Ollama model name |
+| `model` | string | No | "qwen3:30b" | Model name. Ollama: `qwen3:30b`, `qwen:14b`. Gemini: `gemini` (requires GEMINI_ENABLED=true) |
 | `timeout` | integer | No | 60 | Generation timeout |
 
 **Response:** `202 Accepted`
@@ -405,8 +407,13 @@ python main.py \
   --interval-seconds {interval_seconds} \
   --enable-dedup \
   --db-path {db_path} \
-  --load-history
+  --load-history \
+  --model {model}
 ```
+
+| Parameter | Description |
+|-----------|-------------|
+| `--model` | Model selection. Default: Claude Sonnet. Format: `ollama:llama3`, `ollama:qwen`, or Claude model name |
 
 ### Research Generation
 
@@ -416,6 +423,10 @@ python -m src.research.executor run {topic} \
   --model {model} \
   --timeout {timeout}
 ```
+
+| Parameter | Description |
+|-----------|-------------|
+| `--model` | Model selection. Default: Ollama qwen3:30b. Format: `qwen:14b`, `gemini` (requires GEMINI_ENABLED=true) |
 
 ---
 

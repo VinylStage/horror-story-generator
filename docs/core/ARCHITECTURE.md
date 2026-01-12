@@ -409,12 +409,135 @@ Each template defines:
 
 ---
 
+## Model Selection
+
+### Overview
+
+The system supports multiple LLM providers through a unified abstraction layer:
+
+| Pipeline | Default Provider | Alternative Providers |
+|----------|------------------|----------------------|
+| Story Generation | Claude (Anthropic) | Ollama (local) |
+| Research Generation | Ollama (local) | Gemini (optional, feature-flagged) |
+
+### Provider Abstraction
+
+```mermaid
+flowchart TB
+    subgraph Story["Story Generation"]
+        S1["generator.py"] --> S2["model_provider.py"]
+        S2 --> S3["ClaudeProvider"]
+        S2 --> S4["OllamaProvider"]
+    end
+
+    subgraph Research["Research Generation"]
+        R1["executor.py"] --> R2["model_provider.py"]
+        R2 --> R3["OllamaResearchProvider"]
+        R2 --> R4["GeminiResearchProvider"]
+    end
+
+    S3 --> Claude["Claude API"]
+    S4 --> Ollama1["Ollama API"]
+    R3 --> Ollama2["Ollama API"]
+    R4 --> Gemini["Gemini API"]
+```
+
+### Model Specification Format
+
+| Format | Provider | Example |
+|--------|----------|---------|
+| `ollama:{model}` | Ollama | `ollama:llama3`, `ollama:qwen` |
+| `gemini` | Gemini | `gemini` (uses GEMINI_MODEL env) |
+| `gemini:{model}` | Gemini | `gemini:gemini-2.5-flash` |
+| `{claude-model}` | Anthropic | `claude-sonnet-4-5-20250929` |
+| (none) | Default | Story: Claude, Research: Ollama |
+
+### Story Model Selection
+
+**CLI:**
+```bash
+# Default (Claude Sonnet)
+python main.py
+
+# Ollama local models
+python main.py --model ollama:llama3
+python main.py --model ollama:qwen
+```
+
+**API:**
+```json
+POST /jobs/story/trigger
+{
+  "max_stories": 5,
+  "model": "ollama:llama3"
+}
+```
+
+**Metadata Recording:**
+```json
+{
+  "model": "claude-sonnet-4-5-20250929",
+  "provider": "anthropic"
+}
+```
+
+### Research Model Selection
+
+**CLI:**
+```bash
+# Default (Ollama qwen3:30b)
+python -m src.research.executor run "topic"
+
+# Different Ollama model
+python -m src.research.executor run "topic" --model qwen:14b
+
+# Gemini (requires GEMINI_ENABLED=true)
+python -m src.research.executor run "topic" --model gemini
+```
+
+**Metadata Recording:**
+```json
+{
+  "model": "qwen3:30b",
+  "provider": "ollama"
+}
+```
+
+### Gemini API (Research Only)
+
+Gemini is **feature-flagged** and only available for research generation.
+
+**Configuration:**
+```env
+GEMINI_ENABLED=false          # Must be true to use Gemini
+GEMINI_API_KEY=your_key       # Required when enabled
+GEMINI_MODEL=gemini-2.5-flash # Default model
+```
+
+**Requirements:**
+```bash
+pip install google-genai
+```
+
+**Usage:**
+```bash
+# Enable Gemini in .env
+GEMINI_ENABLED=true
+GEMINI_API_KEY=your_api_key
+
+# Run research with Gemini
+python -m src.research.executor run "Korean horror themes" --model gemini
+```
+
+---
+
 ## External Dependencies
 
 | Service | Purpose | Required |
 |---------|---------|----------|
-| Claude API | Story generation | Yes |
-| Ollama | Research generation | Optional |
+| Claude API | Story generation (default) | Yes |
+| Ollama | Research generation (default), Story (optional) | Optional |
+| Gemini API | Research generation (optional, feature-flagged) | No |
 
 ### Local-First Architecture
 
