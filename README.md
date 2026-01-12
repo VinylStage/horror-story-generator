@@ -48,6 +48,10 @@ AUTO_INJECT_RESEARCH=true        # 연구 카드 자동 선택/주입 활성화
 RESEARCH_INJECT_TOP_K=1          # 주입할 연구 카드 수
 RESEARCH_INJECT_REQUIRE=false    # 연구 카드 필수 여부
 RESEARCH_INJECT_EXCLUDE_DUP_LEVEL=HIGH  # 제외할 중복 레벨 (HIGH/MEDIUM)
+
+# 스토리 레벨 중복 검사 설정 (선택)
+ENABLE_STORY_DEDUP=true          # 스토리 시그니처 기반 중복 검사 활성화
+STORY_DEDUP_STRICT=false         # true 시 중복 감지되면 생성 중단
 ```
 
 ---

@@ -43,6 +43,21 @@ try:
 except ImportError:
     RESEARCH_INTEGRATION_AVAILABLE = False
 
+# Story-level dedup module
+try:
+    from src.story.dedup import (
+        compute_story_signature,
+        check_story_duplicate,
+        StoryDedupResult,
+        ENABLE_STORY_DEDUP,
+        STORY_DEDUP_STRICT,
+    )
+    STORY_DEDUP_AVAILABLE = True
+except ImportError:
+    STORY_DEDUP_AVAILABLE = False
+    ENABLE_STORY_DEDUP = False
+    STORY_DEDUP_STRICT = False
+
 # Config flags (can be overridden by environment)
 AUTO_INJECT_RESEARCH = os.getenv("AUTO_INJECT_RESEARCH", "true").lower() == "true"
 RESEARCH_INJECT_TOP_K = int(os.getenv("RESEARCH_INJECT_TOP_K", "1"))
@@ -624,6 +639,37 @@ def generate_with_dedup_control(
             except Exception as e:
                 logger.warning(f"[ResearchInject] Research selection failed: {e}")
 
+        # ==========================================================================
+        # Story-Level Dedup Check (BEFORE API call)
+        # ==========================================================================
+        story_dedup_result = None
+        if STORY_DEDUP_AVAILABLE and ENABLE_STORY_DEDUP:
+            canonical_core = skeleton.get("canonical_core") if skeleton else None
+            research_used = research_metadata.get("research_used", [])
+
+            try:
+                story_dedup_result = check_story_duplicate(
+                    canonical_core=canonical_core,
+                    research_used=research_used,
+                    registry=registry,
+                    strict=STORY_DEDUP_STRICT,
+                )
+
+                if story_dedup_result.is_duplicate:
+                    logger.warning(
+                        f"[StoryDedup] Duplicate signature detected, "
+                        f"existing={story_dedup_result.existing_story_id}, "
+                        f"trying different template..."
+                    )
+                    # In non-strict mode, continue to next template
+                    if not STORY_DEDUP_STRICT:
+                        continue
+
+            except ValueError as e:
+                # STRICT mode raises ValueError on duplicate
+                logger.error(f"[StoryDedup] STRICT mode abort: {e}")
+                continue
+
         # Build prompts
         system_prompt = build_system_prompt(template=None, skeleton=skeleton, research_context=research_context)
         user_prompt = build_user_prompt(custom_request=None, template=None)
@@ -677,6 +723,14 @@ def generate_with_dedup_control(
                     "canonical_core": skeleton.get("canonical_core")
                 }
 
+            # Compute story signature for traceability
+            story_signature = None
+            if STORY_DEDUP_AVAILABLE:
+                story_signature = compute_story_signature(
+                    canonical_keys,
+                    research_metadata.get("research_used", [])
+                )
+
             result = {
                 "story": story_text,
                 "metadata": {
@@ -695,7 +749,11 @@ def generate_with_dedup_control(
                     "phase2c_signal": signal,
                     "phase2c_decision": "accepted",
                     # Research traceability (unified pipeline)
-                    **research_metadata
+                    **research_metadata,
+                    # Story-level dedup traceability
+                    "story_signature": story_signature,
+                    "story_dedup_result": "unique" if not (story_dedup_result and story_dedup_result.is_duplicate) else "duplicate",
+                    "story_dedup_reason": story_dedup_result.reason if story_dedup_result else "not_checked",
                 }
             }
 
@@ -713,7 +771,7 @@ def generate_with_dedup_control(
                 result["file_path"] = file_path
                 logger.info(f"[Phase2C][CONTROL] 저장 완료: {file_path}")
 
-            # Persist to registry
+            # Persist to registry (with story-level dedup fields)
             registry.add_story(
                 story_id=story_id,
                 title=title,
@@ -721,7 +779,10 @@ def generate_with_dedup_control(
                 template_name=template_name,
                 semantic_summary=semantic_summary,
                 accepted=True,
-                decision_reason="accepted"
+                decision_reason="accepted",
+                story_signature=story_signature,
+                canonical_core_json=json.dumps(canonical_keys, ensure_ascii=False) if canonical_keys else None,
+                research_used_json=json.dumps(research_metadata.get("research_used", []), ensure_ascii=False)
             )
 
             # Record similarity edge if available

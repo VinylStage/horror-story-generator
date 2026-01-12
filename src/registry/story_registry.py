@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 DEFAULT_DB_PATH = "./data/story_registry.db"
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"  # Added story_signature, canonical_core_json, research_used_json
 
 # =============================================================================
 # Data Classes
@@ -45,6 +45,10 @@ class StoryRegistryRecord:
     accepted: bool
     decision_reason: str
     source_run_id: Optional[str] = None
+    # v1.1.0 additions for story-level dedup
+    story_signature: Optional[str] = None
+    canonical_core_json: Optional[str] = None
+    research_used_json: Optional[str] = None
 
 
 # =============================================================================
@@ -122,8 +126,13 @@ class StoryRegistry:
             )
             logger.info(f"[Phase2C][CONTROL] 스키마 생성 완료 (v{SCHEMA_VERSION})")
         elif current_version != SCHEMA_VERSION:
-            # Future: handle migrations here
-            logger.warning(f"[Phase2C][CONTROL] 스키마 버전 불일치: DB={current_version}, 코드={SCHEMA_VERSION}")
+            # Handle migrations
+            self._migrate_schema(cursor, current_version)
+            cursor.execute(
+                "UPDATE meta SET value = ? WHERE key = 'schema_version'",
+                (SCHEMA_VERSION,)
+            )
+            logger.info(f"[Phase2C][CONTROL] 스키마 마이그레이션 완료: {current_version} -> {SCHEMA_VERSION}")
         else:
             logger.info(f"[Phase2C][CONTROL] 스키마 버전 확인: v{current_version}")
 
@@ -131,7 +140,7 @@ class StoryRegistry:
 
     def _create_schema(self, cursor: sqlite3.Cursor) -> None:
         """Create the database schema."""
-        # Main stories table
+        # Main stories table (v1.1.0 with story-level dedup columns)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS stories (
                 id TEXT PRIMARY KEY,
@@ -143,7 +152,10 @@ class StoryRegistry:
                 similarity_method TEXT NOT NULL,
                 accepted INTEGER NOT NULL,
                 decision_reason TEXT NOT NULL,
-                source_run_id TEXT
+                source_run_id TEXT,
+                story_signature TEXT,
+                canonical_core_json TEXT,
+                research_used_json TEXT
             )
         """)
 
@@ -156,6 +168,12 @@ class StoryRegistry:
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_stories_accepted
             ON stories(accepted)
+        """)
+
+        # v1.1.0: Index for story signature lookups
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_stories_signature
+            ON stories(story_signature)
         """)
 
         # Similarity edges table (optional but useful for evidence)
@@ -173,6 +191,47 @@ class StoryRegistry:
             )
         """)
 
+    def _migrate_schema(self, cursor: sqlite3.Cursor, from_version: str) -> None:
+        """
+        Migrate schema from older version to current.
+
+        Args:
+            cursor: Database cursor
+            from_version: Version to migrate from
+        """
+        logger.info(f"[Phase2C][CONTROL] 스키마 마이그레이션 시작: {from_version} -> {SCHEMA_VERSION}")
+
+        if from_version == "1.0.0":
+            # Migration from 1.0.0 to 1.1.0
+            # Add story-level dedup columns
+            try:
+                cursor.execute("ALTER TABLE stories ADD COLUMN story_signature TEXT")
+                logger.info("[Phase2C][CONTROL] Added column: story_signature")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+
+            try:
+                cursor.execute("ALTER TABLE stories ADD COLUMN canonical_core_json TEXT")
+                logger.info("[Phase2C][CONTROL] Added column: canonical_core_json")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+
+            try:
+                cursor.execute("ALTER TABLE stories ADD COLUMN research_used_json TEXT")
+                logger.info("[Phase2C][CONTROL] Added column: research_used_json")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+
+            # Add index for signature lookups
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_stories_signature
+                ON stories(story_signature)
+            """)
+            logger.info("[Phase2C][CONTROL] Created index: idx_stories_signature")
+
+        else:
+            logger.warning(f"[Phase2C][CONTROL] 알 수 없는 버전에서 마이그레이션: {from_version}")
+
     def add_story(
         self,
         story_id: str,
@@ -182,7 +241,10 @@ class StoryRegistry:
         semantic_summary: str,
         accepted: bool,
         decision_reason: str,
-        similarity_method: str = "jaccard_summary_v1"
+        similarity_method: str = "jaccard_summary_v1",
+        story_signature: Optional[str] = None,
+        canonical_core_json: Optional[str] = None,
+        research_used_json: Optional[str] = None
     ) -> None:
         """
         Add a story to the registry.
@@ -196,6 +258,9 @@ class StoryRegistry:
             accepted: Whether the story was accepted (True) or skipped (False)
             decision_reason: Reason for the decision
             similarity_method: Method used for similarity comparison
+            story_signature: v1.1.0 - SHA256 signature for dedup
+            canonical_core_json: v1.1.0 - JSON string of canonical_core
+            research_used_json: v1.1.0 - JSON array of research card IDs
         """
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -203,8 +268,9 @@ class StoryRegistry:
         cursor.execute("""
             INSERT OR REPLACE INTO stories
             (id, created_at, title, template_id, template_name,
-             semantic_summary, similarity_method, accepted, decision_reason, source_run_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             semantic_summary, similarity_method, accepted, decision_reason, source_run_id,
+             story_signature, canonical_core_json, research_used_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             story_id,
             datetime.now().isoformat(),
@@ -215,13 +281,17 @@ class StoryRegistry:
             similarity_method,
             1 if accepted else 0,
             decision_reason,
-            self.run_id
+            self.run_id,
+            story_signature,
+            canonical_core_json,
+            research_used_json
         ))
 
         conn.commit()
 
         status = "ACCEPTED" if accepted else "SKIPPED"
-        logger.info(f"[Phase2C][CONTROL] Registry 저장: {story_id} ({status}, {decision_reason})")
+        sig_short = story_signature[:16] if story_signature else "none"
+        logger.info(f"[Phase2C][CONTROL] Registry 저장: {story_id} ({status}, sig={sig_short}...)")
 
     def add_similarity_edge(
         self,
@@ -314,6 +384,40 @@ class StoryRegistry:
         skipped = cursor.fetchone()["cnt"]
 
         return {"accepted": accepted, "skipped": skipped}
+
+    def find_by_signature(self, signature: str) -> Optional[Dict[str, Any]]:
+        """
+        Find an existing story by its signature.
+
+        Used for story-level dedup to check if a structurally identical
+        story already exists.
+
+        Args:
+            signature: SHA256 story signature
+
+        Returns:
+            Dict with story id and created_at if found, None otherwise
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, created_at, title, template_id
+            FROM stories
+            WHERE story_signature = ? AND accepted = 1
+            LIMIT 1
+        """, (signature,))
+
+        row = cursor.fetchone()
+        if row:
+            return {
+                "id": row["id"],
+                "created_at": row["created_at"],
+                "title": row["title"],
+                "template_id": row["template_id"],
+            }
+
+        return None
 
     def close(self) -> None:
         """Close database connection."""

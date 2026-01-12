@@ -1,8 +1,8 @@
 # 24-Hour Continuous Operation Test - Runbook
 
-**Version:** 1.0
-**Date:** 2026-01-08
-**Phase:** Phase 1 Operational Verification
+**Version:** 1.1
+**Date:** 2026-01-12
+**Phase:** Phase 1 Operational Verification (Post–STEP 4-C)
 
 ---
 
@@ -42,6 +42,68 @@ This runbook provides procedures to verify that the horror story generator can r
    # For 24h at 30min intervals: ~48 stories = ~3MB
    df -h .
    ```
+
+4. **Dedup Configuration (선택):**
+   ```bash
+   # .env 파일에서 중복 검사 설정 확인
+   cat .env | grep -E "(ENABLE_STORY_DEDUP|STORY_DEDUP_STRICT)"
+   ```
+
+   | 환경 변수 | 기본값 | 설명 |
+   |-----------|--------|------|
+   | `ENABLE_STORY_DEDUP` | `true` | 스토리 레벨 중복 검사 활성화 |
+   | `STORY_DEDUP_STRICT` | `false` | true 시 중복 감지되면 생성 중단 |
+
+---
+
+## Story-Level Deduplication
+
+### 개요
+
+스토리 레벨 중복 검사는 **구조적으로 동일한 스토리**가 생성되는 것을 방지합니다:
+
+- 동일한 `canonical_core` + `research_used` 조합 → 중복으로 판단
+- SHA256 해시 기반 시그니처로 빠른 중복 검사
+- 연구 카드 중복 검사와 **독립적으로** 동작
+
+### 연구 레벨 vs 스토리 레벨 중복 검사
+
+| 구분 | 연구 레벨 (FAISS) | 스토리 레벨 (Signature) |
+|------|-------------------|------------------------|
+| 대상 | 연구 카드 | 스토리 |
+| 방식 | 시맨틱 임베딩 유사도 | 정확한 시그니처 매칭 |
+| 트리거 | 연구 카드 생성 시 | 스토리 생성 전 |
+| 목적 | 유사 연구 방지 | 구조적 중복 방지 |
+
+### 동작 흐름
+
+```mermaid
+flowchart LR
+    A["Template + Research<br/>Selection"] --> B["Compute<br/>Signature"]
+    B --> C{"Signature<br/>Exists?"}
+    C -->|No| D["Generate<br/>Story"]
+    C -->|Yes| E{"STRICT<br/>Mode?"}
+    E -->|No| F["Warn +<br/>Try New Template"]
+    E -->|Yes| G["Abort"]
+    F --> A
+    D --> H["Save with<br/>Signature"]
+```
+
+### 스토리 시그니처 계산
+
+```
+Story Signature = SHA256(canonical_core + research_used)
+```
+
+- `canonical_core`: 템플릿의 5차원 정규화 핑거프린트
+- `research_used`: 주입된 연구 카드 ID 목록 (정렬됨)
+
+### 모드별 동작
+
+| 모드 | 중복 감지 시 | 환경 변수 |
+|------|-------------|-----------|
+| WARN (기본) | 경고 로그 후 다른 템플릿 시도 | `STORY_DEDUP_STRICT=false` |
+| STRICT | 즉시 생성 중단 | `STORY_DEDUP_STRICT=true` |
 
 ---
 
@@ -187,6 +249,54 @@ grep "실행 완료 - 최종 통계" logs/horror_story_*.log
 
 ---
 
+### Scenario 5: Story-Level Dedup Test
+
+**Purpose:** Verify story-level dedup prevents duplicate generation
+
+**Setup:**
+```bash
+# 1. STRICT 모드 비활성화 (기본값)
+export STORY_DEDUP_STRICT=false
+
+# 2. 첫 번째 스토리 생성 (중복 검사 활성화)
+python main.py --max-stories 1 --enable-dedup
+```
+
+**Verification:**
+```bash
+# 스토리 메타데이터에서 시그니처 확인
+cat generated_stories/horror_story_*_metadata.json | jq '{story_signature, story_dedup_result}'
+
+# 예상 결과:
+# {
+#   "story_signature": "abc123...",
+#   "story_dedup_result": "unique"
+# }
+```
+
+**Duplicate Detection Test:**
+```bash
+# 동일 템플릿 + 연구로 재생성 시도 (강제)
+# 정상 동작: 다른 템플릿 선택 또는 경고 후 건너뜀
+
+# 로그에서 중복 감지 확인
+grep "story_dedup" logs/horror_story_*.log
+grep "duplicate detected" logs/horror_story_*.log
+```
+
+**STRICT 모드 테스트:**
+```bash
+# STRICT 모드 활성화
+export STORY_DEDUP_STRICT=true
+
+# 중복 시도 시 즉시 중단되어야 함
+python main.py --max-stories 1 --enable-dedup
+
+# 예상: 중복 감지 시 ValueError 발생 후 종료
+```
+
+---
+
 ## Stop Conditions
 
 The generator stops when ANY of the following occurs:
@@ -251,6 +361,14 @@ Phase 1 passes if ALL of the following are verified:
 - [ ] If usage missing: warning logged (NOT crash)
 - [ ] If usage missing: `usage: null` in metadata
 - [ ] Average tokens/story calculated correctly
+
+### 6. Story-Level Deduplication ✓
+- [ ] Story signature computed for each generated story
+- [ ] Metadata includes `story_signature` field (64 char hex)
+- [ ] Metadata includes `story_dedup_result` field (unique/duplicate)
+- [ ] Duplicate detected → alternative template selected or skipped
+- [ ] STRICT mode: duplicate → process aborts (if enabled)
+- [ ] Registry stores signature for future lookups
 
 ---
 
@@ -338,6 +456,55 @@ grep -A5 "토큰 사용량" logs/horror_story_*.log
 
 ---
 
+### Problem: Story dedup detecting too many duplicates
+
+**Check logs:**
+```bash
+grep "story_dedup" logs/horror_story_*.log
+grep "duplicate detected" logs/horror_story_*.log
+```
+
+**Common causes:**
+- 템플릿 + 연구 조합이 이미 사용됨
+- 연구 카드 풀이 너무 작음
+- 템플릿 다양성 부족
+
+**Solutions:**
+```bash
+# 1. 새 연구 카드 생성
+python -m src.research.executor run "새로운 공포 주제" --tags horror new
+
+# 2. 사용된 시그니처 확인
+sqlite3 data/story_registry.db "SELECT story_signature, title FROM stories WHERE story_signature IS NOT NULL ORDER BY created_at DESC LIMIT 10"
+
+# 3. STRICT 모드 비활성화 (더 유연한 동작)
+export STORY_DEDUP_STRICT=false
+```
+
+---
+
+### Problem: Story signature missing in metadata
+
+**Check:**
+```bash
+cat generated_stories/horror_story_*_metadata.json | jq 'select(.story_signature == null)'
+```
+
+**Possible causes:**
+- `ENABLE_STORY_DEDUP=false` 설정됨
+- 스토리 레지스트리 초기화 안됨
+
+**Solution:**
+```bash
+# 환경 변수 확인
+cat .env | grep ENABLE_STORY_DEDUP
+
+# 레지스트리 스키마 확인
+sqlite3 data/story_registry.db ".schema stories" | grep story_signature
+```
+
+---
+
 ## Verification Checklist
 
 After completing 24h test, verify all criteria:
@@ -361,6 +528,11 @@ grep "실행 완료 - 최종 통계" logs/horror_story_*.log && echo "PASS: Grac
 
 # 5. Usage logging
 grep "총 토큰 사용량" logs/horror_story_*.log && echo "PASS: Usage logged"
+
+# 6. Story dedup
+SIG_COUNT=$(cat generated_stories/horror_story_*_metadata.json 2>/dev/null | jq -r '.story_signature // empty' | wc -l)
+echo "Stories with signature: $SIG_COUNT"
+[ "$SIG_COUNT" -eq "$STORY_COUNT" ] && echo "PASS: All stories have signatures"
 ```
 
 ---
@@ -371,6 +543,7 @@ grep "총 토큰 사용량" logs/horror_story_*.log && echo "PASS: Usage logged"
 usage: main.py [-h] [--duration-seconds DURATION_SECONDS]
                [--max-stories MAX_STORIES]
                [--interval-seconds INTERVAL_SECONDS]
+               [--enable-dedup] [--db-path DB_PATH]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -381,7 +554,16 @@ optional arguments:
                         생성할 최대 소설 개수. 기본값=1 (단일 실행)
   --interval-seconds INTERVAL_SECONDS
                         소설 생성 간 대기 시간(초). 기본값=0 (대기 없음)
+  --enable-dedup        중복 검사 활성화 (canonical + story-level)
+  --db-path DB_PATH     SQLite DB 경로. 기본값=data/story_registry.db
 ```
+
+**Environment Variables:**
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `ENABLE_STORY_DEDUP` | `true` | 스토리 레벨 중복 검사 활성화 |
+| `STORY_DEDUP_STRICT` | `false` | true 시 중복 감지 즉시 중단 |
 
 **Examples:**
 
@@ -392,14 +574,14 @@ python main.py
 # Generate 5 stories immediately
 python main.py --max-stories 5
 
-# Run for 1 hour, 15min intervals
-python main.py --duration-seconds 3600 --interval-seconds 900
+# Run for 1 hour, 15min intervals (with dedup)
+python main.py --duration-seconds 3600 --interval-seconds 900 --enable-dedup
 
-# Run for 24 hours, 30min intervals
-python main.py --duration-seconds 86400 --interval-seconds 1800
+# Run for 24 hours, 30min intervals (with dedup)
+python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
 
-# Infinite mode (stop with Ctrl+C)
-python main.py --max-stories 999999 --interval-seconds 600
+# Infinite mode with strict dedup (stop with Ctrl+C)
+STORY_DEDUP_STRICT=true python main.py --max-stories 999999 --interval-seconds 600 --enable-dedup
 ```
 
 ---
@@ -437,6 +619,8 @@ cat test_summary.txt
 - **Graceful degradation:** If token usage is unavailable, process continues with warning
 - **Log file persistence:** One log file per process execution (filename includes start timestamp)
 - **No interruption during generation:** SIGINT/SIGTERM only stop after current story completes
+- **Story-level dedup:** 스토리 시그니처 기반 중복 검사로 구조적 중복 방지 (STEP 4-C)
+- **Two-layer dedup:** 연구 레벨 (FAISS 시맨틱) + 스토리 레벨 (시그니처 해시) 이중 보호
 
 ---
 
@@ -444,10 +628,11 @@ cat test_summary.txt
 
 Phase 1 verification ends here. The following are explicitly NOT implemented:
 
-- ❌ KU / Canonical integration
-- ❌ Story validation
+- ✅ KU / Canonical integration (STEP 4-C에서 구현됨)
+- ✅ Story-level dedup (STEP 4-C에서 구현됨)
+- ✅ Database persistence (SQLite 레지스트리)
+- ❌ Story validation (향후 구현)
 - ❌ Platform upload
 - ❌ Distributed execution
-- ❌ Database persistence
 
-Phase 2 will address these if requirements specify them.
+Phase 2 will address remaining items if requirements specify them.

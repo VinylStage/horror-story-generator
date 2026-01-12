@@ -108,6 +108,43 @@ Story generation automatically selects and injects matching research cards:
 
 **Traceability**: Story metadata includes `research_used` field listing injected card IDs.
 
+### Story-Level Deduplication
+
+Story-level dedup prevents structurally duplicated stories even with cosmetic variations.
+
+**Story Signature:**
+```
+canonical_core + research_used → SHA256 hash
+```
+
+**Detection Flow:**
+```mermaid
+flowchart LR
+    A["Template + Research<br/>Selection"] --> B["Compute<br/>Signature"]
+    B --> C{"Signature<br/>Exists?"}
+    C -->|No| D["Generate<br/>Story"]
+    C -->|Yes| E{"STRICT<br/>Mode?"}
+    E -->|No| F["Warn +<br/>Try New Template"]
+    E -->|Yes| G["Abort"]
+    F --> A
+    D --> H["Save with<br/>Signature"]
+```
+
+**Configuration:**
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `ENABLE_STORY_DEDUP` | `true` | Enable signature-based dedup |
+| `STORY_DEDUP_STRICT` | `false` | Abort generation on duplicate |
+
+**Story Metadata:**
+```json
+{
+  "story_signature": "abc123...",
+  "story_dedup_result": "unique",
+  "story_dedup_reason": "unique"
+}
+```
+
 ### Key Modules
 
 | Module | File | Responsibility |
@@ -118,6 +155,7 @@ Story generation automatically selects and injects matching research cards:
 | API Client | `src/story/api_client.py` | Claude API communication |
 | Story Registry | `src/registry/story_registry.py` | Deduplication database |
 | Research Context | `src/infra/research_context/` | Unified research selection & injection |
+| Story Dedup | `src/story/dedup/` | Story-level signature-based deduplication |
 
 ### Deduplication Control
 
@@ -452,6 +490,8 @@ Key architectural decisions are documented in `docs/technical/decision_log.md`:
 - **D-005**: File-based job storage for simplicity
 - **D-006**: Unified research context module (`src/infra/research_context/`) for CLI/API consistency
 - **D-007**: Research auto-injection ON by default with traceability metadata
+- **D-008**: Story-level dedup using signature (canonical_core + research_used → SHA256)
+- **D-009**: Story dedup WARN by default, STRICT mode optional for abort
 
 ---
 
