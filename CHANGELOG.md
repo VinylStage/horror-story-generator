@@ -34,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Backup naming: `{db}.backup.{version}.{timestamp}.db`
   - Non-destructive, stdlib-only implementation
 
+- **CLI Resource Cleanup**
+  - Research executor automatically unloads Ollama models after execution
+  - Signal handlers (SIGINT/SIGTERM) for graceful shutdown
+  - Prevents VRAM leakage during batch operations
+
 - **Canonical Core Normalization**
   - 5-dimension fingerprinting (setting, fear, antagonist, mechanism, twist)
   - Consistent normalization across templates and research cards
@@ -45,6 +50,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `canonical_core_json` column
   - Added `research_used_json` column
   - Added signature index for fast lookups
+
+- Unified version management
+  - Single source of truth in `src/__init__.py`
+  - All submodules import version from parent
+  - Package version synced: pyproject.toml, API, health endpoint
 
 ### Configuration
 

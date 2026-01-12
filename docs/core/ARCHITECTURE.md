@@ -437,6 +437,35 @@ The story generator supports graceful shutdown via SIGINT/SIGTERM:
 
 ---
 
+## CLI Resource Cleanup (Research Executor)
+
+The research executor CLI automatically unloads Ollama models after execution to release VRAM:
+
+```mermaid
+flowchart LR
+    A["CLI Start"] --> B["Setup<br/>Signal Handlers"]
+    B --> C["Execute<br/>Research"]
+    C --> D["Unload Model<br/>(keep_alive=0)"]
+    D --> E["Exit"]
+
+    F["SIGINT/SIGTERM"] --> G["Cleanup Handler"]
+    G --> D
+```
+
+**Cleanup Mechanism:**
+1. Model tracked when `execute_research()` starts
+2. On success: Model unloaded via `unload_model()`
+3. On SIGINT/SIGTERM: Signal handler calls cleanup before exit
+4. `atexit` handler as fallback for abnormal exits
+
+**API vs CLI:**
+| Context | Resource Manager | Cleanup Trigger |
+|---------|------------------|-----------------|
+| API Server | `OllamaResourceManager` | FastAPI lifespan events |
+| CLI | Signal handlers + atexit | Execution complete or signal |
+
+---
+
 ## Registry Backup
 
 The story registry automatically creates a backup before schema migration:
