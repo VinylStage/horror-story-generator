@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
+from src import __version__
 from .routers import research, dedup, jobs
 from .services.ollama_resource import (
     startup_resource_manager,
@@ -76,7 +77,7 @@ curl -X POST http://localhost:8000/research/run -H "Content-Type: application/js
 ### Note
 This API is designed for **local use only**. All operations connect to local Ollama instance.
     """,
-    version="0.1.0",
+    version=__version__,
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=tags_metadata,
@@ -98,7 +99,7 @@ app.include_router(dedup.router, prefix="/dedup", tags=["dedup"])
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": __version__}
 
 
 @app.get("/resource/status")

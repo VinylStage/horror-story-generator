@@ -213,3 +213,50 @@ def execute_research(
         metadata["ollama_eval_count"] = response_json["eval_count"]
 
     return raw_response, metadata
+
+
+def unload_model(model: str = DEFAULT_MODEL, timeout: int = 10) -> bool:
+    """
+    Unload a model from Ollama memory.
+
+    Sends a request with keep_alive=0 to release VRAM/memory.
+    Should be called after CLI execution completes.
+
+    Args:
+        model: Model name to unload
+        timeout: Request timeout in seconds
+
+    Returns:
+        True if successful, False otherwise
+    """
+    logger.info(f"[ResearchExec] Unloading model: {model}")
+
+    request_body = {
+        "model": model,
+        "prompt": "",
+        "keep_alive": 0,  # Tells Ollama to unload immediately
+    }
+
+    try:
+        conn = HTTPConnection(OLLAMA_HOST, OLLAMA_PORT, timeout=timeout)
+        headers = {"Content-Type": "application/json"}
+        conn.request(
+            "POST",
+            OLLAMA_GENERATE_ENDPOINT,
+            body=json.dumps(request_body),
+            headers=headers
+        )
+        response = conn.getresponse()
+        response.read()  # Consume response
+        conn.close()
+
+        if response.status < 400:
+            logger.info(f"[ResearchExec] Model unloaded: {model}")
+            return True
+        else:
+            logger.warning(f"[ResearchExec] Unload returned status {response.status}")
+            return False
+
+    except (socket.error, socket.timeout, HTTPException, OSError) as e:
+        logger.warning(f"[ResearchExec] Failed to unload model: {e}")
+        return False

@@ -1,14 +1,21 @@
 """
 CLI entry point for Research Executor.
+
+v1.1.0: Includes Ollama model cleanup on exit.
 """
 
 import argparse
+import atexit
 import json
 import logging
+import signal
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
+
+# Track model for cleanup
+_active_model: Optional[str] = None
 
 from .config import (
     DEFAULT_MODEL,
@@ -28,6 +35,7 @@ from .executor import (
     check_ollama_available,
     check_model_available,
     execute_research,
+    unload_model,
     OllamaConnectionError,
     OllamaModelNotFoundError,
     OllamaTimeoutError,
@@ -69,6 +77,44 @@ def setup_logging(verbose: bool = False) -> None:
         datefmt="%H:%M:%S",
         handlers=handlers,
     )
+
+
+def _cleanup_model() -> None:
+    """
+    Cleanup function to unload Ollama model on exit.
+
+    Called automatically via atexit or signal handlers.
+    """
+    global _active_model
+    if _active_model:
+        logger = logging.getLogger(__name__)
+        logger.info(f"[ResearchExec] Cleanup: unloading model {_active_model}")
+        unload_model(_active_model)
+        _active_model = None
+
+
+def _signal_handler(signum: int, frame) -> None:
+    """
+    Signal handler for graceful shutdown.
+
+    Handles SIGINT (Ctrl+C) and SIGTERM.
+    """
+    logger = logging.getLogger(__name__)
+    sig_name = signal.Signals(signum).name
+    logger.info(f"[ResearchExec] Received {sig_name}, cleaning up...")
+    _cleanup_model()
+    sys.exit(128 + signum)
+
+
+def setup_signal_handlers() -> None:
+    """
+    Setup signal handlers for graceful shutdown.
+
+    Registers handlers for SIGINT and SIGTERM.
+    """
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+    atexit.register(_cleanup_model)
 
 
 def validate_topic(topic: str) -> Optional[str]:
@@ -151,6 +197,10 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     logger.info("[ResearchExec] Preflight checks passed")
 
+    # Track model for cleanup on exit
+    global _active_model
+    _active_model = model
+
     # Execute research
     try:
         raw_response, metadata = execute_research(
@@ -161,10 +211,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     except OllamaConnectionError as e:
         logger.error(f"[ResearchExec] Connection error: {e}")
         print(f"Error: {e}", file=sys.stderr)
+        _active_model = None  # Don't cleanup on connection error
         return EXIT_OLLAMA_NOT_RUNNING
     except OllamaModelNotFoundError as e:
         logger.error(f"[ResearchExec] Model error: {e}")
         print(f"Error: {e}", file=sys.stderr)
+        _active_model = None  # Don't cleanup if model not found
         return EXIT_MODEL_NOT_FOUND
     except OllamaTimeoutError as e:
         logger.error(f"[ResearchExec] Timeout: {e}")
@@ -266,6 +318,11 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"Markdown: {paths['md']}")
 
     logger.info(f"[ResearchExec] === Research Execution Complete ===")
+
+    # Cleanup: unload model from Ollama memory
+    logger.info(f"[ResearchExec] Cleaning up model: {model}")
+    unload_model(model)
+    _active_model = None
 
     return EXIT_SUCCESS
 
@@ -773,6 +830,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # Setup logging
     setup_logging(verbose=args.verbose)
+
+    # Setup signal handlers for graceful shutdown
+    setup_signal_handlers()
 
     # Dispatch command
     if args.command == "run":

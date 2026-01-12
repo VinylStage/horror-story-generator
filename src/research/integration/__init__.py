@@ -5,7 +5,7 @@ This module provides research context injection for the horror story generator.
 Research influence is READ-ONLY: it guides but never blocks generation.
 """
 
-__version__ = "0.1.0"
+from src import __version__
 
 from .loader import load_research_cards, get_card_by_id
 from .selector import (
