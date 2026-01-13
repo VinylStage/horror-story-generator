@@ -2,6 +2,7 @@
 Jobs router for trigger-based API.
 
 Phase B+: Non-blocking job execution via CLI subprocess.
+v1.3.0: Webhook notifications on job completion.
 
 Endpoints:
 - POST /jobs/story/trigger - Trigger story generation
@@ -118,6 +119,8 @@ async def trigger_story_generation(request: StoryTriggerRequest):
 
     Launches `python main.py` as background subprocess.
     Returns immediately with job_id for status tracking.
+
+    v1.3.0: Supports webhook_url and webhook_events for completion notifications.
     """
     ensure_logs_dir()
 
@@ -127,6 +130,15 @@ async def trigger_story_generation(request: StoryTriggerRequest):
 
     log_path = LOGS_DIR / f"story_{job.job_id}.log"
     update_job_status(job.job_id, "queued")
+
+    # v1.3.0: Set webhook configuration
+    job_data = load_job(job.job_id)
+    if job_data:
+        if request.webhook_url:
+            job_data.webhook_url = request.webhook_url
+            job_data.webhook_events = request.webhook_events
+        from src.infra.job_manager import save_job
+        save_job(job_data)
 
     # Build command
     cmd = build_story_command(params)
@@ -175,6 +187,8 @@ async def trigger_research_generation(request: ResearchTriggerRequest):
 
     Launches `python -m src.research.executor` as background subprocess.
     Returns immediately with job_id for status tracking.
+
+    v1.3.0: Supports webhook_url and webhook_events for completion notifications.
     """
     ensure_logs_dir()
 
@@ -184,6 +198,15 @@ async def trigger_research_generation(request: ResearchTriggerRequest):
 
     log_path = LOGS_DIR / f"research_{job.job_id}.log"
     update_job_status(job.job_id, "queued")
+
+    # v1.3.0: Set webhook configuration
+    job_data = load_job(job.job_id)
+    if job_data:
+        if request.webhook_url:
+            job_data.webhook_url = request.webhook_url
+            job_data.webhook_events = request.webhook_events
+        from src.infra.job_manager import save_job
+        save_job(job_data)
 
     # Build command
     cmd = build_research_command(params)
@@ -230,7 +253,7 @@ async def get_job_status(job_id: str):
     """
     Get job status by ID.
 
-    Returns full job details including pid, artifacts, and error info.
+    Returns full job details including pid, artifacts, error info, and webhook status.
     """
     job = load_job(job_id)
 
@@ -250,6 +273,11 @@ async def get_job_status(job_id: str):
         finished_at=job.finished_at,
         exit_code=job.exit_code,
         error=job.error,
+        # v1.3.0: Webhook fields
+        webhook_url=job.webhook_url,
+        webhook_events=job.webhook_events,
+        webhook_sent=job.webhook_sent,
+        webhook_error=job.webhook_error,
     )
 
 
@@ -280,6 +308,11 @@ async def list_jobs(
             finished_at=j.finished_at,
             exit_code=j.exit_code,
             error=j.error,
+            # v1.3.0: Webhook fields
+            webhook_url=j.webhook_url,
+            webhook_events=j.webhook_events,
+            webhook_sent=j.webhook_sent,
+            webhook_error=j.webhook_error,
         )
         for j in jobs
     ]
@@ -314,7 +347,8 @@ async def monitor_jobs():
     Monitor all running jobs and update their status.
 
     Checks if processes are still running, collects artifacts,
-    and updates job status to succeeded/failed as appropriate.
+    and updates job status to succeeded/failed/skipped as appropriate.
+    v1.3.0: Includes webhook processing for completed jobs.
     """
     results = monitor_all_running_jobs()
 
@@ -326,6 +360,9 @@ async def monitor_jobs():
             artifacts=r.get("artifacts", []),
             error=r.get("error"),
             message=r.get("message"),
+            # v1.3.0: New fields
+            reason=r.get("reason"),
+            webhook_processed=r.get("webhook_processed", False),
         )
         for r in results
     ]
@@ -342,6 +379,7 @@ async def monitor_single_job(job_id: str):
     Monitor a single job and update its status.
 
     Checks if the job's process is still running and updates status.
+    v1.3.0: Includes webhook processing status and skip reason.
     """
     result = monitor_job(job_id)
 
@@ -352,6 +390,9 @@ async def monitor_single_job(job_id: str):
         artifacts=result.get("artifacts", []),
         error=result.get("error"),
         message=result.get("message"),
+        # v1.3.0: New fields
+        reason=result.get("reason"),
+        webhook_processed=result.get("webhook_processed", False),
     )
 
 

@@ -2,10 +2,15 @@
 Job operation schemas.
 
 Phase B+: Trigger-based API layer schemas.
+v1.3.0: Added webhook notification support.
 """
 
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
+
+
+# Default webhook events (all terminal states except cancelled)
+DEFAULT_WEBHOOK_EVENTS = ["succeeded", "failed", "skipped"]
 
 
 class StoryTriggerRequest(BaseModel):
@@ -21,6 +26,15 @@ class StoryTriggerRequest(BaseModel):
         default=None,
         description="Model selection. Default: Claude Sonnet. Format: 'ollama:llama3', 'ollama:qwen', or Claude model name"
     )
+    # Webhook fields (v1.3.0)
+    webhook_url: Optional[str] = Field(
+        default=None,
+        description="URL to POST webhook notification on job completion"
+    )
+    webhook_events: List[str] = Field(
+        default=DEFAULT_WEBHOOK_EVENTS,
+        description="Events that trigger webhook: succeeded, failed, skipped"
+    )
 
 
 class ResearchTriggerRequest(BaseModel):
@@ -30,6 +44,15 @@ class ResearchTriggerRequest(BaseModel):
     tags: List[str] = Field(default=[], description="Optional tags for categorization")
     model: Optional[str] = Field(default=None, description="Ollama model override")
     timeout: Optional[int] = Field(default=None, description="Timeout in seconds")
+    # Webhook fields (v1.3.0)
+    webhook_url: Optional[str] = Field(
+        default=None,
+        description="URL to POST webhook notification on job completion"
+    )
+    webhook_events: List[str] = Field(
+        default=DEFAULT_WEBHOOK_EVENTS,
+        description="Events that trigger webhook: succeeded, failed, skipped"
+    )
 
 
 class JobTriggerResponse(BaseModel):
@@ -56,6 +79,11 @@ class JobStatusResponse(BaseModel):
     finished_at: Optional[str] = None
     exit_code: Optional[int] = None
     error: Optional[str] = None
+    # Webhook fields (v1.3.0)
+    webhook_url: Optional[str] = None
+    webhook_events: List[str] = Field(default=[])
+    webhook_sent: bool = False
+    webhook_error: Optional[str] = None
 
 
 class JobListResponse(BaseModel):
@@ -84,6 +112,8 @@ class JobMonitorResult(BaseModel):
     artifacts: List[str] = Field(default=[])
     error: Optional[str] = None
     message: Optional[str] = None
+    reason: Optional[str] = None  # v1.3.0: Skip reason for skipped jobs
+    webhook_processed: bool = False  # v1.3.0: Whether webhook was processed
 
 
 class JobMonitorResponse(BaseModel):

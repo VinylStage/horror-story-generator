@@ -2,6 +2,7 @@
 Background job monitoring module.
 
 Phase B+: Poll running jobs by PID, update status on completion.
+v1.3.0: Webhook notifications on job completion.
 """
 
 import os
@@ -12,10 +13,12 @@ from typing import Optional
 
 from src.infra.job_manager import (
     load_job,
+    save_job,
     update_job_status,
     get_running_jobs,
     Job,
 )
+from src.infra.webhook import process_webhook_for_job
 
 
 # Artifact directories to scan for story/research outputs
@@ -163,6 +166,53 @@ def collect_artifacts(job: Job) -> list[str]:
     return []
 
 
+def check_job_log_for_skip(job: Job) -> Optional[str]:
+    """
+    Check job log file for skip indicators (duplicate detection).
+
+    v1.3.0: "skipped" is for expected behaviors like duplicate detection,
+    NOT a failure condition.
+
+    Args:
+        job: Job instance
+
+    Returns:
+        Skip reason if found, None otherwise
+    """
+    if not job.log_path:
+        return None
+
+    log_path = Path(job.log_path)
+    if not log_path.exists():
+        return None
+
+    try:
+        content = log_path.read_text(encoding="utf-8", errors="ignore")
+
+        # Check for duplicate/skip indicators
+        skip_indicators = [
+            "DUPLICATE",
+            "duplicate detected",
+            "already exists",
+            "skipping",
+            "Skipping duplicate",
+            "HIGH duplicate",
+            "MEDIUM duplicate",
+        ]
+
+        for indicator in skip_indicators:
+            if indicator.lower() in content.lower():
+                # Extract context around skip indicator
+                idx = content.lower().rfind(indicator.lower())
+                skip_context = content[max(0, idx - 50):idx + 200]
+                return f"Duplicate detected: {skip_context.strip()}"
+
+    except Exception:
+        pass
+
+    return None
+
+
 def check_job_log_for_errors(job: Job) -> Optional[str]:
     """
     Check job log file for error indicators.
@@ -209,6 +259,8 @@ def monitor_job(job_id: str) -> dict:
     """
     Monitor a single job and update its status if completed.
 
+    v1.3.0: Added webhook notifications and "skipped" status for duplicates.
+
     Args:
         job_id: Job ID to monitor
 
@@ -235,8 +287,33 @@ def monitor_job(job_id: str) -> dict:
             "message": "Process still running"
         }
 
-    # Process has exited - determine success/failure
+    # Process has exited - determine success/failure/skipped
     artifacts = collect_artifacts(job)
+
+    # Check for skip (duplicate detection) BEFORE errors
+    # Skipped is expected behavior, not a failure
+    skip_reason = check_job_log_for_skip(job)
+    if skip_reason:
+        update_job_status(
+            job_id,
+            "skipped",
+            exit_code=0,
+            error=skip_reason,
+            artifacts=artifacts
+        )
+        # Process webhook notification
+        updated_job = load_job(job_id)
+        if updated_job:
+            process_webhook_for_job(updated_job)
+        return {
+            "job_id": job_id,
+            "status": "skipped",
+            "artifacts": artifacts,
+            "reason": skip_reason,
+            "webhook_processed": True
+        }
+
+    # Check for errors
     error = check_job_log_for_errors(job)
 
     if error:
@@ -247,11 +324,16 @@ def monitor_job(job_id: str) -> dict:
             error=error,
             artifacts=artifacts
         )
+        # Process webhook notification
+        updated_job = load_job(job_id)
+        if updated_job:
+            process_webhook_for_job(updated_job)
         return {
             "job_id": job_id,
             "status": "failed",
             "artifacts": artifacts,
-            "error": error
+            "error": error,
+            "webhook_processed": True
         }
     else:
         # No errors found, assume success
@@ -261,10 +343,15 @@ def monitor_job(job_id: str) -> dict:
             exit_code=0,
             artifacts=artifacts
         )
+        # Process webhook notification
+        updated_job = load_job(job_id)
+        if updated_job:
+            process_webhook_for_job(updated_job)
         return {
             "job_id": job_id,
             "status": "succeeded",
-            "artifacts": artifacts
+            "artifacts": artifacts,
+            "webhook_processed": True
         }
 
 
@@ -287,6 +374,8 @@ def monitor_all_running_jobs() -> list[dict]:
 def cancel_job(job_id: str) -> dict:
     """
     Cancel a running job by sending SIGTERM to its process.
+
+    v1.3.0: Webhook notifications are NOT sent for cancelled jobs by default.
 
     Args:
         job_id: Job ID to cancel
@@ -315,6 +404,9 @@ def cancel_job(job_id: str) -> dict:
             "cancelled",
             error="Cancelled by user"
         )
+
+        # Note: Webhook is NOT sent for cancelled jobs by default
+        # (cancelled is not in DEFAULT_WEBHOOK_EVENTS)
 
         return {
             "job_id": job_id,

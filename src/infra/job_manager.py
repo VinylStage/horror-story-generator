@@ -15,8 +15,13 @@ from typing import Optional, Literal
 
 
 # Job status types
-JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
+# Note: "skipped" is for expected behaviors like duplicate detection (NOT a failure)
+JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled", "skipped"]
 JobType = Literal["story_generation", "research"]
+
+# Webhook event types
+WebhookEvent = Literal["succeeded", "failed", "skipped"]
+DEFAULT_WEBHOOK_EVENTS = ["succeeded", "failed", "skipped"]
 
 # Jobs directory (project_root/jobs/)
 JOBS_DIR = Path(__file__).parent.parent.parent / "jobs"
@@ -28,6 +33,12 @@ class Job:
     Job model for tracking CLI subprocess executions.
 
     Stored as JSON in ./jobs/{job_id}.json
+
+    Webhook Integration (v1.3.0):
+    - webhook_url: If set, sends HTTP POST on job completion
+    - webhook_events: Which events trigger webhook (default: all terminal states)
+    - webhook_sent: Whether webhook was successfully sent
+    - webhook_error: Error message if webhook failed
     """
     job_id: str
     type: JobType
@@ -41,6 +52,11 @@ class Job:
     finished_at: Optional[str] = None
     exit_code: Optional[int] = None
     error: Optional[str] = None
+    # Webhook fields (v1.3.0)
+    webhook_url: Optional[str] = None
+    webhook_events: list = field(default_factory=lambda: DEFAULT_WEBHOOK_EVENTS.copy())
+    webhook_sent: bool = False
+    webhook_error: Optional[str] = None
 
     def to_dict(self) -> dict:
         """Convert job to dictionary."""
@@ -171,7 +187,7 @@ def update_job_status(
     if status == "running" and job.started_at is None:
         job.started_at = datetime.now().isoformat()
 
-    if status in ("succeeded", "failed", "cancelled"):
+    if status in ("succeeded", "failed", "cancelled", "skipped"):
         job.finished_at = datetime.now().isoformat()
 
     if pid is not None:
