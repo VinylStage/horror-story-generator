@@ -127,6 +127,7 @@ Items related to doc cleanup, explanation additions.
 | TODO-026 | **Remove phase-based naming** - All docs and directories contain legacy phase naming | P2 | `docs/core/ROADMAP.md` (Technical Debt) | PENDING |
 | TODO-027 | **Consolidate scattered docs** - Effort underway but not complete | P2 | `docs/core/ROADMAP.md` (Technical Debt) | IN PROGRESS |
 | TODO-028 | **Archive historical docs** - DOCUMENT_MAP.md identifies targets | P3 | `docs/core/ROADMAP.md` (Technical Debt) | PENDING |
+| TODO-029 | **Rename GEMINI_MODEL env var** - Variable name is misleading. Supports both Gemini and Gemma models via google-genai SDK. Consider renaming to `GOOGLE_AI_MODEL` or `GENAI_MODEL` | P3 | `src/research/executor/model_provider.py`, `.env` | PENDING |
 
 **Notes:**
 - Doc consolidation partially addressed by recent verification reports
@@ -185,8 +186,8 @@ Items requiring investigation or decision before implementation.
 | INFRA / PERFORMANCE | 2 | 0 | 0 | 1 | 1 |
 | API / OBSERVABILITY | 5 | 0 | 1 | 2 | 1 |
 | RELEASE / PROCESS | 1 | 0 | 0 | 0 | 1 |
-| DOCUMENTATION_ONLY | 3 | 0 | 0 | 2 | 1 |
-| **TOTAL** | **24** | **0** | **1** | **10** | **12** |
+| DOCUMENTATION_ONLY | 4 | 0 | 0 | 2 | 2 |
+| **TOTAL** | **25** | **0** | **1** | **10** | **13** |
 
 ---
 
@@ -194,6 +195,7 @@ Items requiring investigation or decision before implementation.
 
 | Date | Change |
 |------|--------|
+| 2026-01-14 | TODO-029 added: Rename GEMINI_MODEL env var (P3) |
 | 2026-01-13 | TODO-016~019 (Infra/Performance debt) marked DONE in v1.3.1 |
 | 2026-01-13 | TODO-020 (Webhook Notifications) marked DONE in v1.3.0 |
 | 2026-01-13 | Initial extraction from v1.2.1 documentation |
