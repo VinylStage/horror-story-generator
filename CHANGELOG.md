@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.2] - 2026-01-13
+
+### Security
+
+- **CVE-2025-27600** (High): Starlette DoS via Range header merging - Fixed
+- **CVE-2024-47874** (Medium): Starlette DoS in multipart forms - Fixed
+
+### Dependencies
+
+- FastAPI: ^0.115.0 → ^0.128.0
+- Starlette: 0.46.2 → 0.50.0
+
+---
+
 ## [1.3.1] - 2026-01-13
 
 ### Changed
