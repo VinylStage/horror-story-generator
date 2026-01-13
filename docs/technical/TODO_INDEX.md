@@ -100,9 +100,11 @@ Items related to progress tracking, WebSocket, monitoring.
 | TODO-023 | **Real-time monitoring dashboard** - Not implemented | P3 | `docs/OPERATIONAL_STATUS.md` | NOT PLANNED |
 | TODO-024 | **Authentication approach** - API keys vs OAuth undecided | P2 | `docs/core/ROADMAP.md` (Open Questions) | UNCERTAIN |
 | TODO-030 | **Research API error propagation** - Gemini/Ollama errors silently return 200 OK with empty data. Should return proper HTTP error codes (4xx/5xx) and error messages. Affects `/research/run`, `/jobs/research/trigger` | P1 | API test (2026-01-14) | PENDING |
+| TODO-031 | **Environment variable hot reload** - `GEMINI_MODEL` and other env vars are read once at module load (`os.getenv()`). Changes to `.env` require uvicorn restart. Consider dynamic reload or document restart requirement. | P2 | API test (2026-01-14) | PENDING |
 
 **Notes:**
 - Webhook and Batch Job are highest priority API enhancements
+- TODO-030, TODO-031 discovered during Gemini API testing (2026-01-14)
 
 ---
 
@@ -185,10 +187,10 @@ Items requiring investigation or decision before implementation.
 | RESEARCH_PIPELINE_V2 | 3 | 0 | 0 | 1 | 2 |
 | STORY_GENERATION_ENHANCEMENT | 10 | 0 | 0 | 4 | 6 |
 | INFRA / PERFORMANCE | 2 | 0 | 0 | 1 | 1 |
-| API / OBSERVABILITY | 6 | 0 | 2 | 2 | 1 |
+| API / OBSERVABILITY | 7 | 0 | 2 | 3 | 1 |
 | RELEASE / PROCESS | 1 | 0 | 0 | 0 | 1 |
 | DOCUMENTATION_ONLY | 4 | 0 | 0 | 2 | 2 |
-| **TOTAL** | **26** | **0** | **2** | **10** | **13** |
+| **TOTAL** | **27** | **0** | **2** | **11** | **13** |
 
 ---
 
@@ -196,11 +198,94 @@ Items requiring investigation or decision before implementation.
 
 | Date | Change |
 |------|--------|
+| 2026-01-14 | TODO-031 added: Environment variable hot reload (P2) |
 | 2026-01-14 | TODO-030 added: Research API error propagation (P1) |
 | 2026-01-14 | TODO-029 added: Rename GEMINI_MODEL env var (P3) |
 | 2026-01-13 | TODO-016~019 (Infra/Performance debt) marked DONE in v1.3.1 |
 | 2026-01-13 | TODO-020 (Webhook Notifications) marked DONE in v1.3.0 |
 | 2026-01-13 | Initial extraction from v1.2.1 documentation |
+
+---
+
+## Detailed Descriptions (2026-01-14 Issues)
+
+### TODO-029: Rename GEMINI_MODEL env var
+
+**Problem:**
+환경변수 이름이 `GEMINI_MODEL`이지만 실제로는 Gemini와 Gemma 모델 모두 지원.
+
+**Current Code:**
+```python
+# src/research/executor/model_provider.py (line 39)
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "deep-research-pro-preview-12-2025")
+```
+
+**Suggested Fix:**
+- 변수명 변경: `GOOGLE_AI_MODEL` 또는 `GENAI_MODEL`
+- 관련 파일: `src/research/executor/model_provider.py`, `.env`, `.env.example`
+
+---
+
+### TODO-030: Research API error propagation
+
+**Problem:**
+Gemini/Ollama API 에러 발생 시 HTTP 200 OK를 반환하고 빈 연구 카드 파일 생성.
+
+**Reproduction:**
+```bash
+# .env에 잘못된 모델명 설정
+GEMINI_MODEL=gemma-3-27b  # 올바른 이름: gemma-3-27b-it
+
+# API 호출
+curl -X POST http://localhost:8000/research/run \
+  -d '{"topic": "test", "model": "gemini"}'
+
+# 결과: HTTP 200 OK, 하지만 파일 내용은 빈 상태
+# data/research/.../RC-xxx.json → status: "error", raw_response: ""
+```
+
+**Expected Behavior:**
+- API 에러 시 HTTP 4xx/5xx 반환
+- 에러 메시지 포함 (`{"detail": "Gemini API error: 404 model not found"}`)
+- 빈 연구 카드 파일 생성 안함
+
+**Affected Files:**
+- `src/api/services/research_service.py`
+- `src/research/executor/executor.py`
+- `src/research/executor/model_provider.py`
+
+---
+
+### TODO-031: Environment variable hot reload
+
+**Problem:**
+환경변수가 모듈 로드 시 1회만 평가되어 `.env` 수정 후 uvicorn 재시작 필요.
+
+**Current Code:**
+```python
+# src/research/executor/model_provider.py
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "...")  # 모듈 import 시 1회 평가
+```
+
+**Timeline Example:**
+| 시간 | 작업 | 결과 |
+|------|------|------|
+| 00:45 | `.env` 수정: `GEMINI_MODEL=gemma-3-27b-it` | |
+| 00:50 | API 호출 (uvicorn 미재시작) | ❌ 이전 값 사용 |
+| 00:54 | uvicorn 재시작 후 API 호출 | ✓ 새 값 사용 |
+
+**Suggested Fix Options:**
+1. **문서화** (간단): 운영 가이드에 "`.env` 변경 후 uvicorn 재시작 필요" 명시
+2. **코드 수정** (권장): 환경변수를 함수 내에서 읽도록 변경
+   ```python
+   def get_gemini_model():
+       return os.getenv("GEMINI_MODEL", "deep-research-pro-preview-12-2025")
+   ```
+
+**Affected Files:**
+- `src/research/executor/model_provider.py`
+- `docs/core/API.md` (문서화 선택 시)
+- `docs/OPERATIONAL_STATUS.md` (문서화 선택 시)
 
 ---
 
