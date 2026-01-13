@@ -37,6 +37,121 @@ curl http://localhost:8000/jobs/{job_id}
 
 ## Endpoints
 
+### Story Endpoints (v1.2.0+)
+
+Direct story generation and registry access. These endpoints execute synchronously.
+
+#### POST /story/generate
+
+Generate a story directly (blocking).
+
+**Request Body:**
+
+```json
+{
+  "topic": "Korean apartment horror",
+  "auto_research": true,
+  "model": "ollama:qwen3:30b",
+  "research_model": null,
+  "save_output": true
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `topic` | string | No | null | Story topic. If provided, searches for matching research card |
+| `auto_research` | boolean | No | true | Auto-generate research if no matching card found |
+| `model` | string | No | null | Story model. Format: `ollama:qwen3:30b` or Claude model name |
+| `research_model` | string | No | null | Research model for auto-research |
+| `save_output` | boolean | No | true | Save story to file |
+
+**Response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "story_id": "20260113_120000",
+  "story": "# The Floor Above\n\n...",
+  "title": "The Floor Above",
+  "file_path": "./generated_stories/horror_story_20260113_120000.md",
+  "word_count": 3500,
+  "metadata": {
+    "model": "claude-sonnet-4-5-20250929",
+    "provider": "anthropic",
+    "topic": "Korean apartment horror",
+    "research_used": ["RC-20260113-084040"],
+    "research_injection_mode": "topic_based"
+  }
+}
+```
+
+---
+
+#### GET /story/list
+
+List stories from the registry.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | integer | Max results (default: 50, max: 500) |
+| `offset` | integer | Pagination offset (default: 0) |
+| `accepted_only` | boolean | Only return accepted stories |
+
+**Response:** `200 OK`
+
+```json
+{
+  "stories": [
+    {
+      "story_id": "20260113_120000",
+      "title": "The Floor Above",
+      "template_id": "T-DOM-001",
+      "template_name": "Domestic Intrusion",
+      "created_at": "2026-01-13T12:00:00",
+      "accepted": true,
+      "decision_reason": "accepted",
+      "story_signature": "abc123...",
+      "research_used": ["RC-20260113-084040"]
+    }
+  ],
+  "total": 1,
+  "message": "Found 1 stories"
+}
+```
+
+---
+
+#### GET /story/{story_id}
+
+Get detailed information about a specific story.
+
+**Response:** `200 OK`
+
+```json
+{
+  "story_id": "20260113_120000",
+  "title": "The Floor Above",
+  "template_id": "T-DOM-001",
+  "template_name": "Domestic Intrusion",
+  "semantic_summary": "A horror story about...",
+  "created_at": "2026-01-13T12:00:00",
+  "accepted": true,
+  "decision_reason": "accepted",
+  "story_signature": "abc123...",
+  "canonical_core": {
+    "setting_archetype": "domestic_space",
+    "primary_fear": "loss_of_autonomy",
+    "antagonist_archetype": "collective",
+    "threat_mechanism": "erosion"
+  },
+  "research_used": ["RC-20260113-084040"]
+}
+```
+
+---
+
 ### Job Trigger Endpoints
 
 #### POST /jobs/story/trigger

@@ -89,6 +89,30 @@ flowchart LR
     G --> J["Record in SQLite<br/>story_registry.py"]
 ```
 
+### Topic-Based Generation (v1.2.0+)
+
+When a topic is provided, the generator uses a different flow:
+
+```mermaid
+flowchart LR
+    A["Topic Input"] --> B{"Research Card<br/>Exists?"}
+    B -->|Yes| C["Use Existing<br/>Card"]
+    B -->|No| D{"auto_research<br/>enabled?"}
+    D -->|Yes| E["Generate New<br/>Research"]
+    D -->|No| F["No Research<br/>Context"]
+    E --> C
+    C --> G["Template Selection"]
+    F --> G
+    G --> H["Story Generation"]
+```
+
+**Topic Matching:**
+1. Search cards by topic keyword (exact match > partial match > title match)
+2. If no match and `auto_research=True`, generate new research via `run_research_pipeline()`
+3. Use matched/generated research card for story context
+
+**API Entry Point:** `POST /story/generate` (blocking) or `POST /jobs/story/trigger` (non-blocking)
+
 ### Research Auto-Injection (Default: ON)
 
 Story generation automatically selects and injects matching research cards:
@@ -149,13 +173,14 @@ flowchart LR
 
 | Module | File | Responsibility |
 |--------|------|----------------|
-| Generator | `src/story/generator.py` | Orchestrates generation pipeline |
+| Generator | `src/story/generator.py` | Orchestrates generation pipeline (`generate_story`, `generate_with_topic`) |
 | Template Loader | `src/story/template_loader.py` | Loads/selects templates |
 | Prompt Builder | `src/story/prompt_builder.py` | Constructs LLM prompts |
 | API Client | `src/story/api_client.py` | Claude API communication |
 | Story Registry | `src/registry/story_registry.py` | Deduplication database |
 | Research Context | `src/infra/research_context/` | Unified research selection & injection |
 | Story Dedup | `src/story/dedup/` | Story-level signature-based deduplication |
+| Research Executor | `src/research/executor/executor.py` | `run_research_pipeline()` for auto-research |
 
 ### Deduplication Control
 
@@ -319,8 +344,9 @@ stateDiagram-v2
 
 | Module | File | Responsibility |
 |--------|------|----------------|
-| Router | `src/api/routers/jobs.py` | HTTP endpoints |
-| Schemas | `src/api/schemas/jobs.py` | Pydantic models |
+| Jobs Router | `src/api/routers/jobs.py` | Non-blocking job endpoints |
+| Story Router | `src/api/routers/story.py` | Direct story generation/listing |
+| Schemas | `src/api/schemas/` | Pydantic models |
 | Job Manager | `src/infra/job_manager.py` | Job CRUD operations |
 | Job Monitor | `src/infra/job_monitor.py` | PID polling, status updates |
 
@@ -673,7 +699,7 @@ Located at `src/infra/research_context/`, this module provides a single source o
 | File | Exports | Purpose |
 |------|---------|---------|
 | `policy.py` | `DedupLevel`, `is_usable_card`, `get_dedup_level` | Dedup level rules and card usability |
-| `repository.py` | `load_usable_research_cards`, `get_card_by_id` | Card loading with dedup filtering |
+| `repository.py` | `load_usable_research_cards`, `get_card_by_id`, `search_cards_by_topic`, `get_best_card_for_topic` | Card loading with dedup filtering and topic search |
 | `selector.py` | `ResearchSelection`, `select_research_for_template` | Canonical affinity matching |
 | `formatter.py` | `build_research_context`, `format_research_for_prompt`, `format_research_for_metadata` | Prompt formatting and traceability |
 
