@@ -1,7 +1,7 @@
 # TODO Index
 
 **Status:** Active
-**Version:** v1.3.0
+**Version:** v1.3.1
 **Last Updated:** 2026-01-13
 **Audit Method:** Documentation scan (no source code TODO comments)
 
@@ -78,10 +78,10 @@ Items related to FAISS optimization, background jobs, scaling.
 |----|-------------|----------|--------|--------|
 | TODO-014 | **Job storage scalability** - File-based JSON may not scale for high volume | P2 | `docs/core/ARCHITECTURE.md`, `docs/core/ROADMAP.md` | UNCERTAIN |
 | TODO-015 | **FAISS index performance beyond 10,000 research cards** - Performance characteristics unknown at scale | P3 | `docs/core/ARCHITECTURE.md` | UNCERTAIN |
-| TODO-016 | **Unify output directories** - generated_stories/ vs data/stories/ inconsistency | P3 | `docs/core/ROADMAP.md` (Technical Debt) | PENDING |
-| TODO-017 | **Path constant centralization** - Currently scattered across modules | P3 | `docs/core/ROADMAP.md` (Technical Debt) | PENDING |
-| TODO-018 | **Legacy research_cards.jsonl cleanup** - Superseded by data/research/ | P3 | `docs/core/ROADMAP.md` (Technical Debt) | PENDING |
-| TODO-019 | **Job history cleanup / automatic pruning** - No automatic pruning mechanism | P3 | `docs/core/ROADMAP.md` (Technical Debt) | PENDING |
+| TODO-016 | **Unify output directories** - generated_stories/ vs data/stories/ inconsistency | P3 | `docs/core/ROADMAP.md` (Technical Debt) | **DONE (v1.3.1)** |
+| TODO-017 | **Path constant centralization** - Currently scattered across modules | P3 | `docs/core/ROADMAP.md` (Technical Debt) | **DONE (v1.3.1)** |
+| TODO-018 | **Legacy research_cards.jsonl cleanup** - Superseded by data/research/ | P3 | `docs/core/ROADMAP.md` (Technical Debt) | **DONE (v1.3.1)** |
+| TODO-019 | **Job history cleanup / automatic pruning** - No automatic pruning mechanism | P3 | `docs/core/ROADMAP.md` (Technical Debt) | **DONE (v1.3.1)** |
 
 **Notes:**
 - Job storage and FAISS scaling are UNCERTAIN, not blocking
@@ -182,11 +182,11 @@ Items requiring investigation or decision before implementation.
 |----------|-------|----|----|----|----|
 | RESEARCH_PIPELINE_V2 | 3 | 0 | 0 | 1 | 2 |
 | STORY_GENERATION_ENHANCEMENT | 10 | 0 | 0 | 4 | 6 |
-| INFRA / PERFORMANCE | 6 | 0 | 0 | 1 | 5 |
+| INFRA / PERFORMANCE | 2 | 0 | 0 | 1 | 1 |
 | API / OBSERVABILITY | 5 | 0 | 1 | 2 | 1 |
 | RELEASE / PROCESS | 1 | 0 | 0 | 0 | 1 |
 | DOCUMENTATION_ONLY | 3 | 0 | 0 | 2 | 1 |
-| **TOTAL** | **28** | **0** | **1** | **10** | **16** |
+| **TOTAL** | **24** | **0** | **1** | **10** | **12** |
 
 ---
 
@@ -194,6 +194,7 @@ Items requiring investigation or decision before implementation.
 
 | Date | Change |
 |------|--------|
+| 2026-01-13 | TODO-016~019 (Infra/Performance debt) marked DONE in v1.3.1 |
 | 2026-01-13 | TODO-020 (Webhook Notifications) marked DONE in v1.3.0 |
 | 2026-01-13 | Initial extraction from v1.2.1 documentation |
 

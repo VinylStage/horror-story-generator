@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2026-01-13
+
+### Changed
+
+- **Path Centralization (TODO-017)**
+  - All path management centralized in `src/infra/data_paths.py`
+  - Consistent path resolution across all modules
+  - Environment variable overrides for all major paths
+
+- **Output Directory Unification (TODO-016)**
+  - Default novel output: `data/novel` (previously `generated_stories/`)
+  - New env var: `NOVEL_OUTPUT_DIR` for custom path
+  - Backward compatible with existing `OUTPUT_DIR` env var
+
+- **Job Pruning (TODO-019)**
+  - Optional automatic job history cleanup
+  - Age-based pruning: `JOB_PRUNE_DAYS` (default: 30)
+  - Count-based pruning: `JOB_PRUNE_MAX_COUNT` (default: 1000)
+  - Disabled by default: `JOB_PRUNE_ENABLED=false`
+
+### Deprecated
+
+- **Legacy research_cards.jsonl (TODO-018)**
+  - Accessing legacy path now emits `DeprecationWarning`
+  - Read-only support maintained for backward compatibility
+  - Use `data/research/` directory structure instead
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NOVEL_OUTPUT_DIR` | `data/novel` | Story output directory |
+| `JOB_DIR` | `jobs/` | Job files directory |
+| `JOB_PRUNE_ENABLED` | `false` | Enable automatic job pruning |
+| `JOB_PRUNE_DAYS` | `30` | Prune jobs older than N days |
+| `JOB_PRUNE_MAX_COUNT` | `1000` | Keep at most N recent jobs |
+
+### Files Modified
+
+- `src/infra/data_paths.py` - Extended with novel, jobs, and legacy path functions
+- `src/infra/job_manager.py` - Centralized paths, added pruning functions
+- `src/infra/job_monitor.py` - Centralized paths
+- `src/story/generator.py` - Centralized paths
+- `main.py` - Deprecated `run_research_stub()`
+
+---
+
 ## [1.3.0] - 2026-01-13
 
 ### Added
