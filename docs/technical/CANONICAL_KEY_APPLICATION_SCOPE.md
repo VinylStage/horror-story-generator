@@ -1,6 +1,6 @@
 # Canonical Key Application Scope
 
-> **Version:** v1.1.0 (Operationally Sealed)
+> **Version:** v1.3.2
 
 **Date:** 2026-01-12
 **Status:** ACTIVE

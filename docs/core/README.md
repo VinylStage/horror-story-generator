@@ -2,7 +2,7 @@
 
 A research-grounded Korean horror story generation system using Claude API with deduplication control and research integration.
 
-> **Version:** v1.1.0 (Operationally Sealed)
+> **Version:** v1.3.2
 >
 > All documentation reflects the current `src/` package structure and Canonical Enum v1.0.
 

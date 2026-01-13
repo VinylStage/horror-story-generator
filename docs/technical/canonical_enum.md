@@ -1,6 +1,6 @@
 # Canonical Enum 정의서 (Horror Template System)
 
-> **Version:** v1.1.0 (Operationally Sealed)
+> **Version:** v1.3.2
 
 **Enum Version:** 1.0
 **Status:** FROZEN (value additions only, semantic changes forbidden)

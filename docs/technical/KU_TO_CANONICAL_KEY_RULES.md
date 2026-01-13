@@ -1,6 +1,6 @@
 # KU → Canonical Key Generation Rules
 
-> **Version:** v1.1.0 (Operationally Sealed)
+> **Version:** v1.3.2
 > **Enum Version:** 1.0
 > **Status:** Active
 

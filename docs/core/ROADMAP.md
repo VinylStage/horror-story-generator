@@ -1,7 +1,7 @@
 # Development Roadmap
 
 **Status:** Active
-**Version:** v1.1.0 (Operationally Sealed)
+**Version:** v1.3.2
 
 ---
 
