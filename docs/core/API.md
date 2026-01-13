@@ -73,7 +73,7 @@ Generate a story directly (blocking).
   "story_id": "20260113_120000",
   "story": "# The Floor Above\n\n...",
   "title": "The Floor Above",
-  "file_path": "./generated_stories/horror_story_20260113_120000.md",
+  "file_path": "./data/novel/horror_story_20260113_120000.md",
   "word_count": 3500,
   "metadata": {
     "model": "claude-sonnet-4-5-20250929",

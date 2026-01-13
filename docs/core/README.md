@@ -111,9 +111,8 @@ horror-story-generator/
 ├── data/                        # Runtime data
 │   ├── research/                # Research cards (YYYY/MM/)
 │   ├── seeds/                   # Story seeds
+│   ├── novel/                   # Generated stories (v1.3.1+)
 │   └── *.db                     # SQLite databases
-│
-├── generated_stories/           # Output stories
 ├── logs/                        # Execution logs
 ├── tests/                       # Test suite
 └── docs/                        # Documentation
@@ -249,7 +248,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 CLAUDE_MODEL=claude-sonnet-4-5-20250929
 MAX_TOKENS=8192
 TEMPERATURE=0.8
-OUTPUT_DIR=./generated_stories
+NOVEL_OUTPUT_DIR=./data/novel
 STORY_REGISTRY_DB_PATH=./data/stories.db
 LOG_LEVEL=INFO
 ```

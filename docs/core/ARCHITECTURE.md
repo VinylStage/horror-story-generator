@@ -427,10 +427,9 @@ Each template defines:
 
 | Directory | Contents |
 |-----------|----------|
-| `data/stories/` | Generated story JSON files |
+| `data/novel/` | Generated story files (v1.3.1+, configurable via `NOVEL_OUTPUT_DIR`) |
 | `data/research/` | Research card JSON files |
-| `generated_stories/` | Legacy story output (Markdown) |
-| `jobs/` | Job metadata JSON files |
+| `jobs/` | Job metadata JSON files (configurable via `JOB_DIR`) |
 | `logs/` | Execution logs |
 
 ---

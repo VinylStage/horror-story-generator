@@ -211,16 +211,16 @@ The following are explicitly out of scope:
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| Unify output directories | Medium | generated_stories/ vs data/stories/ |
-| Path constant centralization | Low | Currently scattered across modules |
+| ~~Unify output directories~~ | ~~Medium~~ | **DONE (v1.3.1)** - Now `data/novel/` |
+| ~~Path constant centralization~~ | ~~Low~~ | **DONE (v1.3.1)** - `src/infra/data_paths.py` |
 | Test coverage gaps | Low | ~93% but some edge cases |
 
 ### Data
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| Legacy research_cards.jsonl | Low | Superseded by data/research/ |
-| Job history cleanup | Low | No automatic pruning |
+| ~~Legacy research_cards.jsonl~~ | ~~Low~~ | **DONE (v1.3.1)** - Deprecated with warning |
+| ~~Job history cleanup~~ | ~~Low~~ | **DONE (v1.3.1)** - Optional pruning via env vars |
 
 ---
 

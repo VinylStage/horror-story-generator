@@ -1,8 +1,8 @@
 # 24-Hour Continuous Operation Test - Runbook
 
-**Version:** 1.1.0
-**Date:** 2026-01-12
-**Phase:** Operational Verification (v1.1.0 Sealed)
+**Version:** 1.3.1
+**Date:** 2026-01-13
+**Phase:** Operational Verification (v1.3.1)
 
 ---
 
@@ -140,14 +140,14 @@ python main.py --max-stories 3 --interval-seconds 300
 
 **Expected outcome:**
 - 3 stories generated
-- Files saved in `generated_stories/`
+- Files saved in `data/novel/`
 - Logs written to `logs/horror_story_YYYYMMDD_HHMMSS.log`
 - Final statistics printed
 
 **Verification:**
 ```bash
 # Check story files
-ls -lh generated_stories/horror_story_*.md | tail -3
+ls -lh data/novel/horror_story_*.md | tail -3
 
 # Check log file
 tail -50 logs/horror_story_*.log
@@ -187,10 +187,10 @@ tail -f output_24h.log
 tail -f logs/horror_story_*.log
 
 # Check stories generated so far
-ls generated_stories/ | wc -l
+ls data/novel/ | wc -l
 
 # Check disk usage
-du -sh generated_stories/ logs/
+du -sh data/novel/ logs/
 ```
 
 **After 24 hours:**
@@ -203,10 +203,10 @@ ps -p $(cat generator.pid) || echo "Process completed"
 tail -20 output_24h.log
 
 # Count generated stories
-ls generated_stories/horror_story_*.md | wc -l
+ls data/novel/horror_story_*.md | wc -l
 
 # Verify all have metadata
-ls generated_stories/horror_story_*_metadata.json | wc -l
+ls data/novel/horror_story_*_metadata.json | wc -l
 ```
 
 ---
@@ -243,10 +243,10 @@ echo "Exit code: $?"
 tail -30 logs/horror_story_*.log
 
 # Verify final story is complete (not truncated)
-tail -20 generated_stories/horror_story_*.md | head -10
+tail -20 data/novel/horror_story_*.md | head -10
 
 # Verify metadata saved
-cat generated_stories/horror_story_*_metadata.json | jq .
+cat data/novel/horror_story_*_metadata.json | jq .
 ```
 
 ---
@@ -285,7 +285,7 @@ python main.py --max-stories 1 --enable-dedup
 **Verification:**
 ```bash
 # 스토리 메타데이터에서 시그니처 확인
-cat generated_stories/horror_story_*_metadata.json | jq '{story_signature, story_dedup_result}'
+cat data/novel/horror_story_*_metadata.json | jq '{story_signature, story_dedup_result}'
 
 # 예상 결과:
 # {
@@ -507,7 +507,7 @@ export STORY_DEDUP_STRICT=false
 
 **Check:**
 ```bash
-cat generated_stories/horror_story_*_metadata.json | jq 'select(.story_signature == null)'
+cat data/novel/horror_story_*_metadata.json | jq 'select(.story_signature == null)'
 ```
 
 **Possible causes:**
@@ -538,8 +538,8 @@ ls logs/horror_story_*.log && echo "PASS: Log file exists"
 wc -l logs/horror_story_*.log  # Should have many lines
 
 # 3. Output continuity
-STORY_COUNT=$(ls generated_stories/horror_story_*.md 2>/dev/null | wc -l)
-METADATA_COUNT=$(ls generated_stories/horror_story_*_metadata.json 2>/dev/null | wc -l)
+STORY_COUNT=$(ls data/novel/horror_story_*.md 2>/dev/null | wc -l)
+METADATA_COUNT=$(ls data/novel/horror_story_*_metadata.json 2>/dev/null | wc -l)
 echo "Stories: $STORY_COUNT, Metadata: $METADATA_COUNT"
 [ "$STORY_COUNT" -eq "$METADATA_COUNT" ] && echo "PASS: Output complete"
 
@@ -550,7 +550,7 @@ grep "실행 완료 - 최종 통계" logs/horror_story_*.log && echo "PASS: Grac
 grep "총 토큰 사용량" logs/horror_story_*.log && echo "PASS: Usage logged"
 
 # 6. Story dedup
-SIG_COUNT=$(cat generated_stories/horror_story_*_metadata.json 2>/dev/null | jq -r '.story_signature // empty' | wc -l)
+SIG_COUNT=$(cat data/novel/horror_story_*_metadata.json 2>/dev/null | jq -r '.story_signature // empty' | wc -l)
 echo "Stories with signature: $SIG_COUNT"
 [ "$SIG_COUNT" -eq "$STORY_COUNT" ] && echo "PASS: All stories have signatures"
 ```
@@ -645,10 +645,10 @@ echo "Test completed: $(date)" >> test_summary.txt
 echo "" >> test_summary.txt
 
 # Story count
-echo "Stories generated: $(ls generated_stories/horror_story_*.md | wc -l)" >> test_summary.txt
+echo "Stories generated: $(ls data/novel/horror_story_*.md | wc -l)" >> test_summary.txt
 
 # Total size
-echo "Total story size: $(du -sh generated_stories/ | cut -f1)" >> test_summary.txt
+echo "Total story size: $(du -sh data/novel/ | cut -f1)" >> test_summary.txt
 echo "Total log size: $(du -sh logs/ | cut -f1)" >> test_summary.txt
 
 # Extract final stats from log
