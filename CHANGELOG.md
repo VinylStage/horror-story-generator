@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-01-13
+
+### Added
+
+- **Model Selection**
+  - Story generation: Claude Sonnet (default) or Ollama models
+  - Research generation: Ollama (default) or Gemini models
+  - CLI flag: `--model ollama:qwen3:30b` for story, `--model gemini` for research
+
+- **Gemini Deep Research Agent**
+  - Optional research execution mode using `deep-research-pro-preview-12-2025`
+  - Google AI Studio integration (standard generate_content API)
+  - CLI flag: `--model deep-research`
+  - Environment: `GEMINI_ENABLED=true`, `GEMINI_API_KEY`
+
+- **Full Pipeline Verification**
+  - Comprehensive real-world execution tests (CLI + API)
+  - Automated pipeline integrity checks
+  - Verification reports in `docs/verification/`
+
+### Changed
+
+- Research executor now loads dotenv before module imports
+- Simplified GeminiDeepResearchProvider to use standard API
+
+### Verified
+
+- CLI: Local research (Ollama), Story generation (Claude/Ollama)
+- API: Health, research endpoints, story job triggers
+- Pipeline: Research auto-injection, dedup modules, unit tests (21/21)
+
+---
+
 ## [1.1.0] - 2026-01-12
 
 **This release is operationally sealed.**

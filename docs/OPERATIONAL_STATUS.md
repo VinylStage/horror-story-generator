@@ -1,8 +1,8 @@
 # 운영 상태 선언
 
-**버전:** v1.1.0
-**상태:** SEALED FOR OPERATION
-**선언일:** 2026-01-12
+**버전:** v1.2.0
+**상태:** OPERATIONAL
+**선언일:** 2026-01-13
 
 ---
 
@@ -66,7 +66,7 @@
 
 ## 명시적 범위 외 (향후 작업)
 
-다음 기능은 v1.1.0에 **포함되지 않습니다**:
+다음 기능은 v1.2.0에 **포함되지 않습니다**:
 
 | 기능 | 상태 |
 |------|------|
@@ -85,6 +85,9 @@
 | 통합 파이프라인 검증 | `docs/analysis/UNIFIED_PIPELINE_FINAL_VERIFICATION.md` |
 | 스토리 중복 검사 검증 | `docs/analysis/STORY_DEDUP_FINAL_VERIFICATION.md` |
 | 전체 파이프라인 스모크 테스트 | `docs/analysis/FINAL_PIPELINE_SMOKE_TEST.md` |
+| 모델 선택 검증 | `docs/verification/MODEL_SELECTION_VERIFICATION.md` |
+| Gemini Deep Research 검증 | `docs/verification/GEMINI_DEEP_RESEARCH_VERIFICATION.md` |
+| 전체 파이프라인 테스트 (v1.2.0) | `docs/verification/FULL_PIPELINE_TEST_20260113.md` |
 
 ---
 
@@ -101,11 +104,11 @@
 
 ## 선언
 
-이 문서는 v1.1.0의 운영 계약입니다.
+이 문서는 v1.2.0의 운영 계약입니다.
 
 문서에 명시되지 않은 동작은 보장되지 않습니다.
 
 ---
 
 **검증자:** Claude Opus 4.5
-**태그:** v1.1.0
+**태그:** v1.2.0

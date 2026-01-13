@@ -1,7 +1,7 @@
 # System Architecture
 
 **Status:** Active
-**Version:** v1.1.0 (Operationally Sealed)
+**Version:** v1.2.0
 
 ---
 
@@ -738,4 +738,4 @@ Key architectural decisions are documented in `docs/technical/decision_log.md`:
 
 ---
 
-**Note:** All documentation reflects v1.1.0 (Operationally Sealed) with unified research context module and complete deduplication pipeline.
+**Note:** All documentation reflects v1.2.0 with model selection, Gemini Deep Research integration, and complete deduplication pipeline.
