@@ -134,6 +134,25 @@ Options:
   --enable-dedup           Enable deduplication control
   --db-path PATH           SQLite database path
   --load-history           Load existing stories into memory
+  --model MODEL            Model selection (see below)
+```
+
+**Model Options:**
+
+| Value | Description |
+|-------|-------------|
+| (default) | Claude Sonnet - 고품질 한국어 호러 |
+| `claude-sonnet-4-5-20250929` | Claude Sonnet 명시적 지정 |
+| `claude-opus-4-5-20251101` | Claude Opus (고성능) |
+| `ollama:qwen3:30b` | 로컬 Ollama 모델 |
+
+**Examples:**
+```bash
+# Claude 기본 (권장)
+python main.py --max-stories 3 --enable-dedup
+
+# Ollama 로컬 모델
+python main.py --model ollama:qwen3:30b
 ```
 
 ### Research Generation
@@ -146,15 +165,54 @@ Arguments:
 
 Options:
   --tags TAG [TAG ...]     Classification tags
-  --model MODEL            Ollama model (default: qwen3:30b)
+  --model MODEL            Model selection (see below)
   --timeout N              Generation timeout in seconds
+  --dry-run                Show prompt without executing
+  --skip-markdown          Skip generating markdown file
+  -o, --output-dir PATH    Output directory (default: data/research)
+```
+
+**Model Options:**
+
+| Value | Description | Timeout |
+|-------|-------------|---------|
+| `qwen3:30b` (default) | Ollama 로컬 모델 | 60s |
+| `gemini` | Google Gemini API | 120s |
+| `deep-research` | Gemini Deep Research Agent (고품질, 권장) | 300-600s |
+
+**Requirements:**
+- Gemini 모델: `GEMINI_ENABLED=true`, `GEMINI_API_KEY` 환경변수 필요
+
+**Examples:**
+```bash
+# Ollama 기본
+python -m src.research.executor run "Korean apartment horror"
+
+# Gemini Deep Research (권장)
+python -m src.research.executor run "Korean apartment horror" --model deep-research --timeout 300
+
+# Gemini 표준
+python -m src.research.executor run "Urban isolation" --model gemini --timeout 120
+
+# 태그 포함
+python -m src.research.executor run "Subway horror" --tags urban supernatural --model deep-research
 ```
 
 ### API Server
 
 ```bash
 uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
+# Options
+--host HOST              Bind address (default: 127.0.0.1)
+--port PORT              Port number (default: 8000)
+--reload                 Auto-reload on code changes (dev only)
 ```
+
+**Endpoints:**
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+- Health: `http://localhost:8000/health`
 
 ---
 
