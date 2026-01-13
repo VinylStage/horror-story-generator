@@ -387,3 +387,137 @@ class TestJobManagerErrorHandling:
                 result = ensure_jobs_dir()
 
                 assert new_dir.exists()
+
+
+class TestJobPruning:
+    """Tests for job pruning functions (v1.3.1)."""
+
+    @pytest.fixture
+    def temp_jobs_dir(self):
+        """Create temporary jobs directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            jobs_path = Path(tmpdir) / "jobs"
+            jobs_path.mkdir()
+            yield jobs_path
+
+    def test_prune_old_jobs_by_age(self, temp_jobs_dir):
+        """Should prune jobs older than specified days."""
+        from src.infra.job_manager import Job, save_job, prune_old_jobs, list_jobs
+        import os
+        import time
+
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            # Create an old job
+            old_job = Job(
+                job_id="old-job",
+                type="story_generation",
+                status="succeeded"
+            )
+            save_job(old_job)
+
+            # Create a recent job
+            recent_job = Job(
+                job_id="recent-job",
+                type="story_generation",
+                status="succeeded"
+            )
+            save_job(recent_job)
+
+            # Modify the old job file's mtime to 40 days ago
+            old_file = temp_jobs_dir / "old-job.json"
+            old_time = time.time() - (40 * 24 * 60 * 60)
+            os.utime(old_file, (old_time, old_time))
+
+            # Prune jobs older than 30 days
+            result = prune_old_jobs(days=30)
+
+            assert result["deleted_by_age"] == 1
+            assert result["deleted_by_count"] == 0
+            assert len(list_jobs()) == 1
+
+    def test_prune_old_jobs_by_count(self, temp_jobs_dir):
+        """Should prune jobs exceeding max count."""
+        from src.infra.job_manager import Job, save_job, prune_old_jobs, list_jobs
+        from datetime import timedelta
+        import time
+
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            # Create 5 jobs with different creation times
+            for i in range(5):
+                job = Job(
+                    job_id=f"job-{i}",
+                    type="story_generation",
+                    status="succeeded"
+                )
+                # Stagger creation times
+                job.created_at = (datetime.now() - timedelta(seconds=5-i)).isoformat()
+                save_job(job)
+
+            # Prune to keep only 3 most recent
+            result = prune_old_jobs(max_count=3)
+
+            assert result["deleted_by_count"] == 2
+            assert len(list_jobs()) == 3
+
+    def test_prune_old_jobs_dry_run(self, temp_jobs_dir):
+        """Should not delete anything in dry run mode."""
+        from src.infra.job_manager import Job, save_job, prune_old_jobs, list_jobs
+        import os
+        import time
+
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            old_job = Job(
+                job_id="old-job",
+                type="story_generation",
+                status="succeeded"
+            )
+            save_job(old_job)
+
+            # Modify the old job file's mtime to 40 days ago
+            old_file = temp_jobs_dir / "old-job.json"
+            old_time = time.time() - (40 * 24 * 60 * 60)
+            os.utime(old_file, (old_time, old_time))
+
+            result = prune_old_jobs(days=30, dry_run=True)
+
+            assert result["deleted_by_age"] == 1
+            assert len(list_jobs()) == 1  # Job still exists
+
+    def test_auto_prune_if_enabled_disabled(self, temp_jobs_dir):
+        """Should return None when pruning is disabled."""
+        from src.infra.job_manager import auto_prune_if_enabled
+
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            with patch.dict("os.environ", {"JOB_PRUNE_ENABLED": "false"}):
+                result = auto_prune_if_enabled()
+                assert result is None
+
+    def test_auto_prune_if_enabled_enabled(self, temp_jobs_dir):
+        """Should prune when enabled."""
+        from src.infra.job_manager import Job, save_job, auto_prune_if_enabled, list_jobs
+        import os
+        import time
+
+        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+            old_job = Job(
+                job_id="old-job",
+                type="story_generation",
+                status="succeeded"
+            )
+            save_job(old_job)
+
+            # Modify the old job file's mtime to 40 days ago
+            old_file = temp_jobs_dir / "old-job.json"
+            old_time = time.time() - (40 * 24 * 60 * 60)
+            os.utime(old_file, (old_time, old_time))
+
+            with patch.dict("os.environ", {
+                "JOB_PRUNE_ENABLED": "true",
+                "JOB_PRUNE_DAYS": "30",
+                "JOB_PRUNE_MAX_COUNT": "1000"
+            }):
+                result = auto_prune_if_enabled()
+
+                assert result is not None
+                assert result["deleted_by_age"] == 1
+                assert len(list_jobs()) == 0

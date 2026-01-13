@@ -264,3 +264,107 @@ class TestInitialize:
 
         # After import, should be initialized
         assert _initialized is True
+
+
+class TestGetNovelOutputDir:
+    """Tests for get_novel_output_dir function (v1.3.1)."""
+
+    def test_returns_default_path(self):
+        """Should return data/novel by default."""
+        from src.infra.data_paths import get_novel_output_dir, get_data_root
+
+        with patch.dict("os.environ", {}, clear=False):
+            # Clear NOVEL_OUTPUT_DIR if set
+            import os
+            os.environ.pop("NOVEL_OUTPUT_DIR", None)
+            result = get_novel_output_dir()
+            assert result == get_data_root() / "novel"
+
+    def test_respects_env_override(self):
+        """Should respect NOVEL_OUTPUT_DIR environment variable."""
+        from src.infra.data_paths import get_novel_output_dir
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict("os.environ", {"NOVEL_OUTPUT_DIR": tmpdir}):
+                result = get_novel_output_dir()
+                assert result == Path(tmpdir).resolve()
+
+
+class TestGetJobsDir:
+    """Tests for get_jobs_dir function (v1.3.1)."""
+
+    def test_returns_default_path(self):
+        """Should return jobs/ directory by default."""
+        from src.infra.data_paths import get_jobs_dir, get_project_root
+
+        import os
+        os.environ.pop("JOB_DIR", None)
+        result = get_jobs_dir()
+        assert result == get_project_root() / "jobs"
+
+    def test_respects_env_override(self):
+        """Should respect JOB_DIR environment variable."""
+        from src.infra.data_paths import get_jobs_dir
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict("os.environ", {"JOB_DIR": tmpdir}):
+                result = get_jobs_dir()
+                assert result == Path(tmpdir).resolve()
+
+
+class TestGetJobPruneConfig:
+    """Tests for get_job_prune_config function (v1.3.1)."""
+
+    def test_returns_defaults(self):
+        """Should return default config when no env vars set."""
+        from src.infra.data_paths import get_job_prune_config
+
+        import os
+        os.environ.pop("JOB_PRUNE_ENABLED", None)
+        os.environ.pop("JOB_PRUNE_DAYS", None)
+        os.environ.pop("JOB_PRUNE_MAX_COUNT", None)
+
+        result = get_job_prune_config()
+        assert result["enabled"] is False
+        assert result["days"] == 30
+        assert result["max_count"] == 1000
+
+    def test_respects_env_overrides(self):
+        """Should respect JOB_PRUNE_* environment variables."""
+        from src.infra.data_paths import get_job_prune_config
+
+        with patch.dict("os.environ", {
+            "JOB_PRUNE_ENABLED": "true",
+            "JOB_PRUNE_DAYS": "7",
+            "JOB_PRUNE_MAX_COUNT": "100"
+        }):
+            result = get_job_prune_config()
+            assert result["enabled"] is True
+            assert result["days"] == 7
+            assert result["max_count"] == 100
+
+
+class TestGetLegacyResearchCardsJsonl:
+    """Tests for get_legacy_research_cards_jsonl function (v1.3.1)."""
+
+    def test_returns_legacy_path(self):
+        """Should return the legacy research_cards.jsonl path."""
+        import warnings
+        from src.infra.data_paths import get_legacy_research_cards_jsonl, get_data_root
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = get_legacy_research_cards_jsonl()
+            assert result == get_data_root() / "research_cards.jsonl"
+
+    def test_emits_deprecation_warning(self):
+        """Should emit DeprecationWarning."""
+        import warnings
+        from src.infra.data_paths import get_legacy_research_cards_jsonl
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            get_legacy_research_cards_jsonl()
+            assert len(w) >= 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+            assert "deprecated" in str(w[-1].message).lower()
