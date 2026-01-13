@@ -7,7 +7,7 @@ import logging
 import socket
 import time
 from http.client import HTTPConnection, HTTPException
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from .config import (
@@ -344,3 +344,162 @@ def execute_research_with_provider(
             "status": "error",
             "error": str(e)
         }
+
+
+def run_research_pipeline(
+    topic: str,
+    tags: Optional[List[str]] = None,
+    model_spec: Optional[str] = None,
+    timeout: int = DEFAULT_TIMEOUT,
+    output_dir: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Run the complete research pipeline programmatically.
+
+    This is a high-level function that executes the entire research workflow:
+    1. Execute LLM research generation
+    2. Validate and parse response
+    3. Collapse canonical affinity to canonical core
+    4. Run dedup check
+    5. Write output files
+
+    Args:
+        topic: Research topic to analyze
+        tags: Optional list of tags
+        model_spec: Model specification (e.g., "gemini", "ollama:qwen3:30b")
+        timeout: Request timeout in seconds
+        output_dir: Output directory (default: ./data/research)
+
+    Returns:
+        Dict with:
+            - success: bool
+            - card_id: str (if successful)
+            - card_path: str (path to JSON file)
+            - card_data: Dict (full research card data)
+            - error: str (if failed)
+    """
+    from .validator import process_llm_response
+    from .output_writer import generate_card_id, write_output
+    from .model_provider import get_research_model_info
+    from pathlib import Path
+
+    logger.info(f"[ResearchPipeline] Starting pipeline for topic: {topic}")
+
+    # Parse model spec
+    model_info = get_research_model_info(model_spec)
+    model_name = model_info.model_name
+    tags = tags or []
+
+    # Step 1: Execute research
+    try:
+        raw_response, exec_metadata = execute_research_with_provider(
+            topic=topic,
+            model_spec=model_spec,
+            timeout=timeout
+        )
+    except Exception as e:
+        logger.error(f"[ResearchPipeline] Execution failed: {e}")
+        return {
+            "success": False,
+            "card_id": None,
+            "card_path": None,
+            "card_data": None,
+            "error": str(e)
+        }
+
+    if not raw_response:
+        error_msg = exec_metadata.get("error", "Empty response from LLM")
+        logger.error(f"[ResearchPipeline] Empty response: {error_msg}")
+        return {
+            "success": False,
+            "card_id": None,
+            "card_path": None,
+            "card_data": None,
+            "error": error_msg
+        }
+
+    # Step 2: Validate and process response
+    processed, validation = process_llm_response(raw_response)
+
+    if not processed:
+        error_msg = validation.get("parse_error", "Failed to parse response")
+        logger.error(f"[ResearchPipeline] Validation failed: {error_msg}")
+        return {
+            "success": False,
+            "card_id": None,
+            "card_path": None,
+            "card_data": None,
+            "error": error_msg
+        }
+
+    # Step 3: Collapse canonical affinity to canonical core
+    canonical_core = None
+    affinity = processed.get("canonical_affinity", {})
+    if affinity:
+        canonical_core = {
+            "setting_archetype": (affinity.get("setting", [None]) or [None])[0],
+            "primary_fear": (affinity.get("primary_fear", [None]) or [None])[0],
+            "antagonist_archetype": (affinity.get("antagonist", [None]) or [None])[0],
+            "threat_mechanism": (affinity.get("mechanism", [None]) or [None])[0],
+            "twist_family": "inevitability"  # Default twist
+        }
+
+    # Step 4: Run dedup check (optional - requires FAISS)
+    dedup_result = None
+    try:
+        from src.dedup.research import check_duplicate
+        if canonical_core:
+            dedup_result = check_duplicate(
+                canonical_core=canonical_core,
+                summary=processed.get("summary", "")
+            )
+            logger.info(f"[ResearchPipeline] Dedup result: {dedup_result.get('signal', 'LOW')}")
+    except ImportError:
+        logger.debug("[ResearchPipeline] Dedup module not available, skipping")
+    except Exception as e:
+        logger.warning(f"[ResearchPipeline] Dedup check failed: {e}")
+
+    # Step 5: Generate card ID and write output
+    card_id = generate_card_id()
+    out_dir = Path(output_dir) if output_dir else None
+
+    paths = write_output(
+        card_id=card_id,
+        topic=topic,
+        tags=tags,
+        model=model_name,
+        output=processed,
+        validation=validation,
+        metadata=exec_metadata,
+        output_dir=out_dir,
+        canonical_core=canonical_core,
+        dedup_result=dedup_result
+    )
+
+    if not paths.get("json"):
+        return {
+            "success": False,
+            "card_id": card_id,
+            "card_path": None,
+            "card_data": None,
+            "error": "Failed to write output file"
+        }
+
+    # Load the written card for return
+    import json as json_module
+    card_data = None
+    try:
+        with open(paths["json"], "r", encoding="utf-8") as f:
+            card_data = json_module.load(f)
+    except Exception as e:
+        logger.warning(f"[ResearchPipeline] Failed to reload card: {e}")
+
+    logger.info(f"[ResearchPipeline] Pipeline complete: {card_id}")
+
+    return {
+        "success": True,
+        "card_id": card_id,
+        "card_path": str(paths["json"]),
+        "card_data": card_data,
+        "error": None
+    }

@@ -849,6 +849,239 @@ def generate_with_dedup_control(
     return None
 
 
+def generate_with_topic(
+    topic: Optional[str] = None,
+    auto_research: bool = True,
+    model_spec: Optional[str] = None,
+    research_model_spec: Optional[str] = None,
+    save_output: bool = True,
+    registry: Any = None
+) -> Dict[str, Any]:
+    """
+    Topic 기반 스토리 생성 (v1.2.0+)
+
+    동작 방식:
+    1. topic이 없으면: 랜덤 템플릿 + 기존 research 카드 사용 (기존 동작)
+    2. topic이 있으면:
+       - 해당 topic에 맞는 기존 research 카드 검색
+       - 없으면 auto_research=True일 때 research 자동 생성
+       - research 카드를 사용하여 스토리 생성
+
+    Args:
+        topic: 스토리 주제 (None이면 랜덤 선택)
+        auto_research: topic에 맞는 research가 없을 때 자동 생성 여부
+        model_spec: 스토리 생성 모델 (Claude/Ollama)
+        research_model_spec: research 생성 모델 (Ollama/Gemini)
+        save_output: 파일 저장 여부
+        registry: StoryRegistry 인스턴스 (중복 체크용)
+
+    Returns:
+        Dict with story, metadata, file_path (if saved)
+    """
+    logger.info("=" * 80)
+    logger.info(f"[TopicGen] Topic-based Story Generation")
+    logger.info(f"[TopicGen] Topic: {topic or '(random)'}")
+    logger.info("=" * 80)
+
+    config = load_environment()
+
+    # Research card selection based on topic
+    research_card = None
+    research_context = None
+    research_metadata = {"research_used": [], "research_injection_mode": "none"}
+
+    if topic and RESEARCH_INTEGRATION_AVAILABLE:
+        # Import topic-based search
+        try:
+            from src.infra.research_context import get_best_card_for_topic
+            research_card = get_best_card_for_topic(topic)
+
+            if research_card:
+                card_id = research_card.get("card_id", "unknown")
+                logger.info(f"[TopicGen] Found existing research card: {card_id}")
+            else:
+                logger.info(f"[TopicGen] No existing research card for topic: {topic}")
+
+                # Auto-generate research if enabled
+                if auto_research:
+                    logger.info("[TopicGen] Running auto-research pipeline...")
+                    try:
+                        from src.research.executor.executor import run_research_pipeline
+                        research_result = run_research_pipeline(
+                            topic=topic,
+                            tags=["auto_generated", "topic_based"],
+                            model_spec=research_model_spec,
+                        )
+
+                        if research_result.get("success"):
+                            research_card = research_result.get("card_data")
+                            logger.info(f"[TopicGen] Auto-research created: {research_result.get('card_id')}")
+                        else:
+                            logger.warning(f"[TopicGen] Auto-research failed: {research_result.get('error')}")
+                    except Exception as e:
+                        logger.warning(f"[TopicGen] Auto-research error: {e}")
+        except ImportError as e:
+            logger.warning(f"[TopicGen] Research context module not available: {e}")
+
+    # Build research context from card if available
+    if research_card:
+        try:
+            from src.infra.research_context import build_research_context, format_research_for_metadata, ResearchSelection
+            # Create a ResearchSelection from the single card
+            selection = ResearchSelection(
+                cards=[research_card],
+                scores=[1.0],
+                match_details=[{}],
+                total_available=1,
+                reason=f"Topic-matched: {topic}" if topic else "Direct card",
+                card_ids=[research_card.get("card_id", "unknown")]
+            )
+            research_context = build_research_context(selection)
+            research_metadata = format_research_for_metadata(selection, injection_mode="topic_based")
+            logger.info(f"[TopicGen] Research context built from: {selection.card_ids}")
+        except Exception as e:
+            logger.warning(f"[TopicGen] Failed to build research context: {e}")
+
+    # Select template (random or based on research card's canonical affinity)
+    skeleton = select_random_template(registry=registry)
+    template_id = skeleton.get("template_id") if skeleton else None
+    template_name = skeleton.get("template_name") if skeleton else None
+
+    logger.info(f"[TopicGen] Template: {template_id} - {template_name}")
+
+    # Story-level dedup check (if registry available)
+    if registry and STORY_DEDUP_AVAILABLE and ENABLE_STORY_DEDUP:
+        canonical_core = skeleton.get("canonical_core") if skeleton else None
+        research_used = research_metadata.get("research_used", [])
+
+        try:
+            story_dedup_result = check_story_duplicate(
+                canonical_core=canonical_core,
+                research_used=research_used,
+                registry=registry,
+                strict=STORY_DEDUP_STRICT,
+            )
+            if story_dedup_result.is_duplicate:
+                logger.warning(f"[TopicGen] Duplicate detected: {story_dedup_result.existing_story_id}")
+                if STORY_DEDUP_STRICT:
+                    return {
+                        "success": False,
+                        "error": f"Duplicate story: {story_dedup_result.existing_story_id}",
+                        "metadata": {"story_dedup_result": "duplicate"}
+                    }
+        except Exception as e:
+            logger.warning(f"[TopicGen] Dedup check failed: {e}")
+
+    # Build prompts with topic as custom request if provided
+    custom_request = topic if topic else None
+    system_prompt = build_system_prompt(
+        template=None,
+        skeleton=skeleton,
+        research_context=research_context
+    )
+    user_prompt = build_user_prompt(custom_request, template=None)
+
+    # API call
+    if model_spec:
+        api_result = call_llm_api(system_prompt, user_prompt, config, model_spec)
+        actual_model = api_result.get("model", model_spec)
+        actual_provider = api_result.get("provider", "unknown")
+    else:
+        api_result = call_claude_api(system_prompt, user_prompt, config)
+        actual_model = config["model"]
+        actual_provider = "anthropic"
+
+    story_text = api_result["story_text"]
+    usage = api_result["usage"]
+
+    # Extract metadata
+    title = extract_title_from_story(story_text)
+    story_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    canonical_keys = {}
+    if skeleton and skeleton.get("canonical_core"):
+        canonical_keys = skeleton.get("canonical_core", {})
+
+    # Generate summary and observe similarity
+    semantic_summary = generate_semantic_summary(story_text, title, config)
+
+    # Build skeleton info
+    skeleton_info = None
+    if skeleton:
+        skeleton_info = {
+            "template_id": template_id,
+            "template_name": template_name,
+            "canonical_core": skeleton.get("canonical_core")
+        }
+
+    # Compute story signature
+    story_signature = None
+    if STORY_DEDUP_AVAILABLE:
+        story_signature = compute_story_signature(
+            canonical_keys,
+            research_metadata.get("research_used", [])
+        )
+
+    result = {
+        "success": True,
+        "story": story_text,
+        "metadata": {
+            "story_id": story_id,
+            "generated_at": datetime.now().isoformat(),
+            "model": actual_model,
+            "provider": actual_provider,
+            "topic": topic,
+            "template_used": None,
+            "skeleton_template": skeleton_info,
+            "custom_request": custom_request,
+            "config": {
+                "max_tokens": config["max_tokens"],
+                "temperature": config["temperature"]
+            },
+            "word_count": len(story_text),
+            "usage": usage,
+            **research_metadata,
+            "story_signature": story_signature,
+            "generation_mode": "topic_based" if topic else "random"
+        }
+    }
+
+    # Save story
+    if save_output:
+        file_path = save_story(
+            story_text,
+            config["output_dir"],
+            result["metadata"],
+            None
+        )
+        result["file_path"] = file_path
+        logger.info(f"[TopicGen] Saved: {file_path}")
+
+    # Persist to registry if available
+    if registry:
+        try:
+            registry.add_story(
+                story_id=story_id,
+                title=title,
+                template_id=template_id,
+                template_name=template_name,
+                semantic_summary=semantic_summary,
+                accepted=True,
+                decision_reason="topic_generated",
+                story_signature=story_signature,
+                canonical_core_json=json.dumps(canonical_keys, ensure_ascii=False) if canonical_keys else None,
+                research_used_json=json.dumps(research_metadata.get("research_used", []), ensure_ascii=False)
+            )
+        except Exception as e:
+            logger.warning(f"[TopicGen] Failed to persist to registry: {e}")
+
+    logger.info("=" * 80)
+    logger.info("[TopicGen] Generation complete")
+    logger.info("=" * 80)
+
+    return result
+
+
 def customize_template(
     template_path: str = "horror_story_prompt_template.json",
     **kwargs: Any

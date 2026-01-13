@@ -219,3 +219,80 @@ def get_card_summary(card: Dict[str, Any]) -> Dict[str, Any]:
         "canonical_affinity": get_canonical_affinity(card),
         "canonical_core": get_canonical_core(card),
     }
+
+
+def search_cards_by_topic(
+    topic: str,
+    base_dir: str = "./data/research",
+    exclude_level: DedupLevel = DedupLevel.HIGH
+) -> List[Dict[str, Any]]:
+    """
+    Search research cards by topic keyword matching.
+
+    Performs case-insensitive substring matching on card topics and titles.
+
+    Args:
+        topic: Search topic string
+        base_dir: Base directory containing research cards
+        exclude_level: Dedup level at or above which cards are excluded
+
+    Returns:
+        List of matching cards, sorted by relevance (exact match first, then newest)
+    """
+    all_cards = load_usable_research_cards(base_dir, exclude_level)
+
+    if not all_cards:
+        return []
+
+    topic_lower = topic.lower()
+    matches = []
+
+    for card in all_cards:
+        card_topic = card.get("input", {}).get("topic", "").lower()
+        card_title = card.get("output", {}).get("title", "").lower()
+
+        # Check for match in topic or title
+        if topic_lower in card_topic or topic_lower in card_title:
+            # Score: exact match > partial match
+            score = 0
+            if card_topic == topic_lower:
+                score = 100  # Exact topic match
+            elif topic_lower in card_topic:
+                score = 50   # Topic contains query
+            elif topic_lower in card_title:
+                score = 25   # Title contains query
+
+            matches.append({"card": card, "score": score})
+
+    # Sort by score (highest first), then by created_at (newest first)
+    matches.sort(
+        key=lambda x: (
+            x["score"],
+            x["card"].get("metadata", {}).get("created_at", "")
+        ),
+        reverse=True
+    )
+
+    logger.info(f"[ResearchContext] Found {len(matches)} cards matching topic: {topic}")
+
+    return [m["card"] for m in matches]
+
+
+def get_best_card_for_topic(
+    topic: str,
+    base_dir: str = "./data/research",
+    exclude_level: DedupLevel = DedupLevel.HIGH
+) -> Optional[Dict[str, Any]]:
+    """
+    Get the best matching research card for a topic.
+
+    Args:
+        topic: Search topic string
+        base_dir: Base directory containing research cards
+        exclude_level: Dedup level at or above which cards are excluded
+
+    Returns:
+        Best matching card or None if no match
+    """
+    matches = search_cards_by_topic(topic, base_dir, exclude_level)
+    return matches[0] if matches else None

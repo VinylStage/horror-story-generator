@@ -9,6 +9,8 @@ from .repository import (
     load_usable_research_cards,
     get_card_by_id,
     get_canonical_affinity,
+    search_cards_by_topic,
+    get_best_card_for_topic,
 )
 from .policy import (
     DedupLevel,
@@ -33,6 +35,8 @@ __all__ = [
     "load_usable_research_cards",
     "get_card_by_id",
     "get_canonical_affinity",
+    "search_cards_by_topic",
+    "get_best_card_for_topic",
     # Policy
     "DedupLevel",
     "is_usable_card",
