@@ -1,7 +1,7 @@
 # API Reference
 
 **Status:** Active
-**Version:** v1.3.1
+**Version:** v1.3.2
 **Base URL:** `http://localhost:8000`
 
 ---

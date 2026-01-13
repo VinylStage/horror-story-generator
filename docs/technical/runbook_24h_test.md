@@ -1,8 +1,8 @@
 # 24-Hour Continuous Operation Test - Runbook
 
-**Version:** 1.3.1
+**Version:** 1.3.2
 **Date:** 2026-01-13
-**Phase:** Operational Verification (v1.3.1)
+**Phase:** Operational Verification (v1.3.2)
 
 ---
 

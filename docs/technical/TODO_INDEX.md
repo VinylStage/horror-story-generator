@@ -1,7 +1,7 @@
 # TODO Index
 
 **Status:** Active
-**Version:** v1.3.1
+**Version:** v1.3.2
 **Last Updated:** 2026-01-13
 **Audit Method:** Documentation scan (no source code TODO comments)
 
