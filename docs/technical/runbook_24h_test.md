@@ -54,7 +54,12 @@ This runbook provides procedures to verify that the horror story generator can r
    | `ENABLE_STORY_DEDUP` | `true` | 스토리 레벨 중복 검사 활성화 |
    | `STORY_DEDUP_STRICT` | `false` | true 시 중복 감지되면 생성 중단 |
 
-5. **Registry Backup Verification:**
+5. **API Server Startup (if using API):**
+
+   > **Note:** API server may fail on first startup due to port conflicts or missing ENV.
+   > Solution: `pkill -f uvicorn` and retry, or verify `.env` is loaded.
+
+6. **Registry Backup Verification:**
    ```bash
    # 기존 백업 파일 확인
    ls -la data/*.backup.*.db 2>/dev/null || echo "백업 파일 없음 (정상)"

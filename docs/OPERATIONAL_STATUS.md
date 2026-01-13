@@ -1,6 +1,6 @@
 # 운영 상태 선언
 
-**버전:** v1.2.0
+**버전:** v1.2.1
 **상태:** OPERATIONAL
 **선언일:** 2026-01-13
 
@@ -88,6 +88,19 @@
 | 모델 선택 검증 | `docs/verification/MODEL_SELECTION_VERIFICATION.md` |
 | Gemini Deep Research 검증 | `docs/verification/GEMINI_DEEP_RESEARCH_VERIFICATION.md` |
 | 전체 파이프라인 테스트 (v1.2.0) | `docs/verification/FULL_PIPELINE_TEST_20260113.md` |
+| 스토리 생성 E2E 테스트 (v1.2.1) | `docs/verification/STORY_GENERATION_E2E_TEST.md` |
+
+---
+
+## 운영 주의사항
+
+### API 서버 시작 오류
+
+API 서버 초기 시작 시 실패할 수 있습니다:
+- 포트 이미 사용 중 (이전 프로세스 미종료)
+- 환경 변수 미로드 (`.env` 파일 누락)
+
+**해결:** `pkill -f uvicorn` 후 재시작하거나, `.env` 파일 확인 후 재시작
 
 ---
 
@@ -104,11 +117,11 @@
 
 ## 선언
 
-이 문서는 v1.2.0의 운영 계약입니다.
+이 문서는 v1.2.1의 운영 계약입니다.
 
 문서에 명시되지 않은 동작은 보장되지 않습니다.
 
 ---
 
 **검증자:** Claude Opus 4.5
-**태그:** v1.2.0
+**태그:** v1.2.1
