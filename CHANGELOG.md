@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.1] - 2026-01-13
+
+### Fixed
+
+- API story router method name mismatch (`get_recent_stories` → `load_recent_accepted`)
+
+### Added
+
+- Story CLI module (`src/story/cli.py`) for topic-based generation testing
+
+### Verified
+
+- CLI topic-based story generation (with/without existing research)
+- API story generation endpoints (`POST /story/generate`, `GET /story/list`)
+- Auto research → story injection pipeline
+- Story-level deduplication (signature-based)
+- Model selection (Claude / Ollama)
+- Full E2E pipeline integrity (11/11 tests PASS)
+
+### Reference
+
+- Bug fix commit: `6119d7b`
+- Test report: `docs/verification/STORY_GENERATION_E2E_TEST.md`
+
+---
+
 ## [1.2.0] - 2026-01-13
 
 ### Added

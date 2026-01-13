@@ -2,7 +2,7 @@
 
 Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시스템입니다.
 
-> **Version:** v1.2.0
+> **Version:** v1.2.1
 >
 > 모든 문서는 현재 `src/` 패키지 구조와 Canonical Enum v1.0을 기준으로 작성되었습니다.
 >
