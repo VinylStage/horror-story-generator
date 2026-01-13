@@ -124,7 +124,7 @@ async def list_stories(
         from src.registry.story_registry import StoryRegistry
 
         registry = StoryRegistry()
-        records = registry.get_recent_stories(limit=limit + offset)
+        records = registry.load_recent_accepted(limit=limit + offset)
 
         # Apply offset
         records = records[offset:offset + limit]
@@ -176,7 +176,7 @@ async def get_story_detail(story_id: str):
         registry = StoryRegistry()
 
         # Search for the story
-        records = registry.get_recent_stories(limit=1000)
+        records = registry.load_recent_accepted(limit=1000)
         record = None
         for r in records:
             if r.id == story_id:
