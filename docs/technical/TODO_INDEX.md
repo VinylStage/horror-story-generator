@@ -99,6 +99,7 @@ Items related to progress tracking, WebSocket, monitoring.
 | TODO-022 | **n8n Integration Examples** - Complete n8n workflow templates for common patterns | P2 | `docs/core/ROADMAP.md` (Near-Term), `docs/technical/TRIGGER_API.md` | PLANNED |
 | TODO-023 | **Real-time monitoring dashboard** - Not implemented | P3 | `docs/OPERATIONAL_STATUS.md` | NOT PLANNED |
 | TODO-024 | **Authentication approach** - API keys vs OAuth undecided | P2 | `docs/core/ROADMAP.md` (Open Questions) | UNCERTAIN |
+| TODO-030 | **Research API error propagation** - Gemini/Ollama errors silently return 200 OK with empty data. Should return proper HTTP error codes (4xx/5xx) and error messages. Affects `/research/run`, `/jobs/research/trigger` | P1 | API test (2026-01-14) | PENDING |
 
 **Notes:**
 - Webhook and Batch Job are highest priority API enhancements
@@ -184,10 +185,10 @@ Items requiring investigation or decision before implementation.
 | RESEARCH_PIPELINE_V2 | 3 | 0 | 0 | 1 | 2 |
 | STORY_GENERATION_ENHANCEMENT | 10 | 0 | 0 | 4 | 6 |
 | INFRA / PERFORMANCE | 2 | 0 | 0 | 1 | 1 |
-| API / OBSERVABILITY | 5 | 0 | 1 | 2 | 1 |
+| API / OBSERVABILITY | 6 | 0 | 2 | 2 | 1 |
 | RELEASE / PROCESS | 1 | 0 | 0 | 0 | 1 |
 | DOCUMENTATION_ONLY | 4 | 0 | 0 | 2 | 2 |
-| **TOTAL** | **25** | **0** | **1** | **10** | **13** |
+| **TOTAL** | **26** | **0** | **2** | **10** | **13** |
 
 ---
 
@@ -195,6 +196,7 @@ Items requiring investigation or decision before implementation.
 
 | Date | Change |
 |------|--------|
+| 2026-01-14 | TODO-030 added: Research API error propagation (P1) |
 | 2026-01-14 | TODO-029 added: Rename GEMINI_MODEL env var (P3) |
 | 2026-01-13 | TODO-016~019 (Infra/Performance debt) marked DONE in v1.3.1 |
 | 2026-01-13 | TODO-020 (Webhook Notifications) marked DONE in v1.3.0 |
