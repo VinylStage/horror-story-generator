@@ -2,6 +2,7 @@
 Job management module for trigger-based API layer.
 
 Phase B+: File-based job storage in ./jobs/ directory.
+v1.3.1: Centralized path management via data_paths module.
 CLI remains source of truth - API triggers subprocess execution.
 """
 
@@ -13,6 +14,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Literal
 
+from src.infra.data_paths import get_jobs_dir
+
 
 # Job status types
 # Note: "skipped" is for expected behaviors like duplicate detection (NOT a failure)
@@ -23,8 +26,9 @@ JobType = Literal["story_generation", "research"]
 WebhookEvent = Literal["succeeded", "failed", "skipped"]
 DEFAULT_WEBHOOK_EVENTS = ["succeeded", "failed", "skipped"]
 
-# Jobs directory (project_root/jobs/)
-JOBS_DIR = Path(__file__).parent.parent.parent / "jobs"
+# Jobs directory - v1.3.1: Use centralized path from data_paths
+# Can be overridden via JOB_DIR environment variable
+JOBS_DIR = get_jobs_dir()
 
 
 @dataclass
@@ -280,3 +284,138 @@ def get_running_jobs() -> list[Job]:
 def get_queued_jobs() -> list[Job]:
     """Get all queued jobs."""
     return list_jobs(status="queued")
+
+
+# =============================================================================
+# Job Pruning (v1.3.1)
+# =============================================================================
+
+def prune_old_jobs(
+    days: Optional[int] = None,
+    max_count: Optional[int] = None,
+    dry_run: bool = False
+) -> dict:
+    """
+    Prune old job files based on age and count.
+
+    v1.3.1: Optional job history cleanup.
+
+    This function is disabled by default. Enable via:
+    - JOB_PRUNE_ENABLED=true environment variable
+    - Or call directly with explicit parameters
+
+    Args:
+        days: Delete jobs older than this many days (default: from env or 30)
+        max_count: Keep at most this many jobs (default: from env or 1000)
+        dry_run: If True, only report what would be deleted
+
+    Returns:
+        dict with pruning results:
+        - deleted_count: Number of jobs deleted
+        - deleted_by_age: Jobs deleted due to age
+        - deleted_by_count: Jobs deleted due to count limit
+        - errors: List of error messages
+        - dry_run: Whether this was a dry run
+    """
+    from src.infra.data_paths import get_job_prune_config
+
+    config = get_job_prune_config()
+
+    # Use provided values or fall back to config
+    prune_days = days if days is not None else config["days"]
+    prune_max_count = max_count if max_count is not None else config["max_count"]
+
+    result = {
+        "deleted_count": 0,
+        "deleted_by_age": 0,
+        "deleted_by_count": 0,
+        "errors": [],
+        "dry_run": dry_run,
+    }
+
+    ensure_jobs_dir()
+
+    try:
+        # Get all job files sorted by modification time (oldest first)
+        job_files = sorted(
+            JOBS_DIR.glob("*.json"),
+            key=lambda p: p.stat().st_mtime
+        )
+
+        cutoff_time = datetime.now().timestamp() - (prune_days * 24 * 60 * 60)
+        to_delete = []
+
+        # Mark old jobs for deletion
+        for job_file in job_files:
+            try:
+                mtime = job_file.stat().st_mtime
+                if mtime < cutoff_time:
+                    # Check if job is in terminal state
+                    job = load_job(job_file.stem)
+                    if job and job.status in ("succeeded", "failed", "cancelled", "skipped"):
+                        to_delete.append(("age", job_file))
+            except Exception as e:
+                result["errors"].append(f"Error checking {job_file.name}: {e}")
+
+        # If still over max_count, mark more for deletion
+        remaining_count = len(job_files) - len(to_delete)
+        if remaining_count > prune_max_count:
+            # Get remaining files (those not already marked for deletion)
+            marked_paths = {f[1] for f in to_delete}
+            remaining_files = [f for f in job_files if f not in marked_paths]
+
+            # Mark oldest ones until we're under max_count
+            excess = remaining_count - prune_max_count
+            for job_file in remaining_files[:excess]:
+                try:
+                    job = load_job(job_file.stem)
+                    if job and job.status in ("succeeded", "failed", "cancelled", "skipped"):
+                        to_delete.append(("count", job_file))
+                except Exception as e:
+                    result["errors"].append(f"Error checking {job_file.name}: {e}")
+
+        # Delete marked jobs
+        for reason, job_file in to_delete:
+            if dry_run:
+                result["deleted_count"] += 1
+                if reason == "age":
+                    result["deleted_by_age"] += 1
+                else:
+                    result["deleted_by_count"] += 1
+            else:
+                try:
+                    job_file.unlink()
+                    result["deleted_count"] += 1
+                    if reason == "age":
+                        result["deleted_by_age"] += 1
+                    else:
+                        result["deleted_by_count"] += 1
+                except Exception as e:
+                    result["errors"].append(f"Error deleting {job_file.name}: {e}")
+
+    except Exception as e:
+        result["errors"].append(f"Pruning error: {e}")
+
+    return result
+
+
+def auto_prune_if_enabled() -> Optional[dict]:
+    """
+    Automatically prune jobs if enabled via environment variable.
+
+    v1.3.1: Called on job creation to keep history manageable.
+
+    Returns:
+        Pruning result dict if pruning was performed, None otherwise
+    """
+    from src.infra.data_paths import get_job_prune_config
+
+    config = get_job_prune_config()
+    if not config["enabled"]:
+        return None
+
+    return prune_old_jobs(
+        days=config["days"],
+        max_count=config["max_count"],
+        dry_run=False
+    )

@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 
 # Extracted modules
 from src.infra.logging_config import setup_logging, DailyRotatingFileHandler
+from src.infra.data_paths import get_novel_output_dir  # v1.3.1: Centralized paths
 from .api_client import call_claude_api, call_llm_api, generate_semantic_summary
 from .model_provider import get_model_info
 from src.dedup.similarity import (
@@ -106,12 +107,18 @@ def load_environment() -> Dict[str, Union[str, int, float]]:
         logger.error("ANTHROPIC_API_KEY가 .env 파일에 설정되지 않았습니다.")
         raise ValueError("ANTHROPIC_API_KEY가 .env 파일에 설정되지 않았습니다.")
 
+    # v1.3.1: Use centralized path from data_paths, with OUTPUT_DIR as override
+    # Priority: OUTPUT_DIR env var > NOVEL_OUTPUT_DIR env var > default (data/novel)
+    output_dir = os.getenv("OUTPUT_DIR")
+    if not output_dir:
+        output_dir = str(get_novel_output_dir())
+
     config = {
         "api_key": api_key,
         "model": os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5-20250929"),
         "max_tokens": int(os.getenv("MAX_TOKENS", "8192")),
         "temperature": float(os.getenv("TEMPERATURE", "0.8")),
-        "output_dir": os.getenv("OUTPUT_DIR", "./generated_stories"),
+        "output_dir": output_dir,
         "log_level": log_level
     }
 

@@ -2,10 +2,12 @@
 Data path helpers for horror-story-generator.
 
 Phase B+: Centralized path management for all data directories.
-Ensures portable directory structure without hardcoded absolute paths.
+v1.3.1: Added novel output directory, job directory, and legacy deprecation.
 
 Directory structure:
 data/
+ ├── novel/                    # Story output (v1.3.1: unified output directory)
+ │   └── YYYY/MM/              # Date-based subdirectories
  ├── research/
  │   ├── cards/                # RC-*.json / md (research cards)
  │   │   └── YYYY/MM/          # Date-based subdirectories (existing format)
@@ -18,13 +20,48 @@ data/
  │   ├── SS-*.json             # Story Seeds
  │   └── seed_registry.sqlite
  └── story_registry.db         # Existing story registry
+
+jobs/                          # Job storage (v1.3.1: centralized)
+
+Environment Variables:
+- NOVEL_OUTPUT_DIR: Override default novel output directory (default: data/novel)
+- JOB_DIR: Override job storage directory (default: jobs)
+- JOB_PRUNE_ENABLED: Enable job history pruning (default: false)
+- JOB_PRUNE_DAYS: Days to keep job history (default: 30)
+- JOB_PRUNE_MAX_COUNT: Maximum jobs to keep (default: 1000)
 """
 
 import logging
+import os
+import warnings
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger("horror_story_generator")
+
+# =============================================================================
+# Environment Variable Configuration (v1.3.1)
+# =============================================================================
+
+def _get_env_bool(key: str, default: bool = False) -> bool:
+    """Get boolean value from environment variable."""
+    val = os.getenv(key, "").lower()
+    if val in ("true", "1", "yes", "on"):
+        return True
+    elif val in ("false", "0", "no", "off"):
+        return False
+    return default
+
+
+def _get_env_int(key: str, default: int) -> int:
+    """Get integer value from environment variable."""
+    val = os.getenv(key)
+    if val is not None:
+        try:
+            return int(val)
+        except ValueError:
+            logger.warning(f"[DataPaths] Invalid integer for {key}: {val}, using default: {default}")
+    return default
 
 # =============================================================================
 # Base Paths (relative to project root)
@@ -174,6 +211,141 @@ def get_story_registry_path() -> Path:
 
 
 # =============================================================================
+# Novel Output Paths (v1.3.1)
+# =============================================================================
+
+def get_novel_output_dir() -> Path:
+    """
+    Get novel output directory.
+
+    v1.3.1: Unified output directory for stories.
+    Can be overridden via NOVEL_OUTPUT_DIR environment variable.
+
+    Default: data/novel
+
+    Returns:
+        Path: Novel output directory
+    """
+    env_path = os.getenv("NOVEL_OUTPUT_DIR")
+    if env_path:
+        return Path(env_path).resolve()
+    return get_data_root() / "novel"
+
+
+def get_novel_output_subdir() -> Path:
+    """
+    Get date-based subdirectory for novel output.
+
+    Returns path like: data/novel/2026/01/
+
+    Returns:
+        Path: Date-based subdirectory path
+    """
+    from datetime import datetime
+    now = datetime.now()
+    return get_novel_output_dir() / str(now.year) / f"{now.month:02d}"
+
+
+# =============================================================================
+# Job Storage Paths (v1.3.1)
+# =============================================================================
+
+def get_jobs_dir() -> Path:
+    """
+    Get jobs directory for job file storage.
+
+    v1.3.1: Centralized job storage path.
+    Can be overridden via JOB_DIR environment variable.
+
+    Default: <project_root>/jobs
+
+    Returns:
+        Path: Jobs directory
+    """
+    env_path = os.getenv("JOB_DIR")
+    if env_path:
+        return Path(env_path).resolve()
+    return get_project_root() / "jobs"
+
+
+def get_logs_dir() -> Path:
+    """
+    Get logs directory for job execution logs.
+
+    Returns:
+        Path: Logs directory
+    """
+    return get_project_root() / "logs"
+
+
+# =============================================================================
+# Job Pruning Configuration (v1.3.1)
+# =============================================================================
+
+def get_job_prune_config() -> dict:
+    """
+    Get job pruning configuration from environment variables.
+
+    v1.3.1: Optional job history cleanup.
+
+    Environment Variables:
+    - JOB_PRUNE_ENABLED: Enable pruning (default: false)
+    - JOB_PRUNE_DAYS: Days to keep (default: 30)
+    - JOB_PRUNE_MAX_COUNT: Max jobs to keep (default: 1000)
+
+    Returns:
+        dict: Pruning configuration
+    """
+    return {
+        "enabled": _get_env_bool("JOB_PRUNE_ENABLED", False),
+        "days": _get_env_int("JOB_PRUNE_DAYS", 30),
+        "max_count": _get_env_int("JOB_PRUNE_MAX_COUNT", 1000),
+    }
+
+
+# =============================================================================
+# Legacy Paths with Deprecation Warnings (v1.3.1)
+# =============================================================================
+
+def get_legacy_research_cards_jsonl() -> Path:
+    """
+    Get legacy research_cards.jsonl path.
+
+    DEPRECATED: Use data/research/ directory structure instead.
+    This function emits a deprecation warning on every call.
+
+    Returns:
+        Path: Legacy research_cards.jsonl path
+    """
+    warnings.warn(
+        "research_cards.jsonl is deprecated. Use data/research/ directory structure. "
+        "See docs/core/ARCHITECTURE.md for the new structure.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_data_root() / "research_cards.jsonl"
+
+
+def get_legacy_generated_stories_dir() -> Path:
+    """
+    Get legacy generated_stories directory.
+
+    DEPRECATED: Use data/novel/ directory instead.
+    This function emits a deprecation warning on every call.
+
+    Returns:
+        Path: Legacy generated_stories directory
+    """
+    warnings.warn(
+        "generated_stories/ is deprecated. Use data/novel/ directory instead. "
+        "Set NOVEL_OUTPUT_DIR environment variable if needed.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_project_root() / "generated_stories"
+
+
+# =============================================================================
 # Directory Initialization
 # =============================================================================
 
@@ -183,6 +355,8 @@ def ensure_data_directories() -> dict:
 
     Creates directories if they don't exist.
     Safe to call multiple times.
+
+    v1.3.1: Added novel output and jobs directories.
 
     Returns:
         dict: Dictionary of created/existing directory paths
@@ -194,6 +368,9 @@ def ensure_data_directories() -> dict:
         "research_vectors": get_research_vectors_dir(),
         "research_logs": get_research_logs_dir(),
         "seeds": get_seeds_root(),
+        "novel_output": get_novel_output_dir(),  # v1.3.1
+        "jobs": get_jobs_dir(),  # v1.3.1
+        "logs": get_logs_dir(),  # v1.3.1
     }
 
     created = []
@@ -215,6 +392,8 @@ def get_all_paths() -> dict:
 
     Useful for debugging and configuration display.
 
+    v1.3.1: Added novel output, jobs, and prune config.
+
     Returns:
         dict: All path configurations
     """
@@ -235,6 +414,11 @@ def get_all_paths() -> dict:
             "registry": get_seed_registry_path(),
         },
         "story_registry": get_story_registry_path(),
+        # v1.3.1: New paths
+        "novel_output": get_novel_output_dir(),
+        "jobs": get_jobs_dir(),
+        "logs": get_logs_dir(),
+        "job_prune_config": get_job_prune_config(),
     }
 
 

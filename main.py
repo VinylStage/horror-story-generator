@@ -277,29 +277,51 @@ def run_research_stub() -> None:
     Phase 2C: 연구 카드 스텁 생성 (테스트용).
 
     실제 웹 요청 없이 플레이스홀더 카드를 생성합니다.
-    ./data/research_cards.jsonl에 추가합니다.
-    """
-    research_dir = Path("./data")
-    research_dir.mkdir(parents=True, exist_ok=True)
 
-    research_file = research_dir / "research_cards.jsonl"
+    DEPRECATED (v1.3.1): research_cards.jsonl은 더 이상 사용되지 않습니다.
+    Use `python -m src.research.executor run <topic>` instead.
+    """
+    import warnings
+    warnings.warn(
+        "run_research_stub() is deprecated. Use 'python -m src.research.executor run <topic>' instead. "
+        "The legacy research_cards.jsonl format is no longer supported.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
+    # v1.3.1: Use new research directory structure for backward compatibility
+    from src.infra.data_paths import get_research_root
+
+    research_root = get_research_root()
+    research_root.mkdir(parents=True, exist_ok=True)
+
+    # Generate a stub card in new format
+    now = datetime.now()
+    card_id = f"STUB-{now.strftime('%Y%m%d_%H%M%S')}"
+
+    # Create date-based subdirectory
+    subdir = research_root / str(now.year) / f"{now.month:02d}"
+    subdir.mkdir(parents=True, exist_ok=True)
 
     stub_card = {
-        "card_id": f"STUB-{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        "card_id": card_id,
         "title": "[STUB] Placeholder Research Card",
         "summary": "This is a stub card for testing the research pipeline. No real web request was made.",
         "tags": ["stub", "test", "placeholder"],
         "source": "local_stub",
-        "created_at": datetime.now().isoformat(),
+        "created_at": now.isoformat(),
         "used_count": 0,
         "last_used_at": None
     }
 
-    with open(research_file, 'a', encoding='utf-8') as f:
-        f.write(json.dumps(stub_card, ensure_ascii=False) + '\n')
+    # Save as JSON file (new format)
+    output_path = subdir / f"{card_id}.json"
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(stub_card, f, ensure_ascii=False, indent=2)
 
-    logger.info(f"[Phase2C] 연구 카드 스텁 생성 완료: {stub_card['card_id']}")
-    logger.info(f"[Phase2C] 저장 위치: {research_file}")
+    logger.info(f"[Phase2C] 연구 카드 스텁 생성 완료: {card_id}")
+    logger.info(f"[Phase2C] 저장 위치: {output_path}")
+    logger.warning("[DEPRECATED] research_cards.jsonl is deprecated. Use src.research.executor instead.")
 
 
 def main() -> None:

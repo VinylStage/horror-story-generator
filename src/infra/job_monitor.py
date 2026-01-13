@@ -3,6 +3,7 @@ Background job monitoring module.
 
 Phase B+: Poll running jobs by PID, update status on completion.
 v1.3.0: Webhook notifications on job completion.
+v1.3.1: Centralized path management via data_paths module.
 """
 
 import os
@@ -19,12 +20,18 @@ from src.infra.job_manager import (
     Job,
 )
 from src.infra.webhook import process_webhook_for_job
+from src.infra.data_paths import (
+    get_project_root,
+    get_novel_output_dir,
+    get_research_root,
+)
 
 
 # Artifact directories to scan for story/research outputs
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-STORY_OUTPUT_DIR = PROJECT_ROOT / "data" / "stories"
-RESEARCH_OUTPUT_DIR = PROJECT_ROOT / "data" / "research"
+# v1.3.1: Use centralized paths from data_paths module
+PROJECT_ROOT = get_project_root()
+STORY_OUTPUT_DIR = get_novel_output_dir()
+RESEARCH_OUTPUT_DIR = get_research_root()
 
 
 def is_process_running(pid: int) -> bool:
