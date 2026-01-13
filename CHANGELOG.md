@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-01-13
+
+### Added
+
+- **Webhook Notifications (TODO-020)**
+  - HTTP POST callbacks on job completion
+  - Configurable events: `succeeded`, `failed`, `skipped`
+  - Retry logic with exponential backoff (3 attempts)
+  - New fields: `webhook_url`, `webhook_events` in trigger requests
+  - New response fields: `webhook_sent`, `webhook_error`
+
+- **"Skipped" Job Status**
+  - New status for expected skip scenarios (e.g., duplicate detection)
+  - Semantically distinct from failure - represents expected behavior
+  - Webhook-triggerable like succeeded/failed
+
+### Changed
+
+- `StoryTriggerRequest` and `ResearchTriggerRequest` schemas extended with webhook fields
+- `JobStatusResponse` includes webhook delivery status
+- `JobMonitorResult` includes `reason` and `webhook_processed` fields
+- Job monitor now detects and reports duplicate detection as "skipped"
+
+### Files Added
+
+- `src/infra/webhook.py` - Webhook notification service
+
+### Files Modified
+
+- `src/infra/job_manager.py` - JobStatus extended, Job dataclass with webhook fields
+- `src/infra/job_monitor.py` - Webhook integration, skip detection
+- `src/api/schemas/jobs.py` - Request/response schemas with webhook support
+- `src/api/routers/jobs.py` - Webhook configuration in triggers
+
+---
+
 ## [1.2.1] - 2026-01-13
 
 ### Fixed

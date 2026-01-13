@@ -1,7 +1,7 @@
 # API Reference
 
 **Status:** Active
-**Version:** v1.2.1
+**Version:** v1.3.0
 **Base URL:** `http://localhost:8000`
 
 ---
@@ -168,7 +168,9 @@ Trigger a story generation job.
   "enable_dedup": true,
   "db_path": "/path/to/stories.db",
   "load_history": true,
-  "model": "ollama:llama3"
+  "model": "ollama:llama3",
+  "webhook_url": "https://your-server.com/callback",
+  "webhook_events": ["succeeded", "failed", "skipped"]
 }
 ```
 
@@ -181,6 +183,8 @@ Trigger a story generation job.
 | `db_path` | string | No | null | SQLite database path |
 | `load_history` | boolean | No | false | Load existing stories |
 | `model` | string | No | null | Model selection. Format: `ollama:llama3`, `ollama:qwen`, or Claude model name |
+| `webhook_url` | string | No | null | URL for webhook notification on job completion (v1.3.0) |
+| `webhook_events` | array | No | ["succeeded", "failed", "skipped"] | Events that trigger webhook (v1.3.0) |
 
 **Response:** `202 Accepted`
 
@@ -206,7 +210,9 @@ Trigger a research generation job.
   "topic": "Korean apartment horror",
   "tags": ["urban", "isolation"],
   "model": "qwen3:30b",
-  "timeout": 120
+  "timeout": 120,
+  "webhook_url": "https://your-server.com/callback",
+  "webhook_events": ["succeeded", "failed", "skipped"]
 }
 ```
 
@@ -216,6 +222,8 @@ Trigger a research generation job.
 | `tags` | array | No | [] | Classification tags |
 | `model` | string | No | "qwen3:30b" | Model name. Ollama: `qwen3:30b`. Gemini: `gemini` or `deep-research` (Deep Research Agent, requires GEMINI_ENABLED=true) |
 | `timeout` | integer | No | 60 | Generation timeout (deep-research supports up to 600s) |
+| `webhook_url` | string | No | null | URL for webhook notification on job completion (v1.3.0) |
+| `webhook_events` | array | No | ["succeeded", "failed", "skipped"] | Events that trigger webhook (v1.3.0) |
 
 **Response:** `202 Accepted`
 
@@ -256,7 +264,11 @@ Get status of a specific job.
   "started_at": "2026-01-12T14:30:01",
   "finished_at": "2026-01-12T14:35:00",
   "exit_code": 0,
-  "error": null
+  "error": null,
+  "webhook_url": "https://your-server.com/callback",
+  "webhook_events": ["succeeded", "failed", "skipped"],
+  "webhook_sent": true,
+  "webhook_error": null
 }
 ```
 
@@ -278,7 +290,7 @@ List all jobs with optional filtering.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `status` | string | Filter by status (queued, running, succeeded, failed, cancelled) |
+| `status` | string | Filter by status (queued, running, succeeded, failed, cancelled, skipped) |
 | `type` | string | Filter by type (story_generation, research) |
 | `limit` | integer | Max results (default: 50, max: 200) |
 
@@ -429,6 +441,7 @@ Only available for research jobs with completed artifacts.
 | `succeeded` | Process completed with no errors |
 | `failed` | Process exited with errors |
 | `cancelled` | User cancelled the job |
+| `skipped` | Expected skip (e.g., duplicate detection) - NOT a failure (v1.3.0) |
 
 ### Job Types
 
@@ -496,16 +509,62 @@ Recommended pattern for n8n or similar workflow tools:
 6. If status == "failed": Handle error
 ```
 
-### Webhook Integration (Planned)
+### Webhook Integration (v1.3.0)
 
-Future versions may support webhook callbacks:
+Jobs can be configured to send HTTP POST notifications on completion:
+
+**Configuration (in trigger request):**
 
 ```json
 {
   "webhook_url": "https://your-server.com/callback",
-  "events": ["succeeded", "failed"]
+  "webhook_events": ["succeeded", "failed", "skipped"]
 }
 ```
+
+**Webhook Payload:**
+
+```json
+{
+  "event": "succeeded",
+  "job_id": "abc-123-def",
+  "type": "story_generation",
+  "status": "succeeded",
+  "params": {...},
+  "created_at": "2026-01-13T12:00:00",
+  "started_at": "2026-01-13T12:00:01",
+  "finished_at": "2026-01-13T12:05:00",
+  "exit_code": 0,
+  "error": null,
+  "artifacts": ["data/stories/story_1.json"],
+  "timestamp": "2026-01-13T12:05:01"
+}
+```
+
+**Webhook Headers:**
+
+| Header | Description |
+|--------|-------------|
+| `Content-Type` | `application/json` |
+| `User-Agent` | `HorrorStoryGenerator/1.3` |
+| `X-Job-ID` | Job identifier |
+| `X-Job-Event` | Event type (succeeded, failed, skipped) |
+
+**Retry Logic:**
+
+- Max 3 attempts with exponential backoff
+- Base delay: 1 second, max delay: 10 seconds
+- Timeout: 30 seconds per request
+
+**Webhook Events:**
+
+| Event | Description |
+|-------|-------------|
+| `succeeded` | Job completed successfully |
+| `failed` | Job failed with error |
+| `skipped` | Job skipped (duplicate detection) |
+
+Note: `cancelled` events do not trigger webhooks by default.
 
 ---
 
