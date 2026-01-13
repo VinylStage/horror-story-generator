@@ -11,8 +11,8 @@
 Integrated Gemini Deep Research Agent as an optional research execution mode:
 - **Agent:** `deep-research-pro-preview-12-2025`
 - **API Provider:** Google AI Studio (not Vertex AI)
-- **API Type:** Gemini Interactions API
-- **Execution:** Asynchronous interaction + polling
+- **API Type:** Standard generate_content API (same as other Gemini models)
+- **Execution:** Synchronous (model handles research internally)
 - **Scope:** Research pipeline ONLY (story generation unchanged)
 
 ---
@@ -23,6 +23,7 @@ Integrated Gemini Deep Research Agent as an optional research execution mode:
 |------|-------------|
 | `591a052` | feat(research): add Gemini Deep Research Agent integration |
 | `58e7969` | docs: add Gemini Deep Research Agent documentation |
+| `b449132` | fix(research): load dotenv before imports, simplify GeminiDeepResearch |
 
 ---
 
@@ -38,7 +39,8 @@ Integrated Gemini Deep Research Agent as an optional research execution mode:
 
 | File | Changes |
 |------|---------|
-| `src/research/executor/model_provider.py` | Added `GeminiDeepResearchProvider` class, updated parsing |
+| `src/research/executor/model_provider.py` | Added `GeminiDeepResearchProvider` class, simplified to use standard generate_content API |
+| `src/research/executor/__main__.py` | Added load_dotenv() before module imports |
 | `src/research/executor/cli.py` | Handle deep-research mode, skip Ollama checks for Gemini |
 | `src/research/executor/output_writer.py` | Record provider, execution_mode, interaction_id in metadata |
 | `.env.example` | Updated GEMINI_MODEL default to deep-research-pro-preview-12-2025 |
@@ -137,13 +139,15 @@ $ python -m src.research.executor run --help | grep -A3 "model"
 
 ## 7. Known Limitations
 
-1. **Polling-based:** Deep Research uses synchronous generate_content call which internally handles the research agent execution. The Interactions API async pattern is prepared but the model handles background execution internally.
+1. **Synchronous Execution:** Deep Research uses standard `generate_content` API. The model handles research agent behavior internally, which may result in longer response times.
 
 2. **Timeout:** Deep research may take longer than standard generation. Default timeout extended to 600 seconds (10 minutes).
 
 3. **API Availability:** Requires `google-genai` package and valid API key from Google AI Studio.
 
 4. **Feature-flagged:** Must set `GEMINI_ENABLED=true` to use any Gemini features.
+
+5. **dotenv Order:** Environment variables must be loaded before module imports. The CLI entry point (`__main__.py`) handles this automatically.
 
 ---
 
