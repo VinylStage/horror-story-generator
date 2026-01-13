@@ -101,10 +101,11 @@ Items related to progress tracking, WebSocket, monitoring.
 | TODO-024 | **Authentication approach** - API keys vs OAuth undecided | P2 | `docs/core/ROADMAP.md` (Open Questions) | UNCERTAIN |
 | TODO-030 | **Research API error propagation** - Gemini/Ollama errors silently return 200 OK with empty data. Should return proper HTTP error codes (4xx/5xx) and error messages. Affects `/research/run`, `/jobs/research/trigger` | P1 | API test (2026-01-14) | PENDING |
 | TODO-031 | **Environment variable hot reload** - `GEMINI_MODEL` and other env vars are read once at module load (`os.getenv()`). Changes to `.env` require uvicorn restart. Consider dynamic reload or document restart requirement. | P2 | API test (2026-01-14) | PENDING |
+| TODO-032 | **Webhook support for sync endpoints** - `/research/run` (sync) doesn't support webhooks, only `/jobs/research/trigger` (async) does. Consider adding optional webhook to sync endpoints or document the difference clearly. | P3 | API test (2026-01-14) | DISCUSSION |
 
 **Notes:**
 - Webhook and Batch Job are highest priority API enhancements
-- TODO-030, TODO-031 discovered during Gemini API testing (2026-01-14)
+- TODO-030, TODO-031, TODO-032 discovered during Gemini API testing (2026-01-14)
 
 ---
 
@@ -187,10 +188,10 @@ Items requiring investigation or decision before implementation.
 | RESEARCH_PIPELINE_V2 | 3 | 0 | 0 | 1 | 2 |
 | STORY_GENERATION_ENHANCEMENT | 10 | 0 | 0 | 4 | 6 |
 | INFRA / PERFORMANCE | 2 | 0 | 0 | 1 | 1 |
-| API / OBSERVABILITY | 7 | 0 | 2 | 3 | 1 |
+| API / OBSERVABILITY | 8 | 0 | 2 | 3 | 2 |
 | RELEASE / PROCESS | 1 | 0 | 0 | 0 | 1 |
 | DOCUMENTATION_ONLY | 4 | 0 | 0 | 2 | 2 |
-| **TOTAL** | **27** | **0** | **2** | **11** | **13** |
+| **TOTAL** | **28** | **0** | **2** | **11** | **14** |
 
 ---
 
@@ -198,6 +199,7 @@ Items requiring investigation or decision before implementation.
 
 | Date | Change |
 |------|--------|
+| 2026-01-14 | TODO-032 added: Webhook support for sync endpoints (P3, DISCUSSION) |
 | 2026-01-14 | TODO-031 added: Environment variable hot reload (P2) |
 | 2026-01-14 | TODO-030 added: Research API error propagation (P1) |
 | 2026-01-14 | TODO-029 added: Rename GEMINI_MODEL env var (P3) |
