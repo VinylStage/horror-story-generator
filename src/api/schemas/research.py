@@ -9,10 +9,26 @@ from pydantic import BaseModel, Field
 class ResearchRunRequest(BaseModel):
     """Request to run research generation."""
 
-    topic: str = Field(..., description="Research topic to analyze")
-    tags: List[str] = Field(default=[], description="Optional tags for categorization")
-    model: Optional[str] = Field(default=None, description="Ollama model override")
-    timeout: Optional[int] = Field(default=None, description="Timeout in seconds")
+    topic: str = Field(
+        ...,
+        description="Research topic to analyze",
+        json_schema_extra={"examples": ["Korean apartment horror", "Urban isolation fear"]}
+    )
+    tags: List[str] = Field(
+        default=[],
+        description="Optional tags for categorization",
+        json_schema_extra={"examples": [["urban", "isolation"], ["supernatural"]]}
+    )
+    model: Optional[str] = Field(
+        default=None,
+        description="Model selection. Options: null/'qwen3:30b' (Ollama default), 'gemini' (Gemini API), 'deep-research' (Gemini Deep Research Agent - recommended). Gemini requires GEMINI_ENABLED=true",
+        json_schema_extra={"examples": ["qwen3:30b", "gemini", "deep-research"]}
+    )
+    timeout: Optional[int] = Field(
+        default=None,
+        description="Timeout in seconds. Recommended: 60 (Ollama), 120 (gemini), 300-600 (deep-research)",
+        json_schema_extra={"examples": [60, 120, 300]}
+    )
 
 
 class ResearchRunResponse(BaseModel):

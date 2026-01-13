@@ -13,7 +13,8 @@ class StoryGenerateRequest(BaseModel):
 
     topic: Optional[str] = Field(
         default=None,
-        description="Story topic. If provided, searches for matching research card or auto-generates one."
+        description="Story topic. If provided, searches for matching research card or auto-generates one.",
+        json_schema_extra={"examples": ["Korean apartment horror", "Subway late night encounter"]}
     )
     auto_research: bool = Field(
         default=True,
@@ -21,11 +22,13 @@ class StoryGenerateRequest(BaseModel):
     )
     model: Optional[str] = Field(
         default=None,
-        description="Story model. Default: Claude Sonnet. Format: 'ollama:qwen3:30b' for Ollama"
+        description="Story model. Options: null (Claude Sonnet default), 'claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101', 'ollama:qwen3:30b' (local Ollama)",
+        json_schema_extra={"examples": [None, "claude-sonnet-4-5-20250929", "ollama:qwen3:30b"]}
     )
     research_model: Optional[str] = Field(
         default=None,
-        description="Research model for auto-research. Default: Ollama qwen3:30b"
+        description="Research model for auto-research. Options: null/'qwen3:30b' (Ollama), 'gemini', 'deep-research' (Gemini Deep Research)",
+        json_schema_extra={"examples": ["qwen3:30b", "gemini", "deep-research"]}
     )
     save_output: bool = Field(
         default=True,

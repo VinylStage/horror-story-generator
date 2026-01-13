@@ -3,12 +3,18 @@
 **Status:** Active
 **Version:** v1.3.2
 **Base URL:** `http://localhost:8000`
+**Swagger UI:** `http://localhost:8000/docs`
+**ReDoc:** `http://localhost:8000/redoc`
 
 ---
 
 ## Overview
 
-The Trigger API provides non-blocking job execution for story and research generation. Jobs are executed as background subprocesses, with status available via polling.
+The Horror Story Generator API provides:
+- **Story Generation** - Direct (blocking) and job-based (non-blocking) story creation
+- **Research Generation** - Ollama/Gemini-based research card creation
+- **Deduplication** - Semantic and canonical similarity checking
+- **Job Management** - Background job execution and monitoring
 
 ### Design Principle
 
@@ -24,18 +30,105 @@ The API triggers CLI commands via subprocess. All business logic resides in the 
 # Start server
 uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
-# Trigger story generation
-curl -X POST http://localhost:8000/jobs/story/trigger \
-  -H "Content-Type: application/json" \
-  -d '{"max_stories": 3, "enable_dedup": true}'
+# Health check
+curl http://localhost:8000/health
 
-# Check status
+# Generate story directly (blocking)
+curl -X POST http://localhost:8000/story/generate \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "Korean apartment horror"}'
+
+# Generate research with Gemini Deep Research
+curl -X POST http://localhost:8000/jobs/research/trigger \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "Korean apartment horror", "model": "deep-research", "timeout": 300}'
+
+# Check job status
 curl http://localhost:8000/jobs/{job_id}
 ```
 
 ---
 
+## Model Selection Reference
+
+### Story Generation Models
+
+| Model | Value | Description |
+|-------|-------|-------------|
+| Claude Sonnet (default) | `null` 또는 미지정 | 기본 모델. 고품질 한국어 호러 생성 |
+| Claude Sonnet 4.5 | `"claude-sonnet-4-5-20250929"` | 최신 Sonnet 모델 명시적 지정 |
+| Claude Opus 4.5 | `"claude-opus-4-5-20251101"` | 고성능 Opus 모델 |
+| Ollama (Local) | `"ollama:qwen3:30b"` | 로컬 Ollama 모델. 형식: `ollama:{model_name}` |
+
+**예시:**
+```json
+// Claude 기본 (권장)
+{"topic": "아파트 호러", "model": null}
+
+// Ollama 로컬 모델
+{"topic": "아파트 호러", "model": "ollama:qwen3:30b"}
+```
+
+### Research Generation Models
+
+| Model | Value | Description | Timeout |
+|-------|-------|-------------|---------|
+| Ollama qwen3:30b (default) | `null` 또는 `"qwen3:30b"` | 기본 로컬 모델 | 60s |
+| Ollama (other) | `"qwen:14b"`, `"llama3"` 등 | 다른 Ollama 모델 | 60s |
+| Gemini Standard | `"gemini"` | Google Gemini API | 120s |
+| Gemini Deep Research | `"deep-research"` | Gemini Deep Research Agent (고품질) | 300-600s |
+
+**환경 변수 요구사항:**
+- Gemini 모델 사용시: `GEMINI_ENABLED=true`, `GEMINI_API_KEY` 필요
+
+**예시:**
+```json
+// Ollama 기본
+{"topic": "Korean apartment horror", "model": "qwen3:30b"}
+
+// Gemini Deep Research (권장 - 고품질)
+{"topic": "Korean apartment horror", "model": "deep-research", "timeout": 300}
+
+// Gemini 표준
+{"topic": "Korean apartment horror", "model": "gemini", "timeout": 120}
+```
+
+---
+
 ## Endpoints
+
+### System Endpoints
+
+#### GET /health
+
+서버 상태 확인.
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "ok",
+  "version": "1.3.2"
+}
+```
+
+---
+
+#### GET /resource/status
+
+Ollama 리소스 매니저 상태 확인.
+
+**Response:** `200 OK`
+
+```json
+{
+  "active_models": ["qwen3:30b"],
+  "idle_timeout_seconds": 300,
+  "last_cleanup": "2026-01-13T12:00:00"
+}
+```
+
+---
 
 ### Story Endpoints (v1.2.0+)
 
@@ -425,6 +518,194 @@ Only available for research jobs with completed artifacts.
   "signal": null,
   "similarity_score": null,
   "message": "Job has no artifacts yet (still running or failed)"
+}
+```
+
+---
+
+### Research Endpoints
+
+연구 카드 생성 및 관리. Ollama LLM을 통해 동기적으로 실행됩니다.
+
+#### POST /research/run
+
+연구 카드 생성 (blocking).
+
+**Request Body:**
+
+```json
+{
+  "topic": "Korean apartment horror",
+  "tags": ["urban", "isolation"],
+  "model": "deep-research",
+  "timeout": 300
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `topic` | string | **Yes** | - | 연구 주제 |
+| `tags` | array | No | [] | 분류 태그 |
+| `model` | string | No | "qwen3:30b" | 모델 선택 (위 Model Selection Reference 참조) |
+| `timeout` | integer | No | 60 | 타임아웃 (초). deep-research는 300-600 권장 |
+
+**Response:** `200 OK`
+
+```json
+{
+  "card_id": "RC-20260113-120000",
+  "status": "completed",
+  "message": "Research card generated successfully",
+  "output_path": "data/research/RC-20260113-120000.json"
+}
+```
+
+---
+
+#### POST /research/validate
+
+기존 연구 카드 품질 검증.
+
+**Request Body:**
+
+```json
+{
+  "card_id": "RC-20260113-120000"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "card_id": "RC-20260113-120000",
+  "is_valid": true,
+  "quality_score": "good",
+  "message": "Card passes all validation checks"
+}
+```
+
+| quality_score | Description |
+|---------------|-------------|
+| `good` | 모든 필수 필드 존재, 품질 양호 |
+| `partial` | 일부 필드 누락 또는 품질 미흡 |
+| `incomplete` | 주요 필드 누락 |
+
+---
+
+#### GET /research/list
+
+연구 카드 목록 조회.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 10 | 최대 결과 수 (1-100) |
+| `offset` | integer | 0 | 페이지네이션 오프셋 |
+| `quality` | string | null | 품질 필터 (good, partial, incomplete) |
+
+**Response:** `200 OK`
+
+```json
+{
+  "cards": [
+    {
+      "card_id": "RC-20260113-120000",
+      "title": "Korean Apartment Horror Research",
+      "topic": "Korean apartment horror",
+      "quality_score": "good",
+      "created_at": "2026-01-13T12:00:00"
+    }
+  ],
+  "total": 1,
+  "limit": 10,
+  "offset": 0,
+  "message": "Found 1 cards"
+}
+```
+
+---
+
+#### POST /research/dedup
+
+연구 카드 시맨틱 중복 검사 (FAISS 임베딩 기반).
+
+**Request Body:**
+
+```json
+{
+  "card_id": "RC-20260113-120000"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "card_id": "RC-20260113-120000",
+  "signal": "LOW",
+  "similarity_score": 0.45,
+  "nearest_card_id": "RC-20260112-090000",
+  "similar_cards": [
+    {
+      "card_id": "RC-20260112-090000",
+      "similarity_score": 0.45,
+      "title": "Urban Horror Research"
+    }
+  ],
+  "index_size": 52,
+  "message": "Card is sufficiently unique"
+}
+```
+
+---
+
+### Dedup Endpoints
+
+스토리 중복 검사. Canonical dimension 기반 유사도 평가.
+
+#### POST /dedup/evaluate
+
+스토리 중복 신호 평가.
+
+**Request Body:**
+
+```json
+{
+  "template_id": "T-DOM-001",
+  "canonical_core": {
+    "setting": "domestic_space",
+    "primary_fear": "loss_of_autonomy",
+    "antagonist": "collective",
+    "mechanism": "erosion",
+    "twist": "acceptance"
+  },
+  "title": "The Floor Above"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `template_id` | string | No | 사용 중인 템플릿 ID |
+| `canonical_core` | object | No | Canonical dimension 값 |
+| `title` | string | No | 스토리 제목 |
+
+**Response:** `200 OK`
+
+```json
+{
+  "signal": "LOW",
+  "similarity_score": 0.15,
+  "similar_stories": [
+    {
+      "story_id": "20260112_143052",
+      "template_id": "T-DOM-001",
+      "similarity_score": 0.15,
+      "matched_dimensions": ["setting"]
+    }
+  ],
+  "message": "Story is sufficiently unique"
 }
 ```
 

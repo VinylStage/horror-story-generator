@@ -24,7 +24,8 @@ class StoryTriggerRequest(BaseModel):
     load_history: bool = Field(default=False, description="Load story history on startup")
     model: Optional[str] = Field(
         default=None,
-        description="Model selection. Default: Claude Sonnet. Format: 'ollama:llama3', 'ollama:qwen', or Claude model name"
+        description="Model selection. Options: null (Claude Sonnet default), 'claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101', 'ollama:qwen3:30b' (local Ollama)",
+        json_schema_extra={"examples": [None, "claude-sonnet-4-5-20250929", "ollama:qwen3:30b"]}
     )
     # Webhook fields (v1.3.0)
     webhook_url: Optional[str] = Field(
@@ -40,10 +41,18 @@ class StoryTriggerRequest(BaseModel):
 class ResearchTriggerRequest(BaseModel):
     """Request to trigger research generation job."""
 
-    topic: str = Field(..., description="Research topic to analyze")
-    tags: List[str] = Field(default=[], description="Optional tags for categorization")
-    model: Optional[str] = Field(default=None, description="Ollama model override")
-    timeout: Optional[int] = Field(default=None, description="Timeout in seconds")
+    topic: str = Field(..., description="Research topic to analyze", json_schema_extra={"examples": ["Korean apartment horror", "Urban isolation fear"]})
+    tags: List[str] = Field(default=[], description="Optional tags for categorization", json_schema_extra={"examples": [["urban", "isolation"], ["supernatural"]]})
+    model: Optional[str] = Field(
+        default=None,
+        description="Model selection. Options: null/'qwen3:30b' (Ollama default), 'gemini' (Gemini API), 'deep-research' (Gemini Deep Research Agent - recommended for high quality). Gemini requires GEMINI_ENABLED=true",
+        json_schema_extra={"examples": ["qwen3:30b", "gemini", "deep-research"]}
+    )
+    timeout: Optional[int] = Field(
+        default=None,
+        description="Timeout in seconds. Recommended: 60 (Ollama), 120 (gemini), 300-600 (deep-research)",
+        json_schema_extra={"examples": [60, 120, 300]}
+    )
     # Webhook fields (v1.3.0)
     webhook_url: Optional[str] = Field(
         default=None,
