@@ -1,7 +1,7 @@
 # System Architecture
 
 **Status:** Active
-**Version:** v1.3.2
+**Version:** v1.3.2 <!-- x-release-please-version -->
 
 ---
 
@@ -472,7 +472,7 @@ flowchart TB
 | Format | Provider | Example |
 |--------|----------|---------|
 | `ollama:{model}` | Ollama | `ollama:llama3`, `ollama:qwen` |
-| `gemini` | Gemini | `gemini` (uses GEMINI_MODEL env) |
+| `gemini` | Gemini | `gemini` (uses GOOGLE_AI_MODEL env) |
 | `gemini:{model}` | Gemini | `gemini:gemini-2.5-flash` |
 | `{claude-model}` | Anthropic | `claude-sonnet-4-5-20250929` |
 | (none) | Default | Story: Claude, Research: Ollama |
@@ -556,7 +556,7 @@ Gemini is **feature-flagged** and only available for research generation.
 ```env
 GEMINI_ENABLED=false          # Must be true to use Gemini
 GEMINI_API_KEY=your_key       # Required when enabled
-GEMINI_MODEL=deep-research-pro-preview-12-2025  # Default model
+GOOGLE_AI_MODEL=deep-research-pro-preview-12-2025  # Default model
 ```
 
 **API Provider:** Google AI Studio (not Vertex AI)

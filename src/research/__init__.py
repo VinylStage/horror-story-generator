@@ -13,7 +13,7 @@ from .integration import (
     select_research_for_template,
     ResearchSelection,
     get_research_context_for_prompt,
-    get_phase_b_status,
+    get_vector_backend_status,
 )
 
 __all__ = [
@@ -23,5 +23,5 @@ __all__ = [
     "select_research_for_template",
     "ResearchSelection",
     "get_research_context_for_prompt",
-    "get_phase_b_status",
+    "get_vector_backend_status",
 ]

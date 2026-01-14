@@ -2,7 +2,7 @@
 
 Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시스템입니다.
 
-> **Version:** v1.2.1
+> **Version:** v1.3.2 <!-- x-release-please-version -->
 >
 > 모든 문서는 현재 `src/` 패키지 구조와 Canonical Enum v1.0을 기준으로 작성되었습니다.
 >
@@ -62,7 +62,7 @@ STORY_DEDUP_STRICT=false         # true 시 중복 감지되면 생성 중단
 # 모드: gemini (표준) 또는 deep-research (Deep Research Agent)
 GEMINI_ENABLED=false             # Gemini 활성화 (true로 설정 시 사용 가능)
 GEMINI_API_KEY=your_gemini_key   # Gemini API 키
-GEMINI_MODEL=deep-research-pro-preview-12-2025  # 기본 모델
+GOOGLE_AI_MODEL=deep-research-pro-preview-12-2025  # 기본 모델
 
 # Ollama 설정 (선택 - 로컬 모델)
 OLLAMA_HOST=localhost            # Ollama 호스트

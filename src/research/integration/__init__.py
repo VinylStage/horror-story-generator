@@ -13,7 +13,7 @@ from .selector import (
     ResearchSelection,
     get_research_context_for_prompt,
 )
-from .phase_b_hooks import get_phase_b_status
+from .vector_backend_hooks import get_vector_backend_status
 
 __all__ = [
     "load_research_cards",
@@ -21,5 +21,5 @@ __all__ = [
     "select_research_for_template",
     "ResearchSelection",
     "get_research_context_for_prompt",
-    "get_phase_b_status",
+    "get_vector_backend_status",
 ]
