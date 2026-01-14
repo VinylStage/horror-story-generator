@@ -117,6 +117,25 @@ API 서버 초기 시작 시 실패할 수 있습니다:
 
 **해결:** `pkill -f uvicorn` 후 재시작하거나, `.env` 파일 확인 후 재시작
 
+### 환경 변수 변경 시 재시작 필요
+
+`.env` 파일의 환경 변수는 **서버 시작 시 1회만 로드**됩니다.
+
+환경 변수 변경 후에는 반드시 uvicorn을 재시작해야 적용됩니다:
+
+```bash
+# API 서버 재시작
+pkill -f uvicorn
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+```
+
+**영향받는 변수:** `GOOGLE_AI_MODEL`, `GEMINI_API_KEY`, `GEMINI_ENABLED` 등
+
+> **팁:** 모델을 변경할 경우, 환경 변수 대신 API 호출 시 `model` 파라미터로 명시적 지정 가능:
+> ```bash
+> curl -X POST .../research/run -d '{"topic": "...", "model": "gemini:gemma-3-27b-it"}'
+> ```
+
 ---
 
 ## 운영 가이드
