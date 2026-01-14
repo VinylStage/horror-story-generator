@@ -1,0 +1,219 @@
+{
+  "name": "Horror Story - Batch Generation (API)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "name": "Schedule: Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/jobs/batch/trigger",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"jobs\": [\n    {\"type\": \"research\", \"topic\": \"Korean urban legends\", \"model\": \"gemini\"},\n    {\"type\": \"research\", \"topic\": \"Apartment horror stories\", \"model\": \"gemini\"},\n    {\"type\": \"story\", \"max_stories\": 2, \"enable_dedup\": true}\n  ]\n}",
+        "options": {}
+      },
+      "name": "Trigger Batch Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\n\nreturn {\n  json: {\n    batch_id: response.batch_id,\n    job_ids: response.job_ids,\n    job_count: response.job_count,\n    poll_count: 0\n  }\n};"
+      },
+      "name": "Extract Batch Info",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "name": "Wait 30s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://localhost:8000/jobs/batch/{{ $json.batch_id }}",
+        "options": {}
+      },
+      "name": "Poll Batch Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Extract Batch Info').item.json;\nconst current = $input.item.json;\nconst pollCount = (prev.poll_count || 0) + 1;\n\nconst isComplete = ['succeeded', 'failed', 'partial'].includes(current.status);\n\nreturn {\n  json: {\n    batch_id: current.batch_id,\n    status: current.status,\n    total_jobs: current.total_jobs,\n    completed_jobs: current.completed_jobs,\n    succeeded_jobs: current.succeeded_jobs,\n    failed_jobs: current.failed_jobs,\n    running_jobs: current.running_jobs,\n    jobs: current.jobs,\n    poll_count: pollCount,\n    is_complete: isComplete,\n    should_continue: !isComplete && pollCount < 60\n  }\n};"
+      },
+      "name": "Check Batch Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.should_continue }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Batch Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\n\nconst summary = {\n  batch_id: result.batch_id,\n  final_status: result.status,\n  total_jobs: result.total_jobs,\n  succeeded: result.succeeded_jobs,\n  failed: result.failed_jobs,\n  success_rate: ((result.succeeded_jobs / result.total_jobs) * 100).toFixed(1) + '%',\n  poll_count: result.poll_count,\n  jobs_detail: result.jobs.map(j => ({\n    job_id: j.job_id,\n    type: j.type,\n    status: j.status,\n    error: j.error\n  }))\n};\n\nreturn { json: summary };"
+      },
+      "name": "Batch Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 400]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"**Horror Story Batch Complete**\\n\\nBatch ID: `{{ $json.batch_id }}`\\nStatus: {{ $json.final_status }}\\nSuccess Rate: {{ $json.success_rate }}\\n\\nSucceeded: {{ $json.succeeded }} / {{ $json.total_jobs }}\"\n}",
+        "options": {}
+      },
+      "name": "Notify: Discord (Optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 400],
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "Schedule: Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Trigger Batch Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Batch Jobs": {
+      "main": [
+        [
+          {
+            "node": "Extract Batch Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Batch Info": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s": {
+      "main": [
+        [
+          {
+            "node": "Poll Batch Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Batch Status": {
+      "main": [
+        [
+          {
+            "node": "Check Batch Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Batch Status": {
+      "main": [
+        [
+          {
+            "node": "Batch Complete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Complete?": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Batch Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Summary": {
+      "main": [
+        [
+          {
+            "node": "Notify: Discord (Optional)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["horror-story", "api", "batch", "scheduled"],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-15T00:00:00.000Z",
+  "versionId": "1"
+}
