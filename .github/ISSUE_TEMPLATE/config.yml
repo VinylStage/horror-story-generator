@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 프로젝트 문서
+    url: https://github.com/vinylstudio/horror-story-generator/blob/main/README.md
+    about: 프로젝트 사용법과 설정 방법을 확인하세요.

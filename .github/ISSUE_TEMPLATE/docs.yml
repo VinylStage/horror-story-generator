@@ -1,0 +1,65 @@
+name: 📚 문서화 (Docs)
+description: README, API 문서, 사용 가이드 등 문서 개선
+title: "[Docs] "
+labels: ["type: docs"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        문서 개선을 제안해주세요.
+        좋은 문서는 프로젝트의 품질을 높이고 협업을 원활하게 합니다.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: 문서 유형
+      description: 어떤 종류의 문서 작업인가요?
+      options:
+        - README 개선
+        - API 문서 작성
+        - 사용 가이드 작성
+        - 개발 환경 설정 가이드
+        - 아키텍처 문서
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: 현재 문서의 문제점
+      description: 기존 문서에 어떤 부분이 부족하거나 개선이 필요한가요?
+      placeholder: |
+        예) README에 로컬 개발 환경 구성 방법이 누락되어 있습니다.
+        예) API 엔드포인트 설명이 최신 상태가 아닙니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 제안하는 개선 사항
+      description: 어떻게 문서를 개선할 계획인가요?
+      placeholder: |
+        예) Poetry를 이용한 로컬 환경 구성 가이드 추가
+        예) OpenAPI 스펙 기반으로 API 문서 자동 생성 설정
+    validations:
+      required: true
+
+  - type: textarea
+    id: outline
+    attributes:
+      label: 문서 개요 (선택사항)
+      description: 작성할 문서의 목차나 구조를 미리 작성해주세요.
+      placeholder: |
+        예)
+        1. 사전 요구사항
+        2. 설치 방법
+        3. 실행 방법
+        4. 문제 해결
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 자료
+      description: 참고할 만한 다른 프로젝트의 문서나 자료가 있다면 공유해주세요.

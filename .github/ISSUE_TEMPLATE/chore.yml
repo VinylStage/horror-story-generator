@@ -1,0 +1,63 @@
+name: 🔧 유지보수 (Chore)
+description: 코드 정리, 의존성 업데이트, 빌드 설정 등 유지보수 작업
+title: "[Chore] "
+labels: ["type: chore"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        유지보수 작업을 등록해주세요.
+        기능 변경 없이 코드 품질이나 개발 환경을 개선하는 작업입니다.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: 작업 유형
+      description: 어떤 종류의 유지보수 작업인가요?
+      options:
+        - 의존성 업데이트
+        - 코드 정리 / 리팩토링
+        - 빌드 설정 변경
+        - CI/CD 개선
+        - 환경 설정 변경
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 작업 내용
+      description: 무엇을 업데이트하거나 개선할 예정인가요?
+      placeholder: |
+        예) Python 3.11 → 3.12 업데이트
+        예) Poetry 의존성 최신화
+        예) Docker 이미지 경량화
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: 작업 이유
+      description: 왜 이 작업이 필요한가요?
+      placeholder: |
+        예) 보안 취약점 패치를 위해 라이브러리 업데이트 필요
+        예) CI 빌드 시간 단축을 위한 캐시 전략 개선
+    validations:
+      required: true
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: 체크리스트
+      value: |
+        - [ ] 변경 사항 적용
+        - [ ] 테스트 통과 확인 (`pytest`)
+        - [ ] Breaking Change 여부 확인
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 추가 메모
+      description: 참고할 사항이 있다면 작성해주세요.
