@@ -3,6 +3,7 @@ Job management module for trigger-based API layer.
 
 Phase B+: File-based job storage in ./jobs/ directory.
 v1.3.1: Centralized path management via data_paths module.
+v1.4.0: Batch job support.
 CLI remains source of truth - API triggers subprocess execution.
 """
 
@@ -284,6 +285,219 @@ def get_running_jobs() -> list[Job]:
 def get_queued_jobs() -> list[Job]:
     """Get all queued jobs."""
     return list_jobs(status="queued")
+
+
+# =============================================================================
+# Batch Job Management (v1.4.0)
+# =============================================================================
+
+BatchStatus = Literal["queued", "running", "succeeded", "failed", "partial"]
+
+# Batches directory
+BATCHES_DIR = JOBS_DIR.parent / "batches"
+
+
+@dataclass
+class Batch:
+    """
+    Batch model for tracking multiple jobs as a unit.
+
+    Stored as JSON in ./batches/{batch_id}.json
+
+    v1.4.0: Batch job support for triggering multiple jobs at once.
+    """
+    batch_id: str
+    job_ids: list = field(default_factory=list)
+    status: BatchStatus = "queued"
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    finished_at: Optional[str] = None
+    # Webhook fields
+    webhook_url: Optional[str] = None
+    webhook_events: list = field(default_factory=lambda: DEFAULT_WEBHOOK_EVENTS.copy())
+    webhook_sent: bool = False
+    webhook_error: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        """Convert batch to dictionary."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Batch":
+        """Create batch from dictionary."""
+        return cls(**data)
+
+
+def ensure_batches_dir() -> Path:
+    """Ensure batches directory exists."""
+    BATCHES_DIR.mkdir(parents=True, exist_ok=True)
+    return BATCHES_DIR
+
+
+def get_batch_path(batch_id: str) -> Path:
+    """Get path to batch JSON file."""
+    return BATCHES_DIR / f"{batch_id}.json"
+
+
+def create_batch(
+    job_ids: list[str],
+    webhook_url: Optional[str] = None,
+    webhook_events: Optional[list] = None
+) -> Batch:
+    """
+    Create a new batch and save to disk.
+
+    Args:
+        job_ids: List of job IDs in the batch
+        webhook_url: Optional webhook URL for batch completion
+        webhook_events: Optional webhook events
+
+    Returns:
+        Created Batch instance
+    """
+    ensure_batches_dir()
+
+    batch_id = f"batch-{uuid.uuid4().hex[:12]}"
+    batch = Batch(
+        batch_id=batch_id,
+        job_ids=job_ids,
+        status="queued",
+        webhook_url=webhook_url,
+        webhook_events=webhook_events or DEFAULT_WEBHOOK_EVENTS.copy(),
+    )
+
+    save_batch(batch)
+    return batch
+
+
+def save_batch(batch: Batch) -> bool:
+    """
+    Save batch to disk.
+
+    Args:
+        batch: Batch instance to save
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        ensure_batches_dir()
+        batch_path = get_batch_path(batch.batch_id)
+
+        with open(batch_path, "w", encoding="utf-8") as f:
+            json.dump(batch.to_dict(), f, indent=2, ensure_ascii=False)
+
+        return True
+    except Exception:
+        return False
+
+
+def load_batch(batch_id: str) -> Optional[Batch]:
+    """
+    Load batch from disk.
+
+    Args:
+        batch_id: Batch ID to load
+
+    Returns:
+        Batch instance if found, None otherwise
+    """
+    try:
+        batch_path = get_batch_path(batch_id)
+
+        if not batch_path.exists():
+            return None
+
+        with open(batch_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return Batch.from_dict(data)
+    except Exception:
+        return None
+
+
+def get_batch_status(batch_id: str) -> Optional[dict]:
+    """
+    Get aggregated batch status with individual job statuses.
+
+    Args:
+        batch_id: Batch ID to check
+
+    Returns:
+        Dict with batch status info, or None if batch not found
+    """
+    batch = load_batch(batch_id)
+    if batch is None:
+        return None
+
+    # Aggregate job statuses
+    job_statuses = []
+    counts = {
+        "total": len(batch.job_ids),
+        "completed": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "running": 0,
+        "queued": 0,
+        "skipped": 0,
+    }
+
+    for job_id in batch.job_ids:
+        job = load_job(job_id)
+        if job:
+            job_statuses.append({
+                "job_id": job.job_id,
+                "type": job.type,
+                "status": job.status,
+                "error": job.error,
+            })
+
+            if job.status in ("succeeded", "failed", "cancelled", "skipped"):
+                counts["completed"] += 1
+            if job.status == "succeeded":
+                counts["succeeded"] += 1
+            elif job.status in ("failed", "cancelled"):
+                counts["failed"] += 1
+            elif job.status == "skipped":
+                counts["skipped"] += 1
+            elif job.status == "running":
+                counts["running"] += 1
+            elif job.status == "queued":
+                counts["queued"] += 1
+
+    # Determine aggregate status
+    if counts["completed"] == counts["total"]:
+        if counts["failed"] > 0:
+            aggregate_status = "partial" if counts["succeeded"] > 0 else "failed"
+        else:
+            aggregate_status = "succeeded"
+        # Update batch finished_at if not set
+        if batch.finished_at is None:
+            batch.finished_at = datetime.now().isoformat()
+            batch.status = aggregate_status
+            save_batch(batch)
+    elif counts["running"] > 0:
+        aggregate_status = "running"
+        if batch.status != "running":
+            batch.status = "running"
+            save_batch(batch)
+    else:
+        aggregate_status = "queued"
+
+    return {
+        "batch_id": batch.batch_id,
+        "status": aggregate_status,
+        "total_jobs": counts["total"],
+        "completed_jobs": counts["completed"],
+        "succeeded_jobs": counts["succeeded"],
+        "failed_jobs": counts["failed"],
+        "running_jobs": counts["running"],
+        "queued_jobs": counts["queued"],
+        "jobs": job_statuses,
+        "created_at": batch.created_at,
+        "finished_at": batch.finished_at,
+        "webhook_url": batch.webhook_url,
+        "webhook_sent": batch.webhook_sent,
+    }
 
 
 # =============================================================================

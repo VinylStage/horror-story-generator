@@ -3,10 +3,13 @@ Jobs router for trigger-based API.
 
 Phase B+: Non-blocking job execution via CLI subprocess.
 v1.3.0: Webhook notifications on job completion.
+v1.4.0: Batch job support.
 
 Endpoints:
 - POST /jobs/story/trigger - Trigger story generation
 - POST /jobs/research/trigger - Trigger research generation
+- POST /jobs/batch/trigger - Trigger multiple jobs as a batch
+- GET /jobs/batch/{batch_id} - Get batch status
 - GET /jobs/{job_id} - Get job status
 - GET /jobs - List all jobs
 - POST /jobs/{job_id}/cancel - Cancel a running job
@@ -33,6 +36,11 @@ from ..schemas.jobs import (
     JobMonitorResult,
     JobMonitorResponse,
     JobDedupCheckResponse,
+    # Batch schemas (v1.4.0)
+    BatchTriggerRequest,
+    BatchTriggerResponse,
+    BatchStatusResponse,
+    BatchJobStatus,
 )
 
 # Import job manager from src.infra
@@ -41,6 +49,9 @@ from src.infra.job_manager import (
     load_job,
     update_job_status,
     list_jobs as list_jobs_func,
+    # Batch functions (v1.4.0)
+    create_batch,
+    get_batch_status,
 )
 from src.infra.job_monitor import (
     monitor_job,
@@ -246,6 +257,143 @@ async def trigger_research_generation(request: ResearchTriggerRequest):
     except Exception as e:
         update_job_status(job.job_id, "failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to start job: {e}")
+
+
+# =============================================================================
+# Batch Job Endpoints (v1.4.0)
+# =============================================================================
+
+
+@router.post("/batch/trigger", response_model=BatchTriggerResponse, status_code=202)
+async def trigger_batch_jobs(request: BatchTriggerRequest):
+    """
+    Trigger multiple jobs as a batch.
+
+    v1.4.0: Batch job support for triggering multiple jobs at once.
+
+    Accepts an array of job specifications and returns a batch_id
+    for tracking the aggregate status of all jobs.
+    """
+    ensure_logs_dir()
+
+    job_ids = []
+    errors = []
+
+    for idx, job_spec in enumerate(request.jobs):
+        try:
+            if job_spec.type == "research":
+                if not job_spec.topic:
+                    errors.append(f"Job {idx}: Research job requires 'topic'")
+                    continue
+
+                params = {
+                    "topic": job_spec.topic,
+                    "tags": job_spec.tags,
+                    "model": job_spec.model,
+                    "timeout": job_spec.timeout,
+                }
+                job = create_job(job_type="research", params=params)
+                log_path = LOGS_DIR / f"research_{job.job_id}.log"
+                cmd = build_research_command(params)
+
+            elif job_spec.type == "story":
+                params = {
+                    "max_stories": job_spec.max_stories,
+                    "enable_dedup": job_spec.enable_dedup,
+                    "model": job_spec.model,
+                }
+                job = create_job(job_type="story_generation", params=params)
+                log_path = LOGS_DIR / f"story_{job.job_id}.log"
+                cmd = build_story_command(params)
+
+            else:
+                errors.append(f"Job {idx}: Unknown job type '{job_spec.type}'")
+                continue
+
+            # Launch subprocess
+            with open(log_path, "w") as log_file:
+                process = subprocess.Popen(
+                    cmd,
+                    cwd=PROJECT_ROOT,
+                    stdout=log_file,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
+
+            # Update job with pid and log path
+            update_job_status(job.job_id, "running", pid=process.pid)
+            job_data = load_job(job.job_id)
+            if job_data:
+                job_data.log_path = str(log_path)
+                from src.infra.job_manager import save_job
+                save_job(job_data)
+
+            job_ids.append(job.job_id)
+
+        except Exception as e:
+            errors.append(f"Job {idx}: {str(e)}")
+
+    if not job_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No jobs were created. Errors: {'; '.join(errors)}"
+        )
+
+    # Create batch record
+    batch = create_batch(
+        job_ids=job_ids,
+        webhook_url=request.webhook_url,
+        webhook_events=request.webhook_events,
+    )
+
+    message = f"Batch triggered with {len(job_ids)} jobs"
+    if errors:
+        message += f" ({len(errors)} failed: {'; '.join(errors)})"
+
+    return BatchTriggerResponse(
+        batch_id=batch.batch_id,
+        job_ids=job_ids,
+        job_count=len(job_ids),
+        status="running",
+        message=message,
+    )
+
+
+@router.get("/batch/{batch_id}", response_model=BatchStatusResponse)
+async def get_batch_job_status(batch_id: str):
+    """
+    Get batch status by ID.
+
+    v1.4.0: Returns aggregate status and individual job statuses.
+    """
+    status = get_batch_status(batch_id)
+
+    if status is None:
+        raise HTTPException(status_code=404, detail=f"Batch not found: {batch_id}")
+
+    return BatchStatusResponse(
+        batch_id=status["batch_id"],
+        status=status["status"],
+        total_jobs=status["total_jobs"],
+        completed_jobs=status["completed_jobs"],
+        succeeded_jobs=status["succeeded_jobs"],
+        failed_jobs=status["failed_jobs"],
+        running_jobs=status["running_jobs"],
+        queued_jobs=status["queued_jobs"],
+        jobs=[
+            BatchJobStatus(
+                job_id=j["job_id"],
+                type=j["type"],
+                status=j["status"],
+                error=j.get("error"),
+            )
+            for j in status["jobs"]
+        ],
+        created_at=status["created_at"],
+        finished_at=status.get("finished_at"),
+        webhook_url=status.get("webhook_url"),
+        webhook_sent=status.get("webhook_sent", False),
+    )
 
 
 @router.get("/{job_id}", response_model=JobStatusResponse)
