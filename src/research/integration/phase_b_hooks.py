@@ -44,10 +44,7 @@ def init_vector_backend() -> bool:
         logger.debug("[PhaseB] Vector backend disabled (placeholder)")
         return False
 
-    # TODO: Phase B implementation
-    # - Initialize vector store connection
-    # - Load embedding model
-    # - Verify index exists or create
+    # Migrated to Issue #27 - Phase B vector backend implementation
     logger.warning("[PhaseB] Vector backend not implemented")
     return False
 
@@ -70,9 +67,7 @@ def generate_embedding(text: str) -> Optional[List[float]]:
         logger.debug("[PhaseB] Embedding generation disabled (placeholder)")
         return None
 
-    # TODO: Phase B implementation
-    # - Call embedding model
-    # - Return normalized vector
+    # Migrated to Issue #27 - Phase B vector backend implementation
     logger.warning("[PhaseB] Embedding generation not implemented")
     return None
 
@@ -99,10 +94,7 @@ def vector_search_research_cards(
         logger.debug("[PhaseB] Vector search disabled (placeholder)")
         return []
 
-    # TODO: Phase B implementation
-    # - Query vector store
-    # - Apply filters
-    # - Return ranked results with scores
+    # Migrated to Issue #27 - Phase B vector backend implementation
     logger.warning("[PhaseB] Vector search not implemented")
     return []
 
@@ -129,10 +121,7 @@ def index_research_card(
         logger.debug("[PhaseB] Card indexing disabled (placeholder)")
         return False
 
-    # TODO: Phase B implementation
-    # - Generate embedding for content
-    # - Store in vector database with metadata
-    # - Return success status
+    # Migrated to Issue #27 - Phase B vector backend implementation
     logger.warning("[PhaseB] Card indexing not implemented")
     return False
 
@@ -158,10 +147,7 @@ def compute_semantic_affinity(
         logger.debug("[PhaseB] Semantic affinity disabled (placeholder)")
         return 0.0
 
-    # TODO: Phase B implementation
-    # - Generate embeddings for both inputs
-    # - Compute cosine similarity
-    # - Combine with rule-based affinity
+    # Migrated to Issue #27 - Phase B vector backend implementation
     logger.warning("[PhaseB] Semantic affinity not implemented")
     return 0.0
 
@@ -186,10 +172,7 @@ def cluster_research_cards(
         logger.debug("[PhaseB] Clustering disabled (placeholder)")
         return {}
 
-    # TODO: Phase B implementation
-    # - Generate embeddings for all cards
-    # - Apply clustering algorithm (k-means, HDBSCAN)
-    # - Return cluster assignments
+    # Migrated to Issue #27 - Phase B vector backend implementation
     logger.warning("[PhaseB] Clustering not implemented")
     return {}
 

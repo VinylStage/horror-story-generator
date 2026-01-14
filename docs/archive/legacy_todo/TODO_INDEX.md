@@ -1,9 +1,20 @@
-# TODO Index
+> ⚠️ **ARCHIVED DOCUMENT**
+>
+> This document is no longer used for task tracking.
+> All active work is tracked exclusively via GitHub Issues.
+>
+> **Migration Date:** 2026-01-14
+> **Migration Issue:** #1
 
-**Status:** Active
+---
+
+# TODO Index (ARCHIVED)
+
+**Status:** ~~Active~~ **ARCHIVED**
 **Version:** v1.3.2
 **Last Updated:** 2026-01-13
 **Audit Method:** Documentation scan (no source code TODO comments)
+**Migration Status:** All items migrated to GitHub Issues #2-#27
 
 ---
 
