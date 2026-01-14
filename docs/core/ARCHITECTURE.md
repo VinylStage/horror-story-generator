@@ -1,7 +1,7 @@
 # System Architecture
 
 **Status:** Active
-**Version:** v1.7.0 <!-- x-release-please-version -->
+**Version:** v1.8.0 <!-- x-release-please-version -->
 
 ---
 
