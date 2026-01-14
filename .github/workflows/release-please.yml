@@ -10,6 +10,10 @@
 # - Creates/updates a release PR with changelog
 # - Bumps version in pyproject.toml and src/__init__.py
 # - Creates GitHub release and tag when PR is merged
+#
+# Loop Prevention:
+# - Skips if commit is from release-please (github-actions[bot])
+# - Skips if commit message starts with "chore(release):"
 
 name: Release Please
 
@@ -34,6 +38,15 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    # Skip if triggered by release-please's own commits
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'push' &&
+        !startsWith(github.event.head_commit.message, 'chore(release):') &&
+        github.event.head_commit.author.name != 'github-actions[bot]'
+      )
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
