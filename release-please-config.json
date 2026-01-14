@@ -6,7 +6,69 @@
       "package-name": "horror-story-generator",
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": false,
-      "include-v-in-tag": true
+      "include-v-in-tag": true,
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "src/__init__.py",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "README.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/README.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/API.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/ARCHITECTURE.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/ROADMAP.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/OPERATIONAL_STATUS.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/runbook_24h_test.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/canonical_enum.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/CANONICAL_KEY_APPLICATION_SCOPE.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/KU_TO_CANONICAL_KEY_RULES.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/audit/IMPLEMENTATION_AUDIT.md",
+          "glob": false
+        }
+      ]
     }
   },
   "changelog-sections": [
@@ -15,6 +77,7 @@
     { "type": "perf", "section": "Performance Improvements" },
     { "type": "refactor", "section": "Code Refactoring" },
     { "type": "docs", "section": "Documentation" },
+    { "type": "tech", "section": "Technical Improvements" },
     { "type": "chore", "section": "Miscellaneous Chores", "hidden": true },
     { "type": "test", "section": "Tests", "hidden": true },
     { "type": "ci", "section": "Continuous Integration", "hidden": true }
