@@ -1,0 +1,79 @@
+# ===================================
+# Type Labels (자동 적용)
+# ===================================
+- name: "type: bug"
+  color: "d73a4a"
+  description: "버그 및 오류 수정"
+
+- name: "type: feature"
+  color: "0075ca"
+  description: "새로운 기능 추가"
+
+- name: "type: task"
+  color: "0e8a16"
+  description: "개발 작업 단위"
+
+- name: "type: design"
+  color: "a371f7"
+  description: "아키텍처 설계 및 RFC"
+
+- name: "type: chore"
+  color: "fef2c0"
+  description: "빌드, 설정, 의존성 업데이트"
+
+- name: "type: docs"
+  color: "f9d0c4"
+  description: "문서 개선 및 추가"
+
+- name: "type: tech"
+  color: "5319e7"
+  description: "기술적 개선 및 리팩토링"
+
+# ===================================
+# Priority Labels (수동 관리)
+# ===================================
+- name: "priority: high"
+  color: "d93f0b"
+  description: "높은 우선순위"
+
+- name: "priority: normal"
+  color: "fbca04"
+  description: "보통 우선순위"
+
+- name: "priority: low"
+  color: "c5def5"
+  description: "낮은 우선순위"
+
+# ===================================
+# Status Labels (선택사항)
+# ===================================
+- name: "status: wip"
+  color: "ededed"
+  description: "작업 진행 중"
+
+- name: "status: blocked"
+  color: "b60205"
+  description: "차단됨 (의존성 대기 등)"
+
+- name: "status: ready"
+  color: "0e8a16"
+  description: "리뷰 또는 머지 준비 완료"
+
+# ===================================
+# Additional Labels
+# ===================================
+- name: "breaking change"
+  color: "d93f0b"
+  description: "하위 호환성이 깨지는 변경사항"
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "의존성 업데이트"
+
+- name: "good first issue"
+  color: "7057ff"
+  description: "처음 기여하기 좋은 이슈"
+
+- name: "help wanted"
+  color: "008672"
+  description: "도움이 필요한 이슈"
