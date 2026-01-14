@@ -1,0 +1,389 @@
+{
+  "name": "Horror Story - Research to Story Pipeline (API)",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configure research topic and story settings\nreturn {\n  json: {\n    research_topic: 'Korean apartment horror legends',\n    research_tags: ['urban', 'supernatural'],\n    research_model: 'gemini',\n    story_max_count: 1,\n    story_enable_dedup: true\n  }\n};"
+      },
+      "name": "Config: Pipeline Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/jobs/research/trigger",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"topic\": \"{{ $json.research_topic }}\",\n  \"tags\": {{ JSON.stringify($json.research_tags) }},\n  \"model\": \"{{ $json.research_model }}\"\n}",
+        "options": {}
+      },
+      "name": "1. Trigger Research Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Config: Pipeline Settings').item.json;\nconst research = $input.item.json;\n\nreturn {\n  json: {\n    ...config,\n    research_job_id: research.job_id,\n    research_status: research.status,\n    poll_count: 0\n  }\n};"
+      },
+      "name": "Merge Config + Research",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "name": "Wait: Research",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://localhost:8000/jobs/{{ $json.research_job_id }}",
+        "options": {}
+      },
+      "name": "Poll Research Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Merge Config + Research').item.json;\nconst current = $input.item.json;\nconst pollCount = (prev.poll_count || 0) + 1;\n\nconst isComplete = ['succeeded', 'failed', 'cancelled', 'skipped'].includes(current.status);\n\nreturn {\n  json: {\n    ...prev,\n    research_status: current.status,\n    research_artifacts: current.artifacts || [],\n    research_error: current.error,\n    poll_count: pollCount,\n    research_complete: isComplete,\n    should_poll_research: !isComplete && pollCount < 30\n  }\n};"
+      },
+      "name": "Check Research Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.should_poll_research }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Research Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.research_status }}",
+              "value2": "succeeded"
+            }
+          ]
+        }
+      },
+      "name": "Research Succeeded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [2000, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/jobs/story/trigger",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"max_stories\": {{ $json.story_max_count }},\n  \"enable_dedup\": {{ $json.story_enable_dedup }}\n}",
+        "options": {}
+      },
+      "name": "2. Trigger Story Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Check Research Status').item.json;\nconst story = $input.item.json;\n\nreturn {\n  json: {\n    ...prev,\n    story_job_id: story.job_id,\n    story_status: story.status,\n    story_poll_count: 0\n  }\n};"
+      },
+      "name": "Merge Story Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "name": "Wait: Story",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2660, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://localhost:8000/jobs/{{ $json.story_job_id }}",
+        "options": {}
+      },
+      "name": "Poll Story Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2880, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Merge Story Job').item.json;\nconst current = $input.item.json;\nconst pollCount = (prev.story_poll_count || 0) + 1;\n\nconst isComplete = ['succeeded', 'failed', 'cancelled', 'skipped'].includes(current.status);\n\nreturn {\n  json: {\n    ...prev,\n    story_status: current.status,\n    story_artifacts: current.artifacts || [],\n    story_error: current.error,\n    story_poll_count: pollCount,\n    story_complete: isComplete,\n    should_poll_story: !isComplete && pollCount < 60\n  }\n};"
+      },
+      "name": "Check Story Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3100, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.should_poll_story }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Story Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [3320, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\n\nreturn {\n  json: {\n    pipeline_success: result.research_status === 'succeeded' && result.story_status === 'succeeded',\n    research: {\n      job_id: result.research_job_id,\n      status: result.research_status,\n      topic: result.research_topic,\n      artifacts: result.research_artifacts\n    },\n    story: {\n      job_id: result.story_job_id,\n      status: result.story_status,\n      artifacts: result.story_artifacts\n    },\n    message: 'Research-to-Story pipeline completed'\n  }\n};"
+      },
+      "name": "Pipeline Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3540, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  json: {\n    pipeline_success: false,\n    error: 'Research job failed',\n    research_status: $json.research_status,\n    research_error: $json.research_error\n  }\n};"
+      },
+      "name": "Research Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 500]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config: Pipeline Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config: Pipeline Settings": {
+      "main": [
+        [
+          {
+            "node": "1. Trigger Research Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Trigger Research Job": {
+      "main": [
+        [
+          {
+            "node": "Merge Config + Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Config + Research": {
+      "main": [
+        [
+          {
+            "node": "Wait: Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: Research": {
+      "main": [
+        [
+          {
+            "node": "Poll Research Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Research Status": {
+      "main": [
+        [
+          {
+            "node": "Check Research Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Research Status": {
+      "main": [
+        [
+          {
+            "node": "Research Complete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Complete?": {
+      "main": [
+        [
+          {
+            "node": "Wait: Research",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Research Succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Succeeded?": {
+      "main": [
+        [
+          {
+            "node": "2. Trigger Story Job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Research Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Trigger Story Job": {
+      "main": [
+        [
+          {
+            "node": "Merge Story Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Story Job": {
+      "main": [
+        [
+          {
+            "node": "Wait: Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: Story": {
+      "main": [
+        [
+          {
+            "node": "Poll Story Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Story Status": {
+      "main": [
+        [
+          {
+            "node": "Check Story Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Story Status": {
+      "main": [
+        [
+          {
+            "node": "Story Complete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Story Complete?": {
+      "main": [
+        [
+          {
+            "node": "Wait: Story",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pipeline Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["horror-story", "api", "pipeline", "research"],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-15T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,194 @@
+{
+  "name": "Horror Story - Polling-based Generation (API)",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/jobs/story/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "max_stories",
+              "value": "1"
+            },
+            {
+              "name": "enable_dedup",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Trigger Story Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobId = $input.item.json.job_id;\nconst status = $input.item.json.status;\n\nreturn {\n  json: {\n    job_id: jobId,\n    status: status,\n    poll_count: 0\n  }\n};"
+      },
+      "name": "Extract Job ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "name": "Wait 5s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://localhost:8000/jobs/{{ $json.job_id }}",
+        "options": {}
+      },
+      "name": "Poll Job Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const status = $input.item.json.status;\nconst jobId = $input.item.json.job_id;\nconst pollCount = ($input.item.json.poll_count || 0) + 1;\n\n// Check if job is complete\nconst isComplete = ['succeeded', 'failed', 'cancelled', 'skipped'].includes(status);\n\nreturn {\n  json: {\n    ...($input.item.json),\n    poll_count: pollCount,\n    is_complete: isComplete,\n    should_continue_polling: !isComplete && pollCount < 60  // Max 60 polls (5 min)\n  }\n};"
+      },
+      "name": "Check Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.should_continue_polling }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Continue Polling?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\n\nif (result.status === 'succeeded') {\n  return {\n    json: {\n      success: true,\n      job_id: result.job_id,\n      status: result.status,\n      artifacts: result.artifacts || [],\n      total_polls: result.poll_count,\n      message: 'Story generation completed successfully'\n    }\n  };\n} else {\n  return {\n    json: {\n      success: false,\n      job_id: result.job_id,\n      status: result.status,\n      error: result.error,\n      total_polls: result.poll_count,\n      message: `Job ended with status: ${result.status}`\n    }\n  };\n}"
+      },
+      "name": "Final Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Trigger Story Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Story Job": {
+      "main": [
+        [
+          {
+            "node": "Extract Job ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Job ID": {
+      "main": [
+        [
+          {
+            "node": "Wait 5s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5s": {
+      "main": [
+        [
+          {
+            "node": "Poll Job Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Job Status": {
+      "main": [
+        [
+          {
+            "node": "Check Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status": {
+      "main": [
+        [
+          {
+            "node": "Continue Polling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue Polling?": {
+      "main": [
+        [
+          {
+            "node": "Wait 5s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Final Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["horror-story", "api", "polling"],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-15T00:00:00.000Z",
+  "versionId": "1"
+}
