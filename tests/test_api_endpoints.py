@@ -87,7 +87,7 @@ class TestResearchRunEndpoint:
                     assert data["status"] == "complete"
 
     def test_run_research_error(self):
-        """Should handle research execution error."""
+        """Should return 502 when research execution fails (Issue #2)."""
         from fastapi.testclient import TestClient
         from src.api.main import app
 
@@ -109,10 +109,10 @@ class TestResearchRunEndpoint:
                         json={"topic": "Test topic"}
                     )
 
-                    assert response.status_code == 200
+                    # Error responses are propagated as HTTP errors (Issue #2)
+                    assert response.status_code == 502
                     data = response.json()
-                    assert data["status"] == "error"
-                    assert "Ollama" in data["message"]
+                    assert "Ollama" in data["detail"]
 
     def test_run_research_with_model_override(self):
         """Should pass model override to service."""
