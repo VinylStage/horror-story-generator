@@ -12,6 +12,61 @@
           "type": "generic",
           "path": "src/__init__.py",
           "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "README.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/README.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/API.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/ARCHITECTURE.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/ROADMAP.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/OPERATIONAL_STATUS.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/runbook_24h_test.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/canonical_enum.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/CANONICAL_KEY_APPLICATION_SCOPE.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/KU_TO_CANONICAL_KEY_RULES.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/audit/IMPLEMENTATION_AUDIT.md",
+          "glob": false
         }
       ]
     }
