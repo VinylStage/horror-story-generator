@@ -590,7 +590,7 @@ optional arguments:
 | `OLLAMA_PORT` | `11434` | Ollama 서버 포트 |
 | `GEMINI_ENABLED` | `false` | Gemini API 활성화 (연구 생성용) |
 | `GEMINI_API_KEY` | - | Gemini API 키 |
-| `GEMINI_MODEL` | `deep-research-pro-preview-12-2025` | 기본 Gemini 모델 |
+| `GOOGLE_AI_MODEL` | `deep-research-pro-preview-12-2025` | 기본 Gemini 모델 |
 
 **Examples:**
 
