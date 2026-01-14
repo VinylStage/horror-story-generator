@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0](https://github.com/VinylStage/horror-story-generator/compare/v1.3.2...v1.4.0) (2026-01-14)
+
+
+### Features
+
+* add n8n API integration workflows and guide ([#39](https://github.com/VinylStage/horror-story-generator/issues/39)) ([4d33560](https://github.com/VinylStage/horror-story-generator/commit/4d33560981b62df870144c6b90df44b4ce34df9e)), closes [#9](https://github.com/VinylStage/horror-story-generator/issues/9)
+* **api:** add batch job trigger API endpoints ([b2affdb](https://github.com/VinylStage/horror-story-generator/commit/b2affdb0a20a08db7869a1994451ceeb09e3c3c8))
+* **api:** add batch job trigger API endpoints ([685f003](https://github.com/VinylStage/horror-story-generator/commit/685f00371e6a902272db13909c608ebd1296aabe))
+
+
+### Bug Fixes
+
+* add issues write permission for release-please ([596b659](https://github.com/VinylStage/horror-story-generator/commit/596b6597b16282248545e6724fd79c9ebb7d7893))
+* add issues write permission for release-please ([a9bc8ed](https://github.com/VinylStage/horror-story-generator/commit/a9bc8edc69a1484b17fc37598b66ed4067ffd97b))
+* **api:** propagate LLM errors as HTTP 502/504 instead of 200 OK ([c8eec66](https://github.com/VinylStage/horror-story-generator/commit/c8eec66626e4df4440ae5ca11a149b28562ec717))
+* **api:** propagate LLM errors as HTTP 502/504 instead of 200 OK ([d9ac683](https://github.com/VinylStage/horror-story-generator/commit/d9ac6838cbc01ad35098a248b1b380e60e13e2d8))
+* prevent release-please workflow loop ([#43](https://github.com/VinylStage/horror-story-generator/issues/43)) ([3712361](https://github.com/VinylStage/horror-story-generator/commit/371236113182d1fc6b99d3e3bc1215197452d762))
+* prevent release-please workflow loop ([#43](https://github.com/VinylStage/horror-story-generator/issues/43)) ([b4e75ed](https://github.com/VinylStage/horror-story-generator/commit/b4e75ed7b29baa585770372d3fa68d4c1b9da613))
+* reset all versions to 1.3.2 and clean invalid releases ([570c9f3](https://github.com/VinylStage/horror-story-generator/commit/570c9f3a488e364a9d1de7c50eb784f8888beb7c))
+* reset all versions to 1.3.2 and clean invalid releases ([4a23c79](https://github.com/VinylStage/horror-story-generator/commit/4a23c796771b39010b1f94f6e13762ecb7470e31))
+* **test:** update test_run_research_error to expect 502 ([#34](https://github.com/VinylStage/horror-story-generator/issues/34)) ([a941982](https://github.com/VinylStage/horror-story-generator/commit/a941982e8a4ca0671c17a7faaa0918dfc8d7c9cf))
+* use token-based loop prevention for release-please ([24b90ea](https://github.com/VinylStage/horror-story-generator/commit/24b90ea31d84da6cf82ad4d2f317d54e231e9d10))
+* use token-based loop prevention for release-please ([#43](https://github.com/VinylStage/horror-story-generator/issues/43)) ([45ffb6f](https://github.com/VinylStage/horror-story-generator/commit/45ffb6f0dad668b27d5f9e3c109614da02887a70))
+
+
+### Documentation
+
+* add release-please version annotations to all docs ([#34](https://github.com/VinylStage/horror-story-generator/issues/34)) ([7d2c563](https://github.com/VinylStage/horror-story-generator/commit/7d2c5635e400687390ea2edb1fcb4f9a8e0b4f1a))
+* **api:** add missing endpoints and improve model selection docs ([756e90d](https://github.com/VinylStage/horror-story-generator/commit/756e90d354fee997f8ac076051c325050f402642))
+* archive historical analysis documents ([#24](https://github.com/VinylStage/horror-story-generator/issues/24)) ([67bf55c](https://github.com/VinylStage/horror-story-generator/commit/67bf55c34a4b7debe6c18cbfa769ee9aa631f38e))
+* archive historical analysis documents ([#24](https://github.com/VinylStage/horror-story-generator/issues/24)) ([bb10476](https://github.com/VinylStage/horror-story-generator/commit/bb10476ac34ba555e73dfa47588d398d5f0706fe))
+* consolidate scattered documentation ([62372a5](https://github.com/VinylStage/horror-story-generator/commit/62372a53761f184a009a0b1cd7b4372d4ae34dd2))
+* consolidate scattered documentation ([316a84d](https://github.com/VinylStage/horror-story-generator/commit/316a84d3069ec5fe6cdec484f8d5ac8818290230))
+* document environment variable restart requirement ([bc20b47](https://github.com/VinylStage/horror-story-generator/commit/bc20b47490cfe82a256723dab81a1807900ad619))
+* document environment variable restart requirement ([189e61d](https://github.com/VinylStage/horror-story-generator/commit/189e61dbcfe602bad0fd97f1ac18a1b804f13856))
+* **readme:** update CLI reference with model options ([0cca187](https://github.com/VinylStage/horror-story-generator/commit/0cca187401f7f720c5cebaa9a91676b6a4815342))
+* remove phase-based naming from directories and code ([6a2ae97](https://github.com/VinylStage/horror-story-generator/commit/6a2ae975488c662b0bb00b6dbb42f05943dbd198))
+* remove phase-based naming from directories and code ([b31262d](https://github.com/VinylStage/horror-story-generator/commit/b31262d5087d3ffebb7a18a78f63bc5e3d85da02))
+* rename GEMINI_MODEL env var to GOOGLE_AI_MODEL ([#25](https://github.com/VinylStage/horror-story-generator/issues/25)) ([d979938](https://github.com/VinylStage/horror-story-generator/commit/d97993833414f1f54c8b2bb459c500534a527756))
+* rename GEMINI_MODEL env var to GOOGLE_AI_MODEL ([#25](https://github.com/VinylStage/horror-story-generator/issues/25)) ([aba554b](https://github.com/VinylStage/horror-story-generator/commit/aba554ba930445b7a6f8a4994bd598d5daa3840e))
+* rename GEMINI_MODEL to GOOGLE_AI_MODEL ([#25](https://github.com/VinylStage/horror-story-generator/issues/25)) ([fb3c048](https://github.com/VinylStage/horror-story-generator/commit/fb3c04827cd58c79252eaa018959d92bc911c9a7))
+* rename GEMINI_MODEL to GOOGLE_AI_MODEL ([#25](https://github.com/VinylStage/horror-story-generator/issues/25)) ([c6c4237](https://github.com/VinylStage/horror-story-generator/commit/c6c42374f9742e9fa2107abb010f1f003210e43d))
+* **todo:** add TODO-029 for GEMINI_MODEL env var rename ([303a9a5](https://github.com/VinylStage/horror-story-generator/commit/303a9a51fe91be123e1f1b6258325ff8a78e7980))
+* **todo:** add TODO-030 for Research API error propagation (P1) ([f4ed308](https://github.com/VinylStage/horror-story-generator/commit/f4ed3089694f9195d261f9dddfeab9c716ebab32))
+* **todo:** add TODO-031 and detailed descriptions for API issues ([d218079](https://github.com/VinylStage/horror-story-generator/commit/d21807911c582179f53f3282641a372ed2bf33b7))
+* **todo:** add TODO-032 for webhook support on sync endpoints ([190b528](https://github.com/VinylStage/horror-story-generator/commit/190b52872be17d1373c9e4ad2b615dd0ba05c762))
+* update all document version headers to v1.3.2 ([f0ce1fd](https://github.com/VinylStage/horror-story-generator/commit/f0ce1fd8e28dcf890d24ce5ba2225f566569c86c))
+* update version references to v1.3.2 ([a15c4b7](https://github.com/VinylStage/horror-story-generator/commit/a15c4b7f0a09cf906a2cfb99d9f71f18a0b1a7b2))
+
+
+### Technical Improvements
+
+* add CI workflow for PR validation ([#34](https://github.com/VinylStage/horror-story-generator/issues/34)) ([4ee1103](https://github.com/VinylStage/horror-story-generator/commit/4ee1103f9a0c71882eece61144f448d99ec1c64d))
+* configure release-please for automatic versioning ([#34](https://github.com/VinylStage/horror-story-generator/issues/34)) ([684febd](https://github.com/VinylStage/horror-story-generator/commit/684febdd10765cca4506c205526a0b07aa290b71))
+* migrate TODOs to GitHub Issues ([#1](https://github.com/VinylStage/horror-story-generator/issues/1)) ([f031078](https://github.com/VinylStage/horror-story-generator/commit/f031078d95cb11343b53f0eacdc522b33fbcedda))
+
 ## [1.3.2] - 2026-01-13
 
 ### Security
