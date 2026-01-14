@@ -6,7 +6,14 @@
       "package-name": "horror-story-generator",
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": false,
-      "include-v-in-tag": true
+      "include-v-in-tag": true,
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "src/__init__.py",
+          "glob": false
+        }
+      ]
     }
   },
   "changelog-sections": [
@@ -15,6 +22,7 @@
     { "type": "perf", "section": "Performance Improvements" },
     { "type": "refactor", "section": "Code Refactoring" },
     { "type": "docs", "section": "Documentation" },
+    { "type": "tech", "section": "Technical Improvements" },
     { "type": "chore", "section": "Miscellaneous Chores", "hidden": true },
     { "type": "test", "section": "Tests", "hidden": true },
     { "type": "ci", "section": "Continuous Integration", "hidden": true }
