@@ -9,7 +9,7 @@ Endpoints:
 """
 
 from typing import Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from ..schemas.research import (
     ResearchRunRequest,
@@ -33,6 +33,9 @@ async def run_research(request: ResearchRunRequest):
     Execute research generation via Ollama.
 
     This endpoint triggers src.research.executor CLI via subprocess.
+
+    Raises:
+        HTTPException: 502 on LLM/model errors, 504 on timeout
     """
     result = await research_service.execute_research(
         topic=request.topic,
@@ -41,9 +44,22 @@ async def run_research(request: ResearchRunRequest):
         timeout=request.timeout,
     )
 
+    # Propagate errors as HTTP errors (Issue #2)
+    status = result.get("status", "error")
+    if status == "error":
+        raise HTTPException(
+            status_code=502,
+            detail=result.get("message") or "Research generation failed"
+        )
+    elif status == "timeout":
+        raise HTTPException(
+            status_code=504,
+            detail=result.get("message") or "Research generation timed out"
+        )
+
     return ResearchRunResponse(
         card_id=result.get("card_id", ""),
-        status=result.get("status", "error"),
+        status=status,
         message=result.get("message"),
         output_path=result.get("output_path"),
     )
