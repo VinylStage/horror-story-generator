@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # Feature flag for Gemini
 GEMINI_ENABLED = os.getenv("GEMINI_ENABLED", "false").lower() == "true"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "deep-research-pro-preview-12-2025")
+GOOGLE_AI_MODEL = os.getenv("GOOGLE_AI_MODEL", "deep-research-pro-preview-12-2025")
 
 # Deep Research specific settings
 DEEP_RESEARCH_MODEL = "deep-research-pro-preview-12-2025"
@@ -104,7 +104,7 @@ def parse_research_model_spec(model_spec: Optional[str]) -> ResearchModelInfo:
         if ":" in model_spec:
             model_name = model_spec.split(":", 1)[1]
         else:
-            model_name = GEMINI_MODEL
+            model_name = GOOGLE_AI_MODEL
         return ResearchModelInfo(
             provider="gemini",
             model_name=model_name,

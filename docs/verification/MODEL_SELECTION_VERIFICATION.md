@@ -91,7 +91,7 @@ Location: `src/research/executor/executor.py` (line 204)
 |---------------------|---------|-------------|
 | `GEMINI_ENABLED` | `false` | Must be `true` to use Gemini |
 | `GEMINI_API_KEY` | `""` | Required when enabled |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Default Gemini model |
+| `GOOGLE_AI_MODEL` | `gemini-2.5-flash` | Default Google AI model |
 
 ### Provider Implementation
 
