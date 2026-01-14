@@ -62,7 +62,7 @@ STORY_DEDUP_STRICT=false         # true 시 중복 감지되면 생성 중단
 # 모드: gemini (표준) 또는 deep-research (Deep Research Agent)
 GEMINI_ENABLED=false             # Gemini 활성화 (true로 설정 시 사용 가능)
 GEMINI_API_KEY=your_gemini_key   # Gemini API 키
-GEMINI_MODEL=deep-research-pro-preview-12-2025  # 기본 모델
+GOOGLE_AI_MODEL=deep-research-pro-preview-12-2025  # 기본 모델
 
 # Ollama 설정 (선택 - 로컬 모델)
 OLLAMA_HOST=localhost            # Ollama 호스트

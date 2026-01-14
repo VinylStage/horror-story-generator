@@ -43,7 +43,7 @@ Integrated Gemini Deep Research Agent as an optional research execution mode:
 | `src/research/executor/__main__.py` | Added load_dotenv() before module imports |
 | `src/research/executor/cli.py` | Handle deep-research mode, skip Ollama checks for Gemini |
 | `src/research/executor/output_writer.py` | Record provider, execution_mode, interaction_id in metadata |
-| `.env.example` | Updated GEMINI_MODEL default to deep-research-pro-preview-12-2025 |
+| `.env.example` | Updated GOOGLE_AI_MODEL default to deep-research-pro-preview-12-2025 |
 | `README.md` | Added deep-research CLI example |
 | `docs/core/ARCHITECTURE.md` | Added Deep Research execution mode documentation |
 | `docs/core/API.md` | Updated research model parameter |
@@ -130,7 +130,7 @@ $ python -m src.research.executor run --help | grep -A3 "model"
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `GEMINI_API_KEY` | (required) | Google AI Studio API key |
-| `GEMINI_MODEL` | `deep-research-pro-preview-12-2025` | Default Gemini model |
+| `GOOGLE_AI_MODEL` | `deep-research-pro-preview-12-2025` | Default Google AI model |
 | `GEMINI_ENABLED` | `false` | Must be true to use Gemini |
 
 **Note:** No additional environment variables invented beyond specification.
@@ -174,7 +174,7 @@ python -m src.research.executor run "Korean horror themes" --model gemini
 - [x] Unified pipeline still auto-injects research into story generation
 - [x] No regression in dedup logic (21/21 tests pass)
 - [x] Documentation updated (README, ARCHITECTURE, API, runbook)
-- [x] Environment variables limited to GEMINI_API_KEY and GEMINI_MODEL
+- [x] Environment variables limited to GEMINI_API_KEY and GOOGLE_AI_MODEL
 
 ---
 
