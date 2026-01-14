@@ -1,39 +1,13 @@
-# Release Please Workflow
-#
-# Automatically creates release PRs and manages versioning.
-#
-# Triggers:
-# - Push to main branch (automatic)
-# - Manual workflow dispatch
-#
-# Behavior:
-# - Creates/updates a release PR with changelog
-# - Bumps version in pyproject.toml and src/__init__.py
-# - Creates GitHub release and tag when PR is merged
-#
-# Loop Prevention:
-# - Token-based: release-please action internally tracks its own commits
-
 name: Release Please
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Run in dry-run mode (no changes)'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
+    branches:
+      - main
 
 permissions:
   contents: write
   pull-requests: write
-  issues: write
 
 jobs:
   release-please:
@@ -45,18 +19,8 @@ jobs:
       version: ${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }}
 
     steps:
-      - name: Run Release Please (Dry Run)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == 'true' }}
-        uses: googleapis/release-please-action@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-          dry-run: true
-
       - name: Run Release Please
         id: release
-        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == 'false') }}
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -64,7 +28,7 @@ jobs:
           manifest-file: .release-please-manifest.json
 
       - name: Output Release Info
-        if: ${{ steps.release.outputs.release_created }}
+        if: steps.release.outputs.release_created
         run: |
           echo "✅ Release created!"
           echo "Tag: ${{ steps.release.outputs.tag_name }}"
