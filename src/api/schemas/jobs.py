@@ -3,10 +3,11 @@ Job operation schemas.
 
 Phase B+: Trigger-based API layer schemas.
 v1.3.0: Added webhook notification support.
+v1.4.0: Added batch job support.
 """
 
-from typing import List, Optional
-from pydantic import BaseModel, Field, HttpUrl
+from typing import List, Optional, Union, Literal
+from pydantic import BaseModel, Field
 
 
 # Default webhook events (all terminal states except cancelled)
@@ -140,4 +141,81 @@ class JobDedupCheckResponse(BaseModel):
     artifact_path: Optional[str] = None
     signal: Optional[str] = Field(default=None, description="Dedup signal (LOW/MEDIUM/HIGH)")
     similarity_score: Optional[float] = Field(default=None, description="Similarity score")
+    message: Optional[str] = None
+
+
+# =============================================================================
+# Batch Job Schemas (v1.4.0)
+# =============================================================================
+
+
+class BatchJobSpec(BaseModel):
+    """Specification for a single job in a batch."""
+
+    type: Literal["research", "story"] = Field(..., description="Job type")
+    # Research job fields
+    topic: Optional[str] = Field(default=None, description="Research topic (required for research jobs)")
+    tags: List[str] = Field(default=[], description="Tags for research job")
+    # Story job fields
+    max_stories: int = Field(default=1, ge=1, le=100, description="Max stories for story job")
+    enable_dedup: bool = Field(default=False, description="Enable dedup for story job")
+    # Common fields
+    model: Optional[str] = Field(default=None, description="Model override")
+    timeout: Optional[int] = Field(default=None, description="Timeout in seconds")
+
+
+class BatchTriggerRequest(BaseModel):
+    """Request to trigger multiple jobs as a batch."""
+
+    jobs: List[BatchJobSpec] = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="List of job specifications"
+    )
+    webhook_url: Optional[str] = Field(
+        default=None,
+        description="URL to POST when all batch jobs complete"
+    )
+    webhook_events: List[str] = Field(
+        default=DEFAULT_WEBHOOK_EVENTS,
+        description="Events that trigger webhook"
+    )
+
+
+class BatchTriggerResponse(BaseModel):
+    """Response from batch trigger endpoint."""
+
+    batch_id: str = Field(..., description="Created batch ID")
+    job_ids: List[str] = Field(..., description="List of created job IDs")
+    job_count: int = Field(..., description="Number of jobs in batch")
+    status: str = Field(default="queued", description="Initial batch status")
+    message: str = Field(default="Batch triggered successfully")
+
+
+class BatchJobStatus(BaseModel):
+    """Status of a single job within a batch."""
+
+    job_id: str
+    type: str
+    status: str
+    error: Optional[str] = None
+
+
+class BatchStatusResponse(BaseModel):
+    """Response from batch status endpoint."""
+
+    batch_id: str
+    status: str = Field(..., description="Aggregate batch status")
+    total_jobs: int
+    completed_jobs: int
+    succeeded_jobs: int
+    failed_jobs: int
+    running_jobs: int
+    queued_jobs: int
+    jobs: List[BatchJobStatus] = Field(default=[], description="Individual job statuses")
+    created_at: str
+    finished_at: Optional[str] = None
+    webhook_url: Optional[str] = None
+    webhook_sent: bool = False
     message: Optional[str] = None

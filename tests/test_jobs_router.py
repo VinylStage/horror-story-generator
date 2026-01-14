@@ -373,3 +373,199 @@ class TestDedupCheckEndpoint:
         assert data["has_artifact"] is True
         assert data["signal"] == "LOW"
         assert data["similarity_score"] == 0.1
+
+
+# =============================================================================
+# Batch Job Tests (v1.4.0)
+# =============================================================================
+
+
+class TestBatchTriggerEndpoint:
+    """Tests for POST /jobs/batch/trigger endpoint."""
+
+    @pytest.fixture
+    def temp_dirs(self):
+        """Create temporary jobs and batches directories."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            jobs_path = Path(tmpdir) / "jobs"
+            batches_path = Path(tmpdir) / "batches"
+            jobs_path.mkdir()
+            batches_path.mkdir()
+            yield jobs_path, batches_path
+
+    @pytest.fixture
+    def client(self):
+        """Create test client for API."""
+        from src.api.main import app
+        from fastapi.testclient import TestClient
+        return TestClient(app)
+
+    def test_batch_trigger_research_jobs(self, client, temp_dirs):
+        """Should trigger multiple research jobs as a batch."""
+        jobs_path, batches_path = temp_dirs
+        logs_dir = jobs_path.parent / "logs"
+        logs_dir.mkdir(exist_ok=True)
+
+        with patch("src.infra.job_manager.JOBS_DIR", jobs_path):
+            with patch("src.infra.job_manager.BATCHES_DIR", batches_path):
+                with patch("src.api.routers.jobs.LOGS_DIR", logs_dir):
+                    with patch("src.api.routers.jobs.subprocess.Popen") as mock_popen:
+                        mock_process = MagicMock()
+                        mock_process.pid = 12345
+                        mock_popen.return_value = mock_process
+
+                        response = client.post(
+                            "/jobs/batch/trigger",
+                            json={
+                                "jobs": [
+                                    {"type": "research", "topic": "Topic 1"},
+                                    {"type": "research", "topic": "Topic 2"},
+                                ]
+                            }
+                        )
+
+                        assert response.status_code == 202
+                        data = response.json()
+                        assert "batch_id" in data
+                        assert data["batch_id"].startswith("batch-")
+                        assert len(data["job_ids"]) == 2
+                        assert data["job_count"] == 2
+
+    def test_batch_trigger_mixed_jobs(self, client, temp_dirs):
+        """Should trigger mixed research and story jobs."""
+        jobs_path, batches_path = temp_dirs
+        logs_dir = jobs_path.parent / "logs"
+        logs_dir.mkdir(exist_ok=True)
+
+        with patch("src.infra.job_manager.JOBS_DIR", jobs_path):
+            with patch("src.infra.job_manager.BATCHES_DIR", batches_path):
+                with patch("src.api.routers.jobs.LOGS_DIR", logs_dir):
+                    with patch("src.api.routers.jobs.subprocess.Popen") as mock_popen:
+                        mock_process = MagicMock()
+                        mock_process.pid = 99999
+                        mock_popen.return_value = mock_process
+
+                        response = client.post(
+                            "/jobs/batch/trigger",
+                            json={
+                                "jobs": [
+                                    {"type": "research", "topic": "Horror research"},
+                                    {"type": "story", "max_stories": 2},
+                                ]
+                            }
+                        )
+
+                        assert response.status_code == 202
+                        data = response.json()
+                        assert len(data["job_ids"]) == 2
+
+    def test_batch_trigger_requires_topic_for_research(self, client, temp_dirs):
+        """Should reject research job without topic."""
+        jobs_path, batches_path = temp_dirs
+        logs_dir = jobs_path.parent / "logs"
+        logs_dir.mkdir(exist_ok=True)
+
+        with patch("src.infra.job_manager.JOBS_DIR", jobs_path):
+            with patch("src.infra.job_manager.BATCHES_DIR", batches_path):
+                with patch("src.api.routers.jobs.LOGS_DIR", logs_dir):
+                    with patch("src.api.routers.jobs.subprocess.Popen") as mock_popen:
+                        mock_process = MagicMock()
+                        mock_process.pid = 11111
+                        mock_popen.return_value = mock_process
+
+                        response = client.post(
+                            "/jobs/batch/trigger",
+                            json={
+                                "jobs": [
+                                    {"type": "research"},  # Missing topic
+                                    {"type": "story", "max_stories": 1},
+                                ]
+                            }
+                        )
+
+                        # Should still succeed with 1 job
+                        assert response.status_code == 202
+                        data = response.json()
+                        assert len(data["job_ids"]) == 1
+                        assert "requires 'topic'" in data["message"]
+
+    def test_batch_trigger_empty_jobs_fails(self, client):
+        """Should reject empty jobs array."""
+        response = client.post(
+            "/jobs/batch/trigger",
+            json={"jobs": []}
+        )
+
+        assert response.status_code == 422
+
+
+class TestBatchStatusEndpoint:
+    """Tests for GET /jobs/batch/{batch_id} endpoint."""
+
+    @pytest.fixture
+    def temp_dirs(self):
+        """Create temporary jobs and batches directories."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            jobs_path = Path(tmpdir) / "jobs"
+            batches_path = Path(tmpdir) / "batches"
+            jobs_path.mkdir()
+            batches_path.mkdir()
+            yield jobs_path, batches_path
+
+    @pytest.fixture
+    def client(self):
+        """Create test client for API."""
+        from src.api.main import app
+        from fastapi.testclient import TestClient
+        return TestClient(app)
+
+    def test_get_batch_status(self, client, temp_dirs):
+        """Should return batch status with job details."""
+        jobs_path, batches_path = temp_dirs
+
+        from src.infra.job_manager import Job, Batch
+
+        # Create mock jobs
+        job1 = Job(job_id="job-1", type="research", status="succeeded")
+        job2 = Job(job_id="job-2", type="research", status="running")
+
+        # Create mock batch
+        batch = Batch(
+            batch_id="batch-test123",
+            job_ids=["job-1", "job-2"],
+            status="running",
+        )
+
+        with patch("src.infra.job_manager.JOBS_DIR", jobs_path):
+            with patch("src.infra.job_manager.BATCHES_DIR", batches_path):
+                with patch("src.infra.job_manager.load_batch", return_value=batch):
+                    with patch("src.infra.job_manager.load_job") as mock_load_job:
+                        def load_job_side_effect(job_id):
+                            if job_id == "job-1":
+                                return job1
+                            elif job_id == "job-2":
+                                return job2
+                            return None
+
+                        mock_load_job.side_effect = load_job_side_effect
+
+                        response = client.get("/jobs/batch/batch-test123")
+
+                        assert response.status_code == 200
+                        data = response.json()
+                        assert data["batch_id"] == "batch-test123"
+                        assert data["status"] == "running"
+                        assert data["total_jobs"] == 2
+                        assert data["succeeded_jobs"] == 1
+                        assert data["running_jobs"] == 1
+                        assert len(data["jobs"]) == 2
+
+    def test_get_nonexistent_batch(self, client, temp_dirs):
+        """Should return 404 for nonexistent batch."""
+        jobs_path, batches_path = temp_dirs
+
+        with patch("src.infra.job_manager.JOBS_DIR", jobs_path):
+            with patch("src.infra.job_manager.BATCHES_DIR", batches_path):
+                response = client.get("/jobs/batch/nonexistent-batch")
+
+                assert response.status_code == 404
