@@ -1,3 +1,9 @@
+> **ARCHIVED DOCUMENT**
+> This is a historical verification report. The implementation described here has been completed.
+> Archived: 2026-01-15
+
+---
+
 # Final Pipeline Smoke Test Report
 
 **Date:** 2026-01-12
@@ -242,17 +248,17 @@ reason: duplicate_of_smoke_test_story_001
 
 ```
 Research Cards (3+ with mixed dedup levels)
-    ↓
+    |
 Research Dedup (FAISS semantic, HIGH excluded)
-    ↓
+    |
 Template Selection (canonical_core)
-    ↓
-Research → Story Injection (auto mode)
-    ↓
+    |
+Research -> Story Injection (auto mode)
+    |
 Story Signature Computation (SHA256)
-    ↓
+    |
 Story Dedup Check (registry lookup)
-    ↓
+    |
 Metadata Complete (all 5 required fields)
 ```
 
@@ -275,7 +281,7 @@ Metadata Complete (all 5 required fields)
 2. Full pipeline verified in one continuous smoke test
 3. All required metadata fields present
 4. Duplicate detection works correctly (WARN mode)
-5. Research → Story integration complete
+5. Research -> Story integration complete
 6. No regression introduced
 
 ---

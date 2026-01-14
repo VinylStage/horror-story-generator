@@ -1,3 +1,9 @@
+> **ARCHIVED DOCUMENT**
+> This is a historical verification report. The implementation described here has been completed.
+> Archived: 2026-01-15
+
+---
+
 # Story-Level Deduplication - Final Verification Report
 
 **Date:** 2026-01-12
@@ -44,7 +50,7 @@ def _init_db(self) -> None:
 |----------|----------|----------|
 | Registry already exists (v1.0.0) | Automatic migration to v1.1.0 | `_migrate_schema()` at line 194 |
 | Registry is empty (fresh) | Creates v1.1.0 schema directly | `_create_schema()` at line 141 |
-| Registry already v1.1.0 | No changes, logs version confirmed | Line 137: `스키마 버전 확인: v{current_version}` |
+| Registry already v1.1.0 | No changes, logs version confirmed | Line 137: `Schema version confirmed: v{current_version}` |
 
 ### Migration Safety Details
 
@@ -146,8 +152,8 @@ E -->|Yes| G["Abort"]
 
 **README.md:53-54:**
 ```
-ENABLE_STORY_DEDUP=true          # 스토리 시그니처 기반 중복 검사 활성화
-STORY_DEDUP_STRICT=false         # true 시 중복 감지되면 생성 중단
+ENABLE_STORY_DEDUP=true          # Enable story signature-based dedup check
+STORY_DEDUP_STRICT=false         # When true, abort on duplicate detection
 ```
 
 ### Policy Consistency Matrix

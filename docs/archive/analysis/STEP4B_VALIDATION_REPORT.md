@@ -1,3 +1,9 @@
+> **ARCHIVED DOCUMENT**
+> This is a historical validation report. The testing described here has been completed.
+> Archived: 2026-01-15
+
+---
+
 # STEP 4-B Validation Report
 
 **Date:** 2026-01-12
@@ -17,12 +23,12 @@ This report documents the validation phase following STEP 4-B (Execution Code Re
 
 | Category | Description | Result |
 |----------|-------------|--------|
-| Static Checks | Import validation, syntax | ✅ PASS |
-| Story Pipeline | Template loading, prompt building, seed selection | ✅ PASS |
-| Research Pipeline | CLI help, card loading, research integration | ✅ PASS |
-| API Server | Server startup, health endpoint, route listing | ✅ PASS |
-| Unit Tests | All 472 test cases | ✅ PASS |
-| Documentation | Core README updated | ✅ PASS |
+| Static Checks | Import validation, syntax | PASS |
+| Story Pipeline | Template loading, prompt building, seed selection | PASS |
+| Research Pipeline | CLI help, card loading, research integration | PASS |
+| API Server | Server startup, health endpoint, route listing | PASS |
+| Unit Tests | All 472 test cases | PASS |
+| Documentation | Core README updated | PASS |
 
 ### What Was NOT Tested
 
@@ -46,8 +52,8 @@ ImportError: cannot import name 'select_seed_for_story' from 'src.story.seed_int
 **Cause:** Export names didn't match actual function names in `seed_integration.py`
 
 **Fix:** Updated to correct names:
-- `select_seed_for_story` → `select_seed_for_generation`
-- `format_seed_for_prompt` → `format_seed_for_system_prompt`
+- `select_seed_for_story` -> `select_seed_for_generation`
+- `format_seed_for_prompt` -> `format_seed_for_system_prompt`
 
 **Commit:** `3f5f00b`
 
@@ -85,13 +91,13 @@ ModuleNotFoundError: No module named 'job_manager'
 **Cause:** Test files used old root-level module paths for mock patches
 
 **Fix:** Updated all test files to use new `src.*` prefixed paths:
-- `api_client` → `src.story.api_client`
-- `research_api` → `src.api`
-- `job_manager` → `src.infra.job_manager`
-- `job_monitor` → `src.infra.job_monitor`
-- `research_dedup` → `src.dedup.research`
-- `seed_integration` → `src.story.seed_integration`
-- `data_paths` → `src.infra.data_paths`
+- `api_client` -> `src.story.api_client`
+- `research_api` -> `src.api`
+- `job_manager` -> `src.infra.job_manager`
+- `job_monitor` -> `src.infra.job_monitor`
+- `research_dedup` -> `src.dedup.research`
+- `seed_integration` -> `src.story.seed_integration`
+- `data_paths` -> `src.infra.data_paths`
 
 **Commit:** `cf38847`
 
@@ -170,19 +176,19 @@ The following docs contain historical references and were intentionally NOT upda
 
 ### Story CLI
 ```bash
-python main.py --help  # ✅ Works
+python main.py --help  # Works
 ```
 
 ### Research CLI
 ```bash
-python -m src.research.executor --help  # ✅ Works
-python -m src.research.executor list    # ✅ Works (13 cards found)
+python -m src.research.executor --help  # Works
+python -m src.research.executor list    # Works (13 cards found)
 ```
 
 ### API Server
 ```bash
 uvicorn src.api.main:app --host 127.0.0.1 --port 8765
-# ✅ Starts and responds to /health endpoint
+# Starts and responds to /health endpoint
 ```
 
 ---
@@ -208,7 +214,7 @@ uvicorn src.api.main:app --host 127.0.0.1 --port 8765
 
 ## Actual Generation Tests (Added 2026-01-12 01:41 KST)
 
-### Story Generation Test ✅ PASS
+### Story Generation Test PASS
 
 ```
 python main.py --max-stories 1
@@ -222,16 +228,16 @@ python main.py --max-stories 1
 | Total Tokens | 4,098 |
 | Generation Time | 67.8 seconds |
 | Output File | `generated_stories/horror_story_20260112_014041.md` |
-| Title | 잔액 (Balance) |
+| Title | Balance |
 
 **Story Theme:** A man's bank balance mysteriously decreases through unexplained "system adjustments" - a horror exploration of economic anxiety.
 
 ---
 
-### Research Generation Test ✅ PASS
+### Research Generation Test PASS
 
 ```
-python -m src.research.executor run "현대 한국 오피스텔의 고립과 공포" --tags horror korean urban
+python -m src.research.executor run "Korean officetel isolation and horror" --tags horror korean urban
 ```
 
 | Metric | Value |
@@ -249,23 +255,23 @@ python -m src.research.executor run "현대 한국 오피스텔의 고립과 공
 
 ## Deduplication System Test (Added 2026-01-12 02:00 KST)
 
-### Story Dedup Test ✅ PASS
+### Story Dedup Test PASS
 
 Generated 5 stories with `--enable-dedup` flag:
 
 | Story | Template | Dedup Signal | Similarity |
 |-------|----------|--------------|------------|
-| 계정 복구 | T-SYS-001 | LOW | - |
-| 마지막 칸 | T-LIM-001 | LOW | - |
-| 주민 평가 | T-APT-001 | LOW | - |
-| 층간소음 | T-DOM-001 | LOW | - |
-| 스마트홈 | T-DOM-002 | LOW | - |
+| Account Recovery | T-SYS-001 | LOW | - |
+| Last Compartment | T-LIM-001 | LOW | - |
+| Resident Evaluation | T-APT-001 | LOW | - |
+| Floor Noise | T-DOM-001 | LOW | - |
+| Smart Home | T-DOM-002 | LOW | - |
 
 All stories were correctly classified as unique (LOW similarity signal).
 
 ---
 
-### Research Dedup Test ✅ PASS
+### Research Dedup Test PASS
 
 **Bug Found & Fixed:**
 - **Issue:** Research dedup used `qwen3:30b` model for embeddings, but this model doesn't support the `/api/embed` endpoint (HTTP 501)
@@ -282,27 +288,27 @@ All stories were correctly classified as unique (LOW similarity signal).
 
 | Card ID | Topic | Nearest Card | Similarity | Signal |
 |---------|-------|--------------|------------|--------|
-| RC-20260112-014153 | 현대 한국 오피스텔의 고립과 공포 | RC-015248 | **0.9019** | HIGH |
-| RC-20260112-015216 | 원룸 오피스텔에서의 고립감과 공포 | RC-015248 | **0.8934** | HIGH |
-| RC-20260112-015233 | 한국 1인가구 아파트에서의 사회적 고립과 공포 | RC-014153 | **0.8749** | HIGH |
-| RC-20260112-015248 | 서울 오피스텔의 고립과 공포 | RC-014153 | **0.9019** | HIGH |
+| RC-20260112-014153 | Korean officetel isolation and horror | RC-015248 | **0.9019** | HIGH |
+| RC-20260112-015216 | One-room officetel isolation and fear | RC-015248 | **0.8934** | HIGH |
+| RC-20260112-015233 | Korean single-person apartment social isolation and fear | RC-014153 | **0.8749** | HIGH |
+| RC-20260112-015248 | Seoul officetel isolation and fear | RC-014153 | **0.9019** | HIGH |
 
-All intentional duplicate cards were correctly detected with HIGH similarity signals (≥ 0.85).
+All intentional duplicate cards were correctly detected with HIGH similarity signals (>= 0.85).
 
 ---
 
 ## API Server Test (Added 2026-01-12 02:15 KST)
 
-### Research API Endpoints ✅ PASS
+### Research API Endpoints PASS
 
 | Endpoint | Method | Test Result |
 |----------|--------|-------------|
-| `/research/list` | GET | ✅ Lists 19+ cards |
-| `/research/run` | POST | ✅ Generated RC-20260112-020939 |
-| `/jobs/research/trigger` | POST | ✅ Job triggered, completed |
-| `/jobs/{id}/monitor` | POST | ✅ Status updates correctly |
-| `/jobs/{id}/dedup_check` | POST | ✅ Returns canonical dedup |
-| `/research/dedup` | POST | ✅ **NEW** FAISS semantic dedup |
+| `/research/list` | GET | Lists 19+ cards |
+| `/research/run` | POST | Generated RC-20260112-020939 |
+| `/jobs/research/trigger` | POST | Job triggered, completed |
+| `/jobs/{id}/monitor` | POST | Status updates correctly |
+| `/jobs/{id}/dedup_check` | POST | Returns canonical dedup |
+| `/research/dedup` | POST | **NEW** FAISS semantic dedup |
 
 ### Semantic Dedup API Test
 
@@ -335,16 +341,16 @@ The new `/research/dedup` endpoint correctly uses FAISS embeddings via `nomic-em
 
 STEP 4-B refactoring validation is **COMPLETE**:
 
-- ✅ All imports work with new `src/` structure
-- ✅ All 472 unit tests pass
-- ✅ CLI entry points work correctly
-- ✅ API server starts and responds
-- ✅ Core documentation updated
-- ✅ **Actual story generation works** (Claude API)
-- ✅ **Actual research generation works** (Ollama)
-- ✅ **Story dedup system works** (SQLite + in-memory)
-- ✅ **Research dedup system works** (FAISS + nomic-embed-text)
-- ✅ **Research API endpoints work** (run, list, validate, trigger)
-- ✅ **Research semantic dedup API works** (NEW: /research/dedup)
+- All imports work with new `src/` structure
+- All 472 unit tests pass
+- CLI entry points work correctly
+- API server starts and responds
+- Core documentation updated
+- **Actual story generation works** (Claude API)
+- **Actual research generation works** (Ollama)
+- **Story dedup system works** (SQLite + in-memory)
+- **Research dedup system works** (FAISS + nomic-embed-text)
+- **Research API endpoints work** (run, list, validate, trigger)
+- **Research semantic dedup API works** (NEW: /research/dedup)
 
 The codebase is fully functional after STEP 4-B refactoring. Both story and research generation pipelines work correctly with real API calls via both CLI and API server.

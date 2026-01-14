@@ -1,3 +1,9 @@
+> **ARCHIVED DOCUMENT**
+> This is a historical verification report. The implementation described here has been completed.
+> Archived: 2026-01-15
+
+---
+
 # Unified Pipeline Final Verification Report
 
 **Date:** 2026-01-12
@@ -8,7 +14,7 @@
 
 ## Executive Summary
 
-This report provides concrete, evidence-backed verification that the unified research→story pipeline:
+This report provides concrete, evidence-backed verification that the unified research->story pipeline:
 1. Works end-to-end
 2. Produces portable, reusable data
 3. Effectively prevents story base duplication through research-level dedup
@@ -207,7 +213,7 @@ high_in_usable = any(c.get('card_id') == high_card_id for c in usable)
 [ResearchContext] Loaded 23/25 usable cards (excluding HIGH)
 ```
 
-### Verification 2: Same Research → Same Traceability
+### Verification 2: Same Research -> Same Traceability
 
 **Story 1 (horror_story_20260112_083042):**
 ```
@@ -234,11 +240,11 @@ Research Card (RC-20260112-082056)
 ├── dedup.level = "HIGH"
 ├── dedup.similarity_score = 0.8885
 └── nearest_card_id = "RC-20260111-162615"
-       ↓
+       |
    EXCLUDED from usable set
-       ↓
+       |
    CANNOT be injected into stories
-       ↓
+       |
    Stories using this research base are PREVENTED
 ```
 
@@ -248,7 +254,7 @@ Research Card (RC-20260112-082056)
 |-------|--------|----------|
 | HIGH duplicates excluded | PASS | `is_usable_card()` returns False for HIGH |
 | MEDIUM duplicates allowed | PASS | RC-20260112-082330 (MEDIUM) was selected |
-| Selection is deterministic | PASS | Same template → same research_used |
+| Selection is deterministic | PASS | Same template -> same research_used |
 | Traceability recorded | PASS | `research_used` in story metadata |
 | Similarity score preserved | PASS | `dedup.similarity_score` in card |
 
@@ -385,7 +391,7 @@ All 4 verification axes have been validated with concrete evidence:
 
 **FINAL VERDICT: OPERATIONAL APPROVAL GRANTED**
 
-The unified research→story pipeline is ready for production use.
+The unified research->story pipeline is ready for production use.
 
 ---
 

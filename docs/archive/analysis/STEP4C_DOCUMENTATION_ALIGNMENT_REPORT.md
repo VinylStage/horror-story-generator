@@ -1,3 +1,9 @@
+> **ARCHIVED DOCUMENT**
+> This is a historical documentation alignment report. The work described here has been completed.
+> Archived: 2026-01-15
+
+---
+
 # STEP 4-C Documentation Alignment Report (Final v2)
 
 **Date:** 2026-01-12
@@ -86,32 +92,32 @@ $ grep -rn "horror_story_prompt_template\|from horror_story_generator\|templates
 #### docs/core/ARCHITECTURE.md
 
 **1. High-Level Architecture** (flowchart TB)
-- Entry points → Core generators → External APIs → Infrastructure → Storage
+- Entry points -> Core generators -> External APIs -> Infrastructure -> Storage
 - Shows complete system topology
 
 **2. Story Generation Flow** (flowchart LR)
-- Template selection → Prompt → API → Dedup check → Save
+- Template selection -> Prompt -> API -> Dedup check -> Save
 - Includes retry logic branching
 
 **3. Research Generation Flow** (flowchart LR)
-- Topic → Ollama → Validation → FAISS → Save
+- Topic -> Ollama -> Validation -> FAISS -> Save
 
 **4. Job Lifecycle** (stateDiagram-v2)
-- queued → running → succeeded/failed/cancelled
+- queued -> running -> succeeded/failed/cancelled
 
 #### docs/technical/TRIGGER_API.md
 
 **1. Sequence Diagram** (sequenceDiagram)
-- Client ↔ API ↔ JobStore ↔ CLI interactions
+- Client <-> API <-> JobStore <-> CLI interactions
 - Full polling loop visualization
 
 **2. n8n Integration Pattern** (flowchart LR)
-- Trigger → Wait → Poll → Check → Process
+- Trigger -> Wait -> Poll -> Check -> Process
 
 #### docs/technical/RESEARCH_DEDUP_SETUP.md
 
 **1. Architecture Flow** (flowchart LR)
-- Research Card → Embedder → FAISS → Similarity → Signal
+- Research Card -> Embedder -> FAISS -> Similarity -> Signal
 
 ---
 
@@ -130,18 +136,18 @@ $ grep -rn "horror_story_prompt_template\|from horror_story_generator\|templates
 **Story Dedup:**
 | Signal | Score | All Docs |
 |--------|-------|----------|
-| LOW | < 0.3 | ✅ Consistent |
-| MEDIUM | 0.3-0.6 | ✅ Consistent |
-| HIGH | > 0.6 | ✅ Consistent |
+| LOW | < 0.3 | Consistent |
+| MEDIUM | 0.3-0.6 | Consistent |
+| HIGH | > 0.6 | Consistent |
 
 **Research Dedup:**
 | Signal | Score | All Docs |
 |--------|-------|----------|
-| LOW | < 0.70 | ✅ Consistent |
-| MEDIUM | 0.70-0.85 | ✅ Consistent |
-| HIGH | ≥ 0.85 | ✅ Consistent |
+| LOW | < 0.70 | Consistent |
+| MEDIUM | 0.70-0.85 | Consistent |
+| HIGH | >= 0.85 | Consistent |
 
-**Embedding Model:** `nomic-embed-text` (768 dimensions) - ✅ Consistent
+**Embedding Model:** `nomic-embed-text` (768 dimensions) - Consistent
 
 ---
 
@@ -158,27 +164,27 @@ $ grep -rn "horror_story_prompt_template\|from horror_story_generator\|templates
 
 ## Strict Completion Confirmation
 
-### Phase 1 ✅
+### Phase 1
 
-1. **README is accurate and runnable for new users** ✅
+1. **README is accurate and runnable for new users**
    - Only current entry points documented
    - No legacy template/Flask/n8n claims
    - Correct output format (.md)
 
-2. **No official docs contain legacy references** ✅
+2. **No official docs contain legacy references**
    - Zero `horror_story_prompt_template.json` references
    - Zero `from horror_story_generator` imports
    - Zero `templates/` directory claims
    - Zero Flask API examples
 
-3. **Canonical baseline is consistent across all active docs** ✅
+3. **Canonical baseline is consistent across all active docs**
    - Same entry points
    - Same dedup thresholds
    - Same embedding model
 
-### Phase 2 ✅
+### Phase 2
 
-4. **All architecture diagrams converted to Mermaid** ✅
+4. **All architecture diagrams converted to Mermaid**
    - 7 total diagrams converted
    - 3 files updated
    - All diagrams reflect current `src/` structure
