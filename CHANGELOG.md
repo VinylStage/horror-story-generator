@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.1](https://github.com/VinylStage/horror-story-generator/compare/v1.4.0...v1.4.1) (2026-01-14)
+
+
+### Bug Fixes
+
+* disable draft releases for proper tag creation ([1462f8b](https://github.com/VinylStage/horror-story-generator/commit/1462f8bbbc76c41b17909b75f90de3f8c01b0aef))
+* disable draft releases for proper tag creation ([f9ede6c](https://github.com/VinylStage/horror-story-generator/commit/f9ede6c5c56f34d9b62f5abb8e0e4598f5820148))
+
 ## [1.4.0](https://github.com/VinylStage/horror-story-generator/compare/v1.3.2...v1.4.0) (2026-01-14)
 
 
