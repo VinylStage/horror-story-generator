@@ -85,6 +85,16 @@
 > **Note:** 스토리 CK 추출은 생성된 텍스트에서 canonical 차원을 LLM으로 분석합니다.
 > 템플릿 CK와 비교하여 정렬 점수(alignment score)를 메타데이터에 기록합니다.
 
+### 벡터 백엔드 설정 (v1.4.0)
+
+| 환경 변수 | 기본값 | 설명 |
+|-----------|--------|------|
+| `VECTOR_BACKEND_ENABLED` | `true` | 벡터 기반 연구 카드 검색/클러스터링 활성화 |
+
+> **Note:** 벡터 백엔드는 Ollama (nomic-embed-text)와 FAISS를 사용합니다.
+> `init_vector_backend()`, `generate_embedding()`, `vector_search_research_cards()`,
+> `compute_semantic_affinity()`, `cluster_research_cards()` 함수를 제공합니다.
+
 ### 경로 설정 (v1.3.1)
 
 | 환경 변수 | 기본값 | 설명 |

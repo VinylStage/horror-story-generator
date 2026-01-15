@@ -102,12 +102,13 @@ flowchart TB
 - **규칙:** 우선순위 기반 선택 (primary_fear), 첫 번째 유효값 (기타)
 
 #### Step 5: Dedup Check
-- **모듈:** `src/dedup/research/`
+- **모듈:** `src/dedup/research/`, `src/research/integration/vector_backend_hooks.py`
 - **처리:**
   1. 카드 텍스트 추출 (topic, title, summary, concepts, applications)
   2. Ollama embedding 생성 (nomic-embed-text, 768차원)
   3. FAISS 인덱스에서 nearest neighbor 검색
   4. 유사도 점수 → 신호 레벨 변환
+- **벡터 백엔드 (v1.4.0):** `vector_backend_hooks.py`에서 통합 벡터 연산 제공
 
 #### Step 6: Output Writing
 - **모듈:** `output_writer.py`

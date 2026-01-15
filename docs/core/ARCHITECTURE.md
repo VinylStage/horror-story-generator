@@ -397,6 +397,41 @@ flowchart LR
 | FAISS Index | `src/dedup/research/index.py` | Vector storage |
 | Dedup | `src/dedup/research/dedup.py` | Similarity checking |
 | Canonical Collapse | `src/research/executor/canonical_collapse.py` | canonical_affinity → canonical_core |
+| Vector Backend | `src/research/integration/vector_backend_hooks.py` | Unified vector operations |
+
+### Vector Backend Hooks (v1.4.0+)
+
+Centralized vector operations for research card semantic search and clustering.
+
+```mermaid
+flowchart LR
+    A["Research Card"] --> B["generate_embedding()"]
+    B --> C["FAISS Index"]
+    C --> D["vector_search_research_cards()"]
+    D --> E["Similar Cards"]
+
+    F["Template"] --> G["compute_semantic_affinity()"]
+    A --> G
+    G --> H["Affinity Score"]
+
+    I["Card Collection"] --> J["cluster_research_cards()"]
+    J --> K["K-Means Clusters"]
+```
+
+**Functions:**
+| Function | Description |
+|----------|-------------|
+| `init_vector_backend()` | Initialize Ollama embedder and FAISS index |
+| `generate_embedding(text)` | Generate embedding via nomic-embed-text |
+| `vector_search_research_cards(embedding, top_k)` | Search similar cards in FAISS |
+| `index_research_card(card_id, content, metadata)` | Add card to FAISS index |
+| `compute_semantic_affinity(template_canonical, research_content)` | Cosine similarity between template and research |
+| `cluster_research_cards(cards, n_clusters)` | K-means++ clustering on embeddings |
+
+**Configuration:**
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `VECTOR_BACKEND_ENABLED` | `true` | Enable vector backend features |
 
 ### Canonical Core Normalization
 

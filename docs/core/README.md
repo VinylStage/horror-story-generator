@@ -102,7 +102,8 @@ horror-story-generator/
 │   │   │   └── validator.py     # Output validation
 │   │   └── integration/         # Story-research bridge
 │   │       ├── loader.py        # Card loading
-│   │       └── selector.py      # Context selection
+│   │       ├── selector.py      # Context selection
+│   │       └── vector_backend_hooks.py  # Vector operations (v1.4.0)
 │   │
 │   └── api/                     # FastAPI application
 │       ├── main.py              # API server
@@ -336,6 +337,9 @@ STORY_DEDUP_STRICT=false             # Abort on duplicate detection
 ENABLE_STORY_SEMANTIC_DEDUP=true     # Enable semantic embedding dedup
 STORY_SEMANTIC_THRESHOLD=0.85        # Semantic HIGH threshold
 STORY_HYBRID_THRESHOLD=0.85          # Hybrid duplicate threshold
+
+# Vector Backend (v1.4.0)
+VECTOR_BACKEND_ENABLED=true          # Enable vector operations for research
 ```
 
 ---
