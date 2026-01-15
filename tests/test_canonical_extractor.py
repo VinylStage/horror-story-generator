@@ -406,3 +406,138 @@ class TestPromptContent:
         # Twists
         assert "revelation" in EXTRACTION_SYSTEM_PROMPT
         assert "inevitability" in EXTRACTION_SYSTEM_PROMPT
+
+
+# Issue #20: Enforcement tests
+from src.story.canonical_extractor import (
+    check_alignment_enforcement,
+    should_retry_for_alignment,
+    should_reject_for_alignment,
+    VALID_ENFORCEMENT_POLICIES,
+)
+
+
+class TestAlignmentEnforcement:
+    """Tests for alignment enforcement (Issue #20)."""
+
+    def test_policy_none_always_accepts(self):
+        """Policy 'none' should always accept regardless of score."""
+        comparison = {"match_score": 0.2, "divergences": []}
+
+        result = check_alignment_enforcement(comparison, policy="none")
+
+        assert result["passed"] is False  # Score below threshold
+        assert result["action"] == "accept"  # But policy says accept
+        assert result["reason"] == "Enforcement disabled"
+
+    def test_policy_warn_below_threshold(self):
+        """Policy 'warn' should warn but accept below threshold."""
+        comparison = {"match_score": 0.4, "divergences": [{"dimension": "primary_fear"}]}
+
+        result = check_alignment_enforcement(comparison, policy="warn", min_alignment=0.6)
+
+        assert result["passed"] is False
+        assert result["action"] == "warn"
+        assert "warning only" in result["reason"]
+
+    def test_policy_retry_below_threshold(self):
+        """Policy 'retry' should request retry below threshold."""
+        comparison = {"match_score": 0.5, "divergences": []}
+
+        result = check_alignment_enforcement(comparison, policy="retry", min_alignment=0.6)
+
+        assert result["passed"] is False
+        assert result["action"] == "retry"
+        assert "retry requested" in result["reason"]
+
+    def test_policy_strict_below_threshold(self):
+        """Policy 'strict' should reject below threshold."""
+        comparison = {"match_score": 0.4, "divergences": []}
+
+        result = check_alignment_enforcement(comparison, policy="strict", min_alignment=0.6)
+
+        assert result["passed"] is False
+        assert result["action"] == "reject"
+        assert "strict mode" in result["reason"]
+
+    def test_above_threshold_accepts(self):
+        """All policies should accept when above threshold."""
+        comparison = {"match_score": 0.8, "divergences": []}
+
+        for policy in ["none", "warn", "retry", "strict"]:
+            result = check_alignment_enforcement(comparison, policy=policy, min_alignment=0.6)
+            assert result["passed"] is True
+            assert result["action"] == "accept"
+
+    def test_exact_threshold_passes(self):
+        """Score exactly at threshold should pass."""
+        comparison = {"match_score": 0.6, "divergences": []}
+
+        result = check_alignment_enforcement(comparison, policy="strict", min_alignment=0.6)
+
+        assert result["passed"] is True
+        assert result["action"] == "accept"
+
+    def test_invalid_policy_defaults_to_warn(self):
+        """Invalid policy should default to 'warn'."""
+        comparison = {"match_score": 0.4, "divergences": []}
+
+        result = check_alignment_enforcement(comparison, policy="invalid_policy", min_alignment=0.6)
+
+        assert result["policy"] == "warn"
+        assert result["action"] == "warn"
+
+    def test_result_includes_metadata(self):
+        """Result should include all expected metadata."""
+        comparison = {"match_score": 0.7, "divergences": [{"dimension": "twist_family"}]}
+
+        result = check_alignment_enforcement(comparison, policy="warn", min_alignment=0.6)
+
+        assert "passed" in result
+        assert "action" in result
+        assert "reason" in result
+        assert "match_score" in result
+        assert "threshold" in result
+        assert "policy" in result
+        assert "divergences" in result
+        assert result["divergences"] == [{"dimension": "twist_family"}]
+
+
+class TestEnforcementHelpers:
+    """Tests for enforcement helper functions."""
+
+    def test_should_retry_for_alignment_true(self):
+        """should_retry_for_alignment should return True for retry action."""
+        enforcement_result = {"action": "retry"}
+
+        assert should_retry_for_alignment(enforcement_result) is True
+
+    def test_should_retry_for_alignment_false(self):
+        """should_retry_for_alignment should return False for other actions."""
+        for action in ["accept", "warn", "reject"]:
+            enforcement_result = {"action": action}
+            assert should_retry_for_alignment(enforcement_result) is False
+
+    def test_should_reject_for_alignment_true(self):
+        """should_reject_for_alignment should return True for reject action."""
+        enforcement_result = {"action": "reject"}
+
+        assert should_reject_for_alignment(enforcement_result) is True
+
+    def test_should_reject_for_alignment_false(self):
+        """should_reject_for_alignment should return False for other actions."""
+        for action in ["accept", "warn", "retry"]:
+            enforcement_result = {"action": action}
+            assert should_reject_for_alignment(enforcement_result) is False
+
+
+class TestEnforcementConfiguration:
+    """Tests for enforcement configuration."""
+
+    def test_valid_enforcement_policies(self):
+        """VALID_ENFORCEMENT_POLICIES should contain expected values."""
+        assert "none" in VALID_ENFORCEMENT_POLICIES
+        assert "warn" in VALID_ENFORCEMENT_POLICIES
+        assert "retry" in VALID_ENFORCEMENT_POLICIES
+        assert "strict" in VALID_ENFORCEMENT_POLICIES
+        assert len(VALID_ENFORCEMENT_POLICIES) == 4

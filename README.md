@@ -140,6 +140,21 @@ uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 | GET | `/jobs/{job_id}` | 작업 상태 조회 |
 | POST | `/research/dedup` | 시맨틱 중복 검사 |
 
+**인증 (선택):**
+
+API 인증은 기본 비활성화입니다. 외부 노출 시 활성화하세요:
+
+```bash
+# .env
+API_AUTH_ENABLED=true
+API_KEY=your-secure-api-key
+```
+
+인증 활성화 시 `X-API-Key` 헤더 필요:
+```bash
+curl -H "X-API-Key: your-key" http://localhost:8000/jobs/story/trigger
+```
+
 ---
 
 ## 프로그래밍 방식 사용

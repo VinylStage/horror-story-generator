@@ -29,6 +29,14 @@ logger = logging.getLogger(__name__)
 ENABLE_STORY_CK_EXTRACTION = os.getenv("ENABLE_STORY_CK_EXTRACTION", "true").lower() == "true"
 STORY_CK_MODEL = os.getenv("STORY_CK_MODEL", None)  # None = use same model as story generation
 
+# Enforcement policy configuration (Issue #20)
+# Policy levels: none, warn, retry, strict
+STORY_CK_ENFORCEMENT = os.getenv("STORY_CK_ENFORCEMENT", "warn").lower()
+STORY_CK_MIN_ALIGNMENT = float(os.getenv("STORY_CK_MIN_ALIGNMENT", "0.6"))  # 60% minimum alignment
+
+# Valid enforcement policy values
+VALID_ENFORCEMENT_POLICIES = ["none", "warn", "retry", "strict"]
+
 
 # Prompt template for canonical key extraction
 EXTRACTION_SYSTEM_PROMPT = """You are a horror story analyst. Your task is to analyze a horror story and identify its structural canonical dimensions.
@@ -301,3 +309,100 @@ def compare_canonical_cores(
         "match_count": len(matches),
         "total_dimensions": len(dimensions),
     }
+
+
+def check_alignment_enforcement(
+    comparison: Dict[str, Any],
+    policy: Optional[str] = None,
+    min_alignment: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    Check if story-template alignment meets enforcement requirements.
+
+    Part of Issue #20: Enforce Canonical Key constraints on story output.
+
+    Args:
+        comparison: Result from compare_canonical_cores()
+        policy: Enforcement policy (none/warn/retry/strict). Uses env default if None.
+        min_alignment: Minimum alignment score (0.0-1.0). Uses env default if None.
+
+    Returns:
+        Dict with enforcement result:
+            - passed: bool - Whether alignment meets threshold
+            - action: str - Recommended action (accept/warn/retry/reject)
+            - reason: str - Human-readable explanation
+            - match_score: float - The alignment score
+            - threshold: float - The threshold used
+    """
+    # Use defaults from environment if not specified
+    effective_policy = policy or STORY_CK_ENFORCEMENT
+    effective_threshold = min_alignment if min_alignment is not None else STORY_CK_MIN_ALIGNMENT
+
+    # Validate policy
+    if effective_policy not in VALID_ENFORCEMENT_POLICIES:
+        logger.warning(f"[StoryCK] Invalid enforcement policy '{effective_policy}', using 'warn'")
+        effective_policy = "warn"
+
+    match_score = comparison.get("match_score", 0.0)
+    passed = match_score >= effective_threshold
+
+    # Determine action based on policy and result
+    if effective_policy == "none":
+        action = "accept"
+        reason = "Enforcement disabled"
+    elif passed:
+        action = "accept"
+        reason = f"Alignment {match_score:.0%} meets threshold {effective_threshold:.0%}"
+    else:
+        # Alignment below threshold - action depends on policy
+        if effective_policy == "warn":
+            action = "warn"
+            reason = f"Alignment {match_score:.0%} below threshold {effective_threshold:.0%} (warning only)"
+        elif effective_policy == "retry":
+            action = "retry"
+            reason = f"Alignment {match_score:.0%} below threshold {effective_threshold:.0%} (retry requested)"
+        elif effective_policy == "strict":
+            action = "reject"
+            reason = f"Alignment {match_score:.0%} below threshold {effective_threshold:.0%} (strict mode)"
+        else:
+            action = "accept"
+            reason = "Unknown policy"
+
+    logger.info(f"[StoryCK][Enforcement] Policy={effective_policy}, Score={match_score:.0%}, "
+                f"Threshold={effective_threshold:.0%}, Action={action}")
+
+    return {
+        "passed": passed,
+        "action": action,
+        "reason": reason,
+        "match_score": match_score,
+        "threshold": effective_threshold,
+        "policy": effective_policy,
+        "divergences": comparison.get("divergences", []),
+    }
+
+
+def should_retry_for_alignment(enforcement_result: Dict[str, Any]) -> bool:
+    """
+    Determine if story should be retried based on alignment enforcement.
+
+    Args:
+        enforcement_result: Result from check_alignment_enforcement()
+
+    Returns:
+        True if retry is recommended, False otherwise
+    """
+    return enforcement_result.get("action") == "retry"
+
+
+def should_reject_for_alignment(enforcement_result: Dict[str, Any]) -> bool:
+    """
+    Determine if story should be rejected based on alignment enforcement.
+
+    Args:
+        enforcement_result: Result from check_alignment_enforcement()
+
+    Returns:
+        True if rejection is recommended, False otherwise
+    """
+    return enforcement_result.get("action") == "reject"

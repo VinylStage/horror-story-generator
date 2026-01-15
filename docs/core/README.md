@@ -340,6 +340,10 @@ STORY_HYBRID_THRESHOLD=0.85          # Hybrid duplicate threshold
 
 # Vector Backend (v1.4.0)
 VECTOR_BACKEND_ENABLED=true          # Enable vector operations for research
+
+# API Authentication (Optional)
+API_AUTH_ENABLED=false    # true로 설정 시 X-API-Key 인증 활성화
+API_KEY=your-secure-key   # 인증에 사용할 API 키
 ```
 
 ---

@@ -139,13 +139,58 @@ This document defines the **official application scope** of Canonical Key within
 
 ---
 
-### 5. Intentionally NOT Applied (Deferred)
+### 5. Story Canonical Key Enforcement (IMPLEMENTED)
+
+**Location:** Story Generation Pipeline (Post-extraction)
+
+| Component | File | Description |
+|-----------|------|-------------|
+| Enforcement Check | `src/story/canonical_extractor.py` | Validates alignment against threshold |
+| Generator Integration | `src/story/generator.py` | Applies enforcement policy (retry/reject) |
+
+**How It Works:**
+1. After CK extraction and comparison, alignment score is checked against threshold
+2. Enforcement policy determines action: accept, warn, retry, or reject
+3. Retry policy causes re-generation with new template selection
+4. Strict policy rejects stories that fail to meet alignment threshold
+
+**Enforcement Policies:**
+
+| Policy | Behavior |
+|--------|----------|
+| `none` | Disabled - always accept |
+| `warn` | Log warning if below threshold (default) |
+| `retry` | Re-attempt generation with different template |
+| `strict` | Reject story if below threshold |
+
+**Configuration:**
+- `STORY_CK_ENFORCEMENT`: Policy level (default: `warn`)
+- `STORY_CK_MIN_ALIGNMENT`: Minimum alignment score 0.0-1.0 (default: `0.6`)
+
+**Output Format (in story metadata):**
+```json
+{
+  "story_canonical_extraction": {
+    "enforcement": {
+      "passed": true,
+      "action": "accept",
+      "reason": "Alignment 80% meets threshold 60%",
+      "match_score": 0.8,
+      "threshold": 0.6,
+      "policy": "warn"
+    }
+  }
+}
+```
+
+---
+
+### 6. Intentionally NOT Applied (Deferred)
 
 The following are **explicitly deferred** to future phases:
 
 | Feature | Status | Rationale |
 |---------|--------|-----------|
-| Canonical Key enforcement on story output | DEFERRED | No validation that story content matches template's canonical_core (Issue #20) |
 | Cross-pipeline Canonical Key matching | DEFERRED | No automatic matching between research affinity and template core (Issue #21) |
 
 ---
@@ -159,7 +204,7 @@ The following are **explicitly deferred** to future phases:
 | Story template definition | PREDEFINED | canonical_core is fixed per template |
 | Story dedup comparison | OPTIONAL | Used if available, not required |
 | Story output extraction | IMPLEMENTED | Stories extract own CK for alignment scoring |
-| Story output enforcement | DEFERRED | Alignment score is informational only |
+| Story output enforcement | IMPLEMENTED | Configurable policy (none/warn/retry/strict) |
 
 ---
 

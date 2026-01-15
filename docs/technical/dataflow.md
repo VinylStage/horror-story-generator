@@ -1,7 +1,7 @@
 # End-to-End Dataflow
 
-**Version:** 1.1
-**Last Updated:** 2026-01-15
+**Version:** 1.0
+**Last Updated:** 2026-01-14
 
 ---
 
@@ -102,13 +102,12 @@ flowchart TB
 - **규칙:** 우선순위 기반 선택 (primary_fear), 첫 번째 유효값 (기타)
 
 #### Step 5: Dedup Check
-- **모듈:** `src/dedup/research/`, `src/research/integration/vector_backend_hooks.py`
+- **모듈:** `src/dedup/research/`
 - **처리:**
   1. 카드 텍스트 추출 (topic, title, summary, concepts, applications)
   2. Ollama embedding 생성 (nomic-embed-text, 768차원)
   3. FAISS 인덱스에서 nearest neighbor 검색
   4. 유사도 점수 → 신호 레벨 변환
-- **벡터 백엔드 (v1.4.0):** `vector_backend_hooks.py`에서 통합 벡터 연산 제공
 
 #### Step 6: Output Writing
 - **모듈:** `output_writer.py`
@@ -140,18 +139,23 @@ flowchart TB
         C3["Response Processing"]
     end
 
-    subgraph HybridDedup["Hybrid Dedup (Post, v1.4.0)"]
-        D1["Extract Story Text"]
-        D2["Generate Embedding<br/>(nomic-embed-text)"]
-        D3["FAISS Search"]
-        D4["Hybrid Score<br/>(0.3×canonical + 0.7×semantic)"]
-        D5{"Signal Level?"}
+    subgraph CKExtraction["CK Extraction & Enforcement"]
+        CK1["LLM Analysis<br/>(canonical_extractor.py)"]
+        CK2["Collapse to<br/>canonical_core"]
+        CK3["Compare with<br/>Template CK"]
+        CK4{"Enforcement<br/>Policy?"}
+    end
+
+    subgraph SemanticDedup["Semantic Dedup (Post)"]
+        D1["Generate Semantic Summary"]
+        D2["Similarity Check"]
+        D3{"Signal Level?"}
     end
 
     subgraph Decision["결정"]
         E1["Accept"]
         E2["Retry"]
-        E3["Skip"]
+        E3["Skip/Reject"]
     end
 
     subgraph Output["출력"]
@@ -167,14 +171,18 @@ flowchart TB
     B2 -->|Yes, WARN| E2
     C1 --> C2
     C2 --> C3
-    C3 --> D1
+    C3 --> CK1
+    CK1 --> CK2
+    CK2 --> CK3
+    CK3 --> CK4
+    CK4 -->|pass/warn| D1
+    CK4 -->|retry| E2
+    CK4 -->|strict reject| E3
     D1 --> D2
     D2 --> D3
-    D3 --> D4
-    D4 --> D5
-    D5 -->|LOW/MED| E1
-    D5 -->|HIGH, retry<2| E2
-    D5 -->|HIGH, retry>=2| E3
+    D3 -->|LOW/MED| E1
+    D3 -->|HIGH, retry<2| E2
+    D3 -->|HIGH, retry>=2| E3
     E1 --> F1
     E1 --> F2
     E2 --> A1
@@ -217,19 +225,32 @@ flowchart TB
 - **API:** Anthropic Messages API
 - **모델:** 환경변수 `CLAUDE_MODEL` (기본: claude-sonnet-4-5)
 
-#### Step 6: Hybrid Dedup (Post-generation, v1.4.0)
-- **모듈:** `src/dedup/story/`, `src/story/dedup/story_dedup_check.py`
+#### Step 6: Canonical Key Extraction & Enforcement
+- **모듈:** `src/story/canonical_extractor.py`
 - **처리:**
-  1. 스토리 텍스트 추출 (제목, 요약, 본문, canonical)
-  2. Ollama embedding 생성 (nomic-embed-text, 768차원)
-  3. Story FAISS 인덱스에서 nearest neighbor 검색
-  4. 하이브리드 점수 계산: `hybrid = (canonical × 0.3) + (semantic × 0.7)`
-  5. 복합 신호 레벨 결정
+  1. 생성된 스토리 텍스트를 LLM으로 분석
+  2. 5개 canonical 차원 추출 (canonical_affinity → canonical_core)
+  3. 템플릿의 canonical_core와 비교하여 정렬 점수 계산
+  4. 정책에 따라 액션 결정 (accept/warn/retry/reject)
+- **정책:**
+  - `none`: 검증 비활성화
+  - `warn`: 경고 후 진행 (기본값)
+  - `retry`: 임계값 미달 시 재생성
+  - `strict`: 임계값 미달 시 거부
 
-#### Step 7: Decision & Output
+#### Step 7: Semantic Dedup (Post-generation)
+- **모듈:** `src/dedup/similarity.py`
+- **처리:**
+  1. LLM으로 semantic summary 생성
+  2. 기존 스토리들과 Jaccard 유사도 비교
+  3. canonical key 일치도 계산
+  4. 복합 신호 레벨 결정
+
+#### Step 8: Decision & Output
 - **LOW/MEDIUM:** 수락 → 파일 저장 + Registry 등록
 - **HIGH (retry < 2):** 다른 템플릿으로 재생성
 - **HIGH (retry >= 2):** 스킵 (Registry에 기록)
+- **CK Enforcement reject:** 스킵 (strict 정책일 때)
 
 ---
 
@@ -312,10 +333,6 @@ Research Selection (selector.py)
      ↓
 Story Generation (generator.py)
      ↓
-Story Hybrid Dedup (v1.4.0)
-     ↓  ↘
-Story FAISS Index (story.faiss)
-     ↓
 Story Registry (story_registry.db)
 ```
 
@@ -358,5 +375,5 @@ flowchart TD
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
+| 1.1 | 2026-01-15 | Story CK Extraction & Enforcement 단계 추가 |
 | 1.0 | 2026-01-14 | 초기 문서 작성 |
-| 1.1 | 2026-01-15 | v1.4.0 스토리 하이브리드 시맨틱 dedup 반영 |

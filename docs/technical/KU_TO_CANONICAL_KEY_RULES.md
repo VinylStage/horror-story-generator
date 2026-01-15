@@ -464,9 +464,18 @@ alignment_score = matched_dimensions / 5 × 100%
 
 When story CK diverges from template CK:
 
-1. **Informational only** — Alignment score is logged, not enforced
-2. **No automatic retry** — Divergence does not trigger regeneration
-3. **Metadata recorded** — Full comparison stored for analysis
+1. **Enforcement policy** — Action depends on `STORY_CK_ENFORCEMENT` setting
+2. **Retry mode** — Low alignment can trigger regeneration with different template
+3. **Strict mode** — Low alignment can reject the story entirely
+4. **Metadata recorded** — Full comparison and enforcement result stored
+
+**Enforcement Policies:**
+| Policy | Action on Low Alignment |
+|--------|-------------------------|
+| `none` | Always accept (disabled) |
+| `warn` | Log warning, accept anyway (default) |
+| `retry` | Re-attempt with different template |
+| `strict` | Reject story entirely |
 
 **Divergence Example:**
 ```json
@@ -481,10 +490,17 @@ This indicates the LLM wrote a story emphasizing collective/mob threat when the 
 
 ### 11.6 Configuration
 
+**Extraction:**
 | Env Variable | Default | Description |
 |--------------|---------|-------------|
 | `ENABLE_STORY_CK_EXTRACTION` | `true` | Enable/disable extraction |
 | `STORY_CK_MODEL` | (none) | Override model for extraction |
+
+**Enforcement:**
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `STORY_CK_ENFORCEMENT` | `warn` | Policy: none/warn/retry/strict |
+| `STORY_CK_MIN_ALIGNMENT` | `0.6` | Minimum alignment score (0.0-1.0) |
 
 ### 11.7 Related Implementation
 

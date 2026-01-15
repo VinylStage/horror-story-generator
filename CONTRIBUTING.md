@@ -111,6 +111,10 @@ MAX_TOKENS=8192
 TEMPERATURE=0.8
 OUTPUT_DIR=./generated_stories
 LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+# API 인증 (선택 - API 서버 운영 시)
+API_AUTH_ENABLED=false    # true로 설정 시 X-API-Key 인증 활성화
+API_KEY=your_secure_key   # 인증에 사용할 API 키
 ```
 
 ### 5. 테스트 실행
@@ -491,9 +495,9 @@ Breaking change가 있는 경우:
 
 ### API 서버 구현
 
-- FastAPI 기반 REST API
+- FastAPI 기반 REST API ✅
+- X-API-Key 인증 시스템 ✅ (`API_AUTH_ENABLED=true`로 활성화)
 - GraphQL API (Strawberry)
-- 인증/인가 시스템
 - Rate limiting
 
 ### 기능 개선

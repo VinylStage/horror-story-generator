@@ -141,14 +141,22 @@ Automated prompt construction from template + KUs.
 
 Validate generated stories against canonical constraints.
 
-**Scope:**
-- Parse story for structural elements
-- Check alignment with template canonical_core
-- Flag deviations for review
+**Status:** Partially Implemented (v1.4.1)
 
-**Uncertainty:**
-- Validation strictness level unclear
-- May require LLM-based analysis
+**Implemented (Issue #19, #20):**
+- LLM-based extraction of canonical dimensions from story text
+- Alignment scoring (story CK vs template CK)
+- Configurable enforcement policies (none/warn/retry/strict)
+- Retry and rejection based on alignment threshold
+
+**Remaining Scope:**
+- Structural element parsing (non-LLM based)
+- Quality scoring beyond canonical alignment
+- Human review interface for flagged stories
+
+**Configuration:**
+- `STORY_CK_ENFORCEMENT`: Policy level (default: warn)
+- `STORY_CK_MIN_ALIGNMENT`: Threshold (default: 0.6)
 
 ---
 
