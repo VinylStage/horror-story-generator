@@ -1,7 +1,7 @@
 # End-to-End Dataflow
 
-**Version:** 1.0
-**Last Updated:** 2026-01-14
+**Version:** 1.1
+**Last Updated:** 2026-01-15
 
 ---
 
@@ -139,10 +139,12 @@ flowchart TB
         C3["Response Processing"]
     end
 
-    subgraph SemanticDedup["Semantic Dedup (Post)"]
-        D1["Generate Semantic Summary"]
-        D2["Similarity Check"]
-        D3{"Signal Level?"}
+    subgraph HybridDedup["Hybrid Dedup (Post, v1.4.0)"]
+        D1["Extract Story Text"]
+        D2["Generate Embedding<br/>(nomic-embed-text)"]
+        D3["FAISS Search"]
+        D4["Hybrid Score<br/>(0.3×canonical + 0.7×semantic)"]
+        D5{"Signal Level?"}
     end
 
     subgraph Decision["결정"]
@@ -167,9 +169,11 @@ flowchart TB
     C3 --> D1
     D1 --> D2
     D2 --> D3
-    D3 -->|LOW/MED| E1
-    D3 -->|HIGH, retry<2| E2
-    D3 -->|HIGH, retry>=2| E3
+    D3 --> D4
+    D4 --> D5
+    D5 -->|LOW/MED| E1
+    D5 -->|HIGH, retry<2| E2
+    D5 -->|HIGH, retry>=2| E3
     E1 --> F1
     E1 --> F2
     E2 --> A1
@@ -212,13 +216,14 @@ flowchart TB
 - **API:** Anthropic Messages API
 - **모델:** 환경변수 `CLAUDE_MODEL` (기본: claude-sonnet-4-5)
 
-#### Step 6: Semantic Dedup (Post-generation)
-- **모듈:** `src/dedup/similarity.py`
+#### Step 6: Hybrid Dedup (Post-generation, v1.4.0)
+- **모듈:** `src/dedup/story/`, `src/story/dedup/story_dedup_check.py`
 - **처리:**
-  1. LLM으로 semantic summary 생성
-  2. 기존 스토리들과 Jaccard 유사도 비교
-  3. canonical key 일치도 계산
-  4. 복합 신호 레벨 결정
+  1. 스토리 텍스트 추출 (제목, 요약, 본문, canonical)
+  2. Ollama embedding 생성 (nomic-embed-text, 768차원)
+  3. Story FAISS 인덱스에서 nearest neighbor 검색
+  4. 하이브리드 점수 계산: `hybrid = (canonical × 0.3) + (semantic × 0.7)`
+  5. 복합 신호 레벨 결정
 
 #### Step 7: Decision & Output
 - **LOW/MEDIUM:** 수락 → 파일 저장 + Registry 등록
@@ -306,6 +311,10 @@ Research Selection (selector.py)
      ↓
 Story Generation (generator.py)
      ↓
+Story Hybrid Dedup (v1.4.0)
+     ↓  ↘
+Story FAISS Index (story.faiss)
+     ↓
 Story Registry (story_registry.db)
 ```
 
@@ -349,3 +358,4 @@ flowchart TD
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
 | 1.0 | 2026-01-14 | 초기 문서 작성 |
+| 1.1 | 2026-01-15 | v1.4.0 스토리 하이브리드 시맨틱 dedup 반영 |

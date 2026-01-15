@@ -31,6 +31,7 @@
 |------|------|------|
 | 연구 카드 | FAISS 시맨틱 (nomic-embed-text) | 보장됨 |
 | 스토리 | SHA256 시그니처 | 보장됨 |
+| 스토리 | 시맨틱 임베딩 (하이브리드, v1.4.0) | 보장됨 |
 
 ### 3. Canonical 무결성
 
@@ -63,6 +64,16 @@
 | `RESEARCH_INJECT_EXCLUDE_DUP_LEVEL` | `HIGH` | 제외할 중복 레벨 |
 | `ENABLE_STORY_DEDUP` | `true` | 스토리 레벨 중복 검사 |
 | `STORY_DEDUP_STRICT` | `false` | 중복 시 생성 중단 |
+
+### 스토리 시맨틱 중복 검사 (v1.4.0)
+
+| 환경 변수 | 기본값 | 설명 |
+|-----------|--------|------|
+| `ENABLE_STORY_SEMANTIC_DEDUP` | `true` | 시맨틱 임베딩 기반 중복 검사 |
+| `STORY_SEMANTIC_THRESHOLD` | `0.85` | 시맨틱 HIGH 신호 기준점 |
+| `STORY_HYBRID_THRESHOLD` | `0.85` | 하이브리드 중복 판정 기준점 |
+| `STORY_HYBRID_CANONICAL_WEIGHT` | `0.3` | 하이브리드 canonical 가중치 |
+| `STORY_HYBRID_SEMANTIC_WEIGHT` | `0.7` | 하이브리드 semantic 가중치 |
 
 ### 스토리 Canonical Key 추출 설정
 

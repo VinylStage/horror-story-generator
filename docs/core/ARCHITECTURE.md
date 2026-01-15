@@ -137,6 +137,8 @@ Story generation automatically selects and injects matching research cards:
 
 Story-level dedup prevents structurally duplicated stories even with cosmetic variations.
 
+#### Signature-Based Dedup (v1.0+)
+
 **Story Signature:**
 ```
 canonical_core + research_used → SHA256 hash
@@ -155,19 +157,72 @@ flowchart LR
     D --> H["Save with<br/>Signature"]
 ```
 
+#### Semantic Embedding Dedup (v1.4.0+)
+
+In addition to signature-based dedup, story content can be checked for semantic similarity using embeddings.
+
+**Architecture:**
+```mermaid
+flowchart LR
+    A["Story Text"] --> B["Ollama Embedding<br/>(nomic-embed-text)"]
+    B --> C["FAISS Index<br/>(story_vectors/)"]
+    C --> D["Cosine Similarity"]
+    D --> E{"Score >= 0.85?"}
+    E -->|Yes| F["HIGH Signal"]
+    E -->|No| G["LOW/MEDIUM"]
+```
+
+**Hybrid Scoring:**
+```
+hybrid_score = (canonical_score × 0.3) + (semantic_score × 0.7)
+```
+
+| Component | Weight | Description |
+|-----------|--------|-------------|
+| Canonical | 30% | Exact signature match (0 or 1) |
+| Semantic | 70% | Cosine similarity (0.0 to 1.0) |
+
+**Duplicate Detection:**
+- Exact signature match → Always HIGH
+- Hybrid score ≥ 0.85 → HIGH (semantic duplicate)
+- Hybrid score 0.70-0.85 → MEDIUM
+- Hybrid score < 0.70 → LOW
+
 **Configuration:**
 | Env Variable | Default | Description |
 |--------------|---------|-------------|
 | `ENABLE_STORY_DEDUP` | `true` | Enable signature-based dedup |
 | `STORY_DEDUP_STRICT` | `false` | Abort generation on duplicate |
+| `ENABLE_STORY_SEMANTIC_DEDUP` | `true` | Enable semantic embedding dedup |
+| `STORY_SEMANTIC_THRESHOLD_HIGH` | `0.85` | HIGH similarity threshold |
+| `STORY_HYBRID_CANONICAL_WEIGHT` | `0.3` | Canonical weight in hybrid score |
+| `STORY_HYBRID_SEMANTIC_WEIGHT` | `0.7` | Semantic weight in hybrid score |
 
 **Story Metadata:**
 ```json
 {
   "story_signature": "abc123...",
   "story_dedup_result": "unique",
-  "story_dedup_reason": "unique"
+  "story_dedup_reason": "unique",
+  "semantic_similarity_score": 0.45,
+  "hybrid_dedup_score": 0.315,
+  "nearest_story_id": "story-20260112-143052"
 }
+```
+
+**Key Modules:**
+| Module | File | Purpose |
+|--------|------|---------|
+| Story Embedder | `src/dedup/story/embedder.py` | Extract text and generate embeddings |
+| Story FAISS Index | `src/dedup/story/index.py` | Vector storage for stories |
+| Semantic Dedup | `src/dedup/story/semantic_dedup.py` | Similarity checking |
+| Hybrid Dedup | `src/dedup/story/hybrid_dedup.py` | Combined scoring |
+
+**Storage:**
+```
+data/story_vectors/
+├── story.faiss          # FAISS index for story embeddings
+└── metadata.json        # story_id ↔ vector mapping
 ```
 
 ### Story Canonical Key Extraction
