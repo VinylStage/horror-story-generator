@@ -22,6 +22,14 @@ info:
     uvicorn src.api.main:app --host 127.0.0.1 --port 8000
     ```
 
+    ## Authentication (Optional)
+    API key authentication is disabled by default. To enable:
+    ```bash
+    export API_AUTH_ENABLED=true
+    export API_KEY=your-secure-key
+    ```
+    When enabled, include `X-API-Key` header in all requests (except `/health` and `/resource/status`).
+
     ## Note
     This API is designed for **local use only**. All operations connect to local Ollama instance.
   version: 1.1.0
@@ -593,3 +601,17 @@ components:
         type:
           type: string
           description: Error type
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        API key authentication (optional).
+        Required when API_AUTH_ENABLED=true.
+        Excluded endpoints: /health, /resource/status
+
+security:
+  - ApiKeyAuth: []
+  - {}  # Also allow unauthenticated access (when API_AUTH_ENABLED=false)
