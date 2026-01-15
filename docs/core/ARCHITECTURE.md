@@ -137,6 +137,8 @@ Story generation automatically selects and injects matching research cards:
 
 Story-level dedup prevents structurally duplicated stories even with cosmetic variations.
 
+#### Signature-Based Dedup (v1.0+)
+
 **Story Signature:**
 ```
 canonical_core + research_used → SHA256 hash
@@ -155,18 +157,128 @@ flowchart LR
     D --> H["Save with<br/>Signature"]
 ```
 
+#### Semantic Embedding Dedup (v1.4.0+)
+
+In addition to signature-based dedup, story content can be checked for semantic similarity using embeddings.
+
+**Architecture:**
+```mermaid
+flowchart LR
+    A["Story Text"] --> B["Ollama Embedding<br/>(nomic-embed-text)"]
+    B --> C["FAISS Index<br/>(story_vectors/)"]
+    C --> D["Cosine Similarity"]
+    D --> E{"Score >= 0.85?"}
+    E -->|Yes| F["HIGH Signal"]
+    E -->|No| G["LOW/MEDIUM"]
+```
+
+**Hybrid Scoring:**
+```
+hybrid_score = (canonical_score × 0.3) + (semantic_score × 0.7)
+```
+
+| Component | Weight | Description |
+|-----------|--------|-------------|
+| Canonical | 30% | Exact signature match (0 or 1) |
+| Semantic | 70% | Cosine similarity (0.0 to 1.0) |
+
+**Duplicate Detection:**
+- Exact signature match → Always HIGH
+- Hybrid score ≥ 0.85 → HIGH (semantic duplicate)
+- Hybrid score 0.70-0.85 → MEDIUM
+- Hybrid score < 0.70 → LOW
+
 **Configuration:**
 | Env Variable | Default | Description |
 |--------------|---------|-------------|
 | `ENABLE_STORY_DEDUP` | `true` | Enable signature-based dedup |
 | `STORY_DEDUP_STRICT` | `false` | Abort generation on duplicate |
+| `ENABLE_STORY_SEMANTIC_DEDUP` | `true` | Enable semantic embedding dedup |
+| `STORY_SEMANTIC_THRESHOLD_HIGH` | `0.85` | HIGH similarity threshold |
+| `STORY_HYBRID_CANONICAL_WEIGHT` | `0.3` | Canonical weight in hybrid score |
+| `STORY_HYBRID_SEMANTIC_WEIGHT` | `0.7` | Semantic weight in hybrid score |
 
 **Story Metadata:**
 ```json
 {
   "story_signature": "abc123...",
   "story_dedup_result": "unique",
-  "story_dedup_reason": "unique"
+  "story_dedup_reason": "unique",
+  "semantic_similarity_score": 0.45,
+  "hybrid_dedup_score": 0.315,
+  "nearest_story_id": "story-20260112-143052"
+}
+```
+
+**Key Modules:**
+| Module | File | Purpose |
+|--------|------|---------|
+| Story Embedder | `src/dedup/story/embedder.py` | Extract text and generate embeddings |
+| Story FAISS Index | `src/dedup/story/index.py` | Vector storage for stories |
+| Semantic Dedup | `src/dedup/story/semantic_dedup.py` | Similarity checking |
+| Hybrid Dedup | `src/dedup/story/hybrid_dedup.py` | Combined scoring |
+
+**Storage:**
+```
+data/story_vectors/
+├── story.faiss          # FAISS index for story embeddings
+└── metadata.json        # story_id ↔ vector mapping
+```
+
+### Story Canonical Key Extraction
+
+After story generation, the system extracts canonical dimensions from the **actual story text** to compare against the template's predefined `canonical_core`.
+
+**Extraction Flow:**
+```mermaid
+flowchart LR
+    A["Story Text"] --> B["LLM Analysis<br/>canonical_extractor.py"]
+    B --> C["canonical_affinity<br/>(arrays)"]
+    C --> D["Collapse to<br/>canonical_core"]
+    D --> E["Compare with<br/>Template CK"]
+    E --> F["Alignment Score<br/>(0-100%)"]
+```
+
+**Purpose:**
+- Validate that generated content matches intended structure
+- Track divergence between template intent and actual output
+- Provide quality signals for future improvements
+
+**Configuration:**
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `ENABLE_STORY_CK_EXTRACTION` | `true` | Enable/disable extraction |
+| `STORY_CK_MODEL` | (none) | Override model for extraction |
+
+**Alignment Score Calculation:**
+```
+alignment_score = matched_dimensions / 5 × 100%
+```
+
+| Score | Interpretation |
+|-------|----------------|
+| 100% | Perfect alignment |
+| 80% | 4/5 dimensions match |
+| 60% | 3/5 dimensions match |
+| <40% | Significant divergence |
+
+**Story Metadata:**
+```json
+{
+  "story_canonical_extraction": {
+    "canonical_core": {
+      "setting_archetype": "apartment",
+      "primary_fear": "social_displacement",
+      "antagonist_archetype": "collective",
+      "threat_mechanism": "surveillance",
+      "twist_family": "inevitability"
+    },
+    "template_comparison": {
+      "match_score": 0.8,
+      "matches": ["setting_archetype", "primary_fear", "threat_mechanism", "twist_family"],
+      "divergences": [{"dimension": "antagonist_archetype", "template": "system", "story": "collective"}]
+    }
+  }
 }
 ```
 
@@ -367,6 +479,41 @@ flowchart LR
 | FAISS Index | `src/dedup/research/index.py` | Vector storage |
 | Dedup | `src/dedup/research/dedup.py` | Similarity checking |
 | Canonical Collapse | `src/research/executor/canonical_collapse.py` | canonical_affinity → canonical_core |
+| Vector Backend | `src/research/integration/vector_backend_hooks.py` | Unified vector operations |
+
+### Vector Backend Hooks (v1.4.0+)
+
+Centralized vector operations for research card semantic search and clustering.
+
+```mermaid
+flowchart LR
+    A["Research Card"] --> B["generate_embedding()"]
+    B --> C["FAISS Index"]
+    C --> D["vector_search_research_cards()"]
+    D --> E["Similar Cards"]
+
+    F["Template"] --> G["compute_semantic_affinity()"]
+    A --> G
+    G --> H["Affinity Score"]
+
+    I["Card Collection"] --> J["cluster_research_cards()"]
+    J --> K["K-Means Clusters"]
+```
+
+**Functions:**
+| Function | Description |
+|----------|-------------|
+| `init_vector_backend()` | Initialize Ollama embedder and FAISS index |
+| `generate_embedding(text)` | Generate embedding via nomic-embed-text |
+| `vector_search_research_cards(embedding, top_k)` | Search similar cards in FAISS |
+| `index_research_card(card_id, content, metadata)` | Add card to FAISS index |
+| `compute_semantic_affinity(template_canonical, research_content)` | Cosine similarity between template and research |
+| `cluster_research_cards(cards, n_clusters)` | K-means++ clustering on embeddings |
+
+**Configuration:**
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `VECTOR_BACKEND_ENABLED` | `true` | Enable vector backend features |
 
 ### Canonical Core Normalization
 

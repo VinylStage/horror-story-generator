@@ -1,6 +1,12 @@
 # **📌 Future Technical Note**
 
-  
+> **Update (2026-01-15):** Vector Backend Hooks가 v1.4.0에서 구현되었습니다.
+> 현재 FAISS + Ollama 기반으로 벡터 검색, 시맨틱 어피니티, 클러스터링이 작동합니다.
+> 이 문서는 향후 OpenSearch로의 마이그레이션을 검토할 때 참조용으로 유지됩니다.
+>
+> **현재 구현:** `src/research/integration/vector_backend_hooks.py`
+
+
 
 ## **OpenSearch as Vector DB Candidate (Deferred)**
 

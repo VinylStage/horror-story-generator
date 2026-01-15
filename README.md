@@ -15,7 +15,7 @@ Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시�
 - **템플릿 스켈레톤 시스템**: 15개의 사전 정의된 호러 템플릿으로 다양한 공포 패턴 생성
 - **Canonical 중복 검사**: 5차원 fingerprint로 유사 스토리 방지
 - **연구 카드 통합**: Ollama/Gemini Deep Research 기반 연구 생성 및 FAISS 시맨틱 중복 검사
-- **스토리 레벨 중복 검사**: SHA256 시그니처 기반 구조적 중복 방지
+- **스토리 레벨 중복 검사**: 시그니처 기반 + 시맨틱 임베딩 하이브리드 중복 방지 (v1.4.0)
 - **자동 백업**: 스키마 마이그레이션 전 레지스트리 자동 백업
 - **24시간 연속 운영**: Graceful shutdown 및 자동 재시도 지원
 - **한국어 최적화**: 한국적 정서와 호러 요소를 반영한 프롬프트 설계
@@ -56,6 +56,9 @@ RESEARCH_INJECT_EXCLUDE_DUP_LEVEL=HIGH  # 제외할 중복 레벨 (HIGH/MEDIUM)
 # 스토리 레벨 중복 검사 설정 (선택)
 ENABLE_STORY_DEDUP=true          # 스토리 시그니처 기반 중복 검사 활성화
 STORY_DEDUP_STRICT=false         # true 시 중복 감지되면 생성 중단
+ENABLE_STORY_SEMANTIC_DEDUP=true # 시맨틱 임베딩 기반 중복 검사 (v1.4.0)
+STORY_SEMANTIC_THRESHOLD=0.85    # 시맨틱 HIGH 신호 기준점
+STORY_HYBRID_THRESHOLD=0.85      # 하이브리드 중복 판정 기준점
 
 # Gemini API 설정 (선택 - 연구 생성 전용)
 # API: Google AI Studio (not Vertex AI)
@@ -198,7 +201,8 @@ horror-story-generator/
 │   │   └── integration/         # 스토리-연구 연동
 │   ├── dedup/                   # 중복 검사
 │   │   ├── similarity.py        # 스토리 중복 (Canonical)
-│   │   └── research/            # 연구 중복 (FAISS)
+│   │   ├── research/            # 연구 중복 (FAISS)
+│   │   └── story/               # 스토리 시맨틱 중복 (v1.4.0)
 │   ├── registry/                # 데이터 저장소
 │   ├── infra/                   # 인프라 (로깅, 경로 등)
 │   │   └── research_context/    # 연구↔스토리 연동 (공유 모듈)
@@ -232,6 +236,26 @@ horror-story-generator/
 | LOW | < 0.3 | 수락 |
 | MEDIUM | 0.3-0.6 | 수락 (로깅) |
 | HIGH | > 0.6 | 재생성 (최대 2회) |
+
+### 스토리 시맨틱 중복 (v1.4.0, FAISS Hybrid)
+
+시그니처 기반 정확 매칭과 시맨틱 임베딩을 결합한 **하이브리드 중복 검사**:
+
+```
+hybrid_score = (canonical_score × 0.3) + (semantic_score × 0.7)
+```
+
+| 컴포넌트 | 설명 | 가중치 |
+|---------|------|--------|
+| Canonical | 시그니처 정확 매칭 (0 또는 1) | 30% |
+| Semantic | `nomic-embed-text` 임베딩 유사도 | 70% |
+
+**신호 레벨:**
+| Signal | Score | 동작 |
+|--------|-------|------|
+| LOW | < 0.70 | 수락 |
+| MEDIUM | 0.70-0.85 | 수락 (로깅) |
+| HIGH | ≥ 0.85 | 중복 판정 |
 
 ### 연구 중복 (FAISS Semantic)
 

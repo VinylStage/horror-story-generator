@@ -3,6 +3,7 @@ Data path helpers for horror-story-generator.
 
 Phase B+: Centralized path management for all data directories.
 v1.3.1: Added novel output directory, job directory, and legacy deprecation.
+v1.4.0: Added story vectors directory for semantic dedup.
 
 Directory structure:
 data/
@@ -19,6 +20,9 @@ data/
  ├── seeds/
  │   ├── SS-*.json             # Story Seeds
  │   └── seed_registry.sqlite
+ ├── story_vectors/            # Story embedding vectors (v1.4.0)
+ │   ├── story.faiss           # FAISS index for stories
+ │   └── metadata.json         # story_id <-> vector mapping
  └── story_registry.db         # Existing story registry
 
 jobs/                          # Job storage (v1.3.1: centralized)
@@ -135,6 +139,32 @@ def get_faiss_index_path() -> Path:
 def get_vector_metadata_path() -> Path:
     """Get vector metadata JSON file path."""
     return get_research_vectors_dir() / "metadata.json"
+
+
+# =============================================================================
+# Story Vector Paths (v1.4.0)
+# =============================================================================
+
+def get_story_vectors_dir() -> Path:
+    """
+    Get story vectors directory for FAISS index.
+
+    v1.4.0: Separate vector storage for story embeddings.
+
+    Returns:
+        Path: story_vectors/ directory
+    """
+    return get_data_root() / "story_vectors"
+
+
+def get_story_faiss_index_path() -> Path:
+    """Get story FAISS index file path."""
+    return get_story_vectors_dir() / "story.faiss"
+
+
+def get_story_vector_metadata_path() -> Path:
+    """Get story vector metadata JSON file path."""
+    return get_story_vectors_dir() / "metadata.json"
 
 
 # =============================================================================
@@ -371,6 +401,7 @@ def ensure_data_directories() -> dict:
         "novel_output": get_novel_output_dir(),  # v1.3.1
         "jobs": get_jobs_dir(),  # v1.3.1
         "logs": get_logs_dir(),  # v1.3.1
+        "story_vectors": get_story_vectors_dir(),  # v1.4.0
     }
 
     created = []
@@ -419,6 +450,12 @@ def get_all_paths() -> dict:
         "jobs": get_jobs_dir(),
         "logs": get_logs_dir(),
         "job_prune_config": get_job_prune_config(),
+        # v1.4.0: Story vectors
+        "story_vectors": {
+            "root": get_story_vectors_dir(),
+            "faiss_index": get_story_faiss_index_path(),
+            "metadata": get_story_vector_metadata_path(),
+        },
     }
 
 

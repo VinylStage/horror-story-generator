@@ -28,6 +28,7 @@ flowchart LR
 | Embedder | `src/dedup/research/embedder.py` | Generates embeddings via Ollama |
 | FAISS Index | `src/dedup/research/index.py` | Stores and searches vectors |
 | Dedup Logic | `src/dedup/research/dedup.py` | Orchestrates similarity checks |
+| Vector Backend | `src/research/integration/vector_backend_hooks.py` | Unified vector operations (v1.4.0) |
 
 ---
 
@@ -186,10 +187,57 @@ FAISS index files are stored in:
 
 ---
 
+## Vector Backend Hooks (v1.4.0)
+
+The `vector_backend_hooks.py` module provides a unified interface for vector operations.
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `init_vector_backend()` | Initialize embedder and FAISS index |
+| `generate_embedding(text)` | Generate embedding for text |
+| `vector_search_research_cards(embedding, top_k)` | Search similar cards |
+| `index_research_card(card_id, content, metadata)` | Add card to index |
+| `compute_semantic_affinity(template_canonical, research_content)` | Compute template-research similarity |
+| `cluster_research_cards(cards, n_clusters)` | K-means clustering on cards |
+
+### Usage
+
+```python
+from src.research.integration import (
+    init_vector_backend,
+    search_similar_cards,
+    compute_semantic_affinity,
+)
+
+# Initialize
+init_vector_backend()
+
+# Search by text
+results = search_similar_cards("Korean apartment horror", top_k=5)
+for r in results:
+    print(f"{r['card_id']}: {r['similarity_score']:.4f}")
+
+# Compute template-research affinity
+template_canonical = {"setting_archetype": "apartment", "primary_fear": "isolation"}
+affinity = compute_semantic_affinity(template_canonical, "A story about urban isolation...")
+print(f"Affinity: {affinity:.4f}")
+```
+
+### Configuration
+
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `VECTOR_BACKEND_ENABLED` | `true` | Enable vector backend |
+
+---
+
 ## History
 
 | Date | Change |
 |------|--------|
+| 2026-01-15 | Added vector backend hooks (v1.4.0) |
 | 2026-01-12 | Fixed embedding model from qwen3:30b to nomic-embed-text |
 | 2026-01-11 | Initial implementation with FAISS |
 
