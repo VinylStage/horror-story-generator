@@ -422,8 +422,136 @@ jobs/{job_id}.json
 
 ---
 
+## 7. Story Canonical Extraction
+
+스토리 텍스트에서 추출된 Canonical Key 데이터 구조입니다.
+
+### 7.1 개요
+
+스토리 생성 후, LLM이 생성된 텍스트를 분석하여 5개 canonical 차원을 추출합니다. 이는 템플릿의 `canonical_core`와 독립적으로 "실제 작성된 내용"을 반영합니다.
+
+### 7.2 저장 위치
+
+스토리 메타데이터 JSON 내부:
+
+```
+data/novel/horror_story_YYYYMMDD_HHMMSS_metadata.json
+└── story_canonical_extraction: {...}
+```
+
+### 7.3 스키마
+
+```json
+{
+  "story_canonical_extraction": {
+    "canonical_core": {
+      "setting_archetype": "string (required)",
+      "primary_fear": "string (required)",
+      "antagonist_archetype": "string (required)",
+      "threat_mechanism": "string (required)",
+      "twist_family": "string (required)"
+    },
+    "canonical_affinity": {
+      "setting": "string[] (required)",
+      "primary_fear": "string[] (required)",
+      "antagonist": "string[] (required)",
+      "mechanism": "string[] (required)",
+      "twist": "string[] (optional)"
+    },
+    "analysis_notes": "string (optional)",
+    "extraction_model": "string (required)",
+    "story_truncated": "boolean (required)",
+    "template_comparison": {
+      "match_score": "float 0.0-1.0 (required)",
+      "match_count": "integer (required)",
+      "total_dimensions": "integer (required, always 5)",
+      "matches": "string[] (required)",
+      "divergences": [
+        {
+          "dimension": "string (required)",
+          "template": "string (required)",
+          "story": "string (required)"
+        }
+      ]
+    }
+  }
+}
+```
+
+### 7.4 예제
+
+```json
+{
+  "story_canonical_extraction": {
+    "canonical_core": {
+      "setting_archetype": "apartment",
+      "primary_fear": "social_displacement",
+      "antagonist_archetype": "collective",
+      "threat_mechanism": "surveillance",
+      "twist_family": "inevitability"
+    },
+    "canonical_affinity": {
+      "setting": ["apartment", "domestic_space"],
+      "primary_fear": ["social_displacement", "isolation"],
+      "antagonist": ["collective", "system"],
+      "mechanism": ["surveillance", "confinement"],
+      "twist": ["inevitability"]
+    },
+    "analysis_notes": "Social horror in apartment setting with collective antagonism",
+    "extraction_model": "claude-sonnet-4-5-20250929",
+    "story_truncated": false,
+    "template_comparison": {
+      "match_score": 0.8,
+      "match_count": 4,
+      "total_dimensions": 5,
+      "matches": [
+        "setting_archetype",
+        "primary_fear",
+        "threat_mechanism",
+        "twist_family"
+      ],
+      "divergences": [
+        {
+          "dimension": "antagonist_archetype",
+          "template": "system",
+          "story": "collective"
+        }
+      ]
+    }
+  }
+}
+```
+
+### 7.5 정렬 점수 계산
+
+```
+alignment_score = matches / 5 × 100%
+```
+
+- **100%**: 모든 차원이 템플릿과 일치
+- **80%**: 4/5 차원 일치
+- **60%**: 3/5 차원 일치
+- **40% 이하**: 상당한 divergence 발생
+
+### 7.6 환경 변수
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `ENABLE_STORY_CK_EXTRACTION` | `true` | 추출 활성화 |
+| `STORY_CK_MODEL` | (없음) | 추출용 모델 오버라이드 |
+
+### 7.7 관련 코드
+
+| 파일 | 역할 |
+|------|------|
+| `src/story/canonical_extractor.py` | 추출 로직 |
+| `src/story/generator.py` | 통합 및 호출 |
+
+---
+
 ## Version History
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
+| 1.1 | 2026-01-15 | Story Canonical Extraction 섹션 추가 |
 | 1.0 | 2026-01-14 | 초기 문서 작성 |
