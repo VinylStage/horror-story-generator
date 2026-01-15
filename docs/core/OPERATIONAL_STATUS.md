@@ -64,15 +64,25 @@
 | `ENABLE_STORY_DEDUP` | `true` | 스토리 레벨 중복 검사 |
 | `STORY_DEDUP_STRICT` | `false` | 중복 시 생성 중단 |
 
-### 스토리 Canonical Key 추출 설정
+### 스토리 Canonical Key 추출 및 검증 설정
 
 | 환경 변수 | 기본값 | 설명 |
 |-----------|--------|------|
 | `ENABLE_STORY_CK_EXTRACTION` | `true` | 스토리 CK 추출 활성화 |
 | `STORY_CK_MODEL` | (없음) | 추출용 모델 오버라이드 |
+| `STORY_CK_ENFORCEMENT` | `warn` | 정렬 검증 정책 (none/warn/retry/strict) |
+| `STORY_CK_MIN_ALIGNMENT` | `0.6` | 최소 정렬 점수 (0.0-1.0) |
 
 > **Note:** 스토리 CK 추출은 생성된 텍스트에서 canonical 차원을 LLM으로 분석합니다.
 > 템플릿 CK와 비교하여 정렬 점수(alignment score)를 메타데이터에 기록합니다.
+
+**검증 정책 설명:**
+| 정책 | 동작 |
+|------|------|
+| `none` | 검증 비활성화, 항상 수락 |
+| `warn` | 임계값 미달 시 경고만 출력 (기본값) |
+| `retry` | 임계값 미달 시 재생성 시도 |
+| `strict` | 임계값 미달 시 스토리 거부 |
 
 ### 경로 설정 (v1.3.1)
 

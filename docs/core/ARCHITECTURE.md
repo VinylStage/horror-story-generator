@@ -170,11 +170,11 @@ flowchart LR
 }
 ```
 
-### Story Canonical Key Extraction
+### Story Canonical Key Extraction & Enforcement
 
-After story generation, the system extracts canonical dimensions from the **actual story text** to compare against the template's predefined `canonical_core`.
+After story generation, the system extracts canonical dimensions from the **actual story text** to compare against the template's predefined `canonical_core`, then applies enforcement policy.
 
-**Extraction Flow:**
+**Extraction & Enforcement Flow:**
 ```mermaid
 flowchart LR
     A["Story Text"] --> B["LLM Analysis<br/>canonical_extractor.py"]
@@ -182,18 +182,37 @@ flowchart LR
     C --> D["Collapse to<br/>canonical_core"]
     D --> E["Compare with<br/>Template CK"]
     E --> F["Alignment Score<br/>(0-100%)"]
+    F --> G{"Enforcement<br/>Check"}
+    G -->|Pass| H["Accept"]
+    G -->|Fail + retry| I["Re-generate"]
+    G -->|Fail + strict| J["Reject"]
 ```
 
 **Purpose:**
 - Validate that generated content matches intended structure
 - Track divergence between template intent and actual output
+- Enforce alignment constraints via configurable policy
 - Provide quality signals for future improvements
 
-**Configuration:**
+**Extraction Configuration:**
 | Env Variable | Default | Description |
 |--------------|---------|-------------|
 | `ENABLE_STORY_CK_EXTRACTION` | `true` | Enable/disable extraction |
 | `STORY_CK_MODEL` | (none) | Override model for extraction |
+
+**Enforcement Configuration:**
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `STORY_CK_ENFORCEMENT` | `warn` | Policy: none/warn/retry/strict |
+| `STORY_CK_MIN_ALIGNMENT` | `0.6` | Minimum alignment score (0.0-1.0) |
+
+**Enforcement Policies:**
+| Policy | Action on Failure |
+|--------|-------------------|
+| `none` | Always accept (disabled) |
+| `warn` | Log warning, accept anyway (default) |
+| `retry` | Re-attempt with different template |
+| `strict` | Reject story entirely |
 
 **Alignment Score Calculation:**
 ```
@@ -204,7 +223,7 @@ alignment_score = matched_dimensions / 5 × 100%
 |-------|----------------|
 | 100% | Perfect alignment |
 | 80% | 4/5 dimensions match |
-| 60% | 3/5 dimensions match |
+| 60% | 3/5 dimensions match (default threshold) |
 | <40% | Significant divergence |
 
 **Story Metadata:**
@@ -222,6 +241,12 @@ alignment_score = matched_dimensions / 5 × 100%
       "match_score": 0.8,
       "matches": ["setting_archetype", "primary_fear", "threat_mechanism", "twist_family"],
       "divergences": [{"dimension": "antagonist_archetype", "template": "system", "story": "collective"}]
+    },
+    "enforcement": {
+      "passed": true,
+      "action": "accept",
+      "reason": "Alignment 80% meets threshold 60%",
+      "policy": "warn"
     }
   }
 }
