@@ -60,6 +60,18 @@ except ImportError:
     ENABLE_STORY_DEDUP = False
     STORY_DEDUP_STRICT = False
 
+# Story canonical key extraction module (Issue #19)
+try:
+    from src.story.canonical_extractor import (
+        extract_canonical_from_story,
+        compare_canonical_cores,
+        ENABLE_STORY_CK_EXTRACTION,
+    )
+    STORY_CK_AVAILABLE = True
+except ImportError:
+    STORY_CK_AVAILABLE = False
+    ENABLE_STORY_CK_EXTRACTION = False
+
 # Config flags (can be overridden by environment)
 AUTO_INJECT_RESEARCH = os.getenv("AUTO_INJECT_RESEARCH", "true").lower() == "true"
 RESEARCH_INJECT_TOP_K = int(os.getenv("RESEARCH_INJECT_TOP_K", "1"))
@@ -560,6 +572,41 @@ def generate_horror_story(
     # End Phase 2B
     # ==========================================================================
 
+    # ==========================================================================
+    # Story Canonical Key Extraction (Issue #19)
+    # ==========================================================================
+    # Extract canonical dimensions from the ACTUAL story content
+    # This is independent of the template's predefined canonical_core
+    # ==========================================================================
+    if STORY_CK_AVAILABLE and ENABLE_STORY_CK_EXTRACTION:
+        try:
+            story_ck_result = extract_canonical_from_story(
+                story_text=story_text,
+                config=config,
+                model_spec=model_spec
+            )
+            if story_ck_result:
+                result["metadata"]["story_canonical_extraction"] = {
+                    "canonical_core": story_ck_result.get("canonical_core"),
+                    "canonical_affinity": story_ck_result.get("canonical_affinity"),
+                    "analysis_notes": story_ck_result.get("analysis_notes"),
+                    "extraction_model": story_ck_result.get("extraction_model"),
+                }
+                # Compare with template canonical_core if available
+                if skeleton_info and skeleton_info.get("canonical_core"):
+                    comparison = compare_canonical_cores(
+                        template_core=skeleton_info["canonical_core"],
+                        story_core=story_ck_result.get("canonical_core", {})
+                    )
+                    result["metadata"]["story_canonical_extraction"]["template_comparison"] = comparison
+                    logger.info(f"[StoryCK] Template alignment: {comparison['match_score']:.0%} ({comparison['match_count']}/{comparison['total_dimensions']})")
+        except Exception as e:
+            logger.warning(f"[StoryCK] Extraction failed: {e}")
+
+    # ==========================================================================
+    # End Story Canonical Key Extraction
+    # ==========================================================================
+
     # 6. 파일 저장
     if save_output:
         file_path = save_story(
@@ -789,6 +836,31 @@ def generate_with_dedup_control(
 
             if similarity_observation:
                 result["metadata"]["similarity_observation"] = similarity_observation
+
+            # Story Canonical Key Extraction (Issue #19)
+            if STORY_CK_AVAILABLE and ENABLE_STORY_CK_EXTRACTION:
+                try:
+                    story_ck_result = extract_canonical_from_story(
+                        story_text=story_text,
+                        config=config,
+                        model_spec=model_spec
+                    )
+                    if story_ck_result:
+                        result["metadata"]["story_canonical_extraction"] = {
+                            "canonical_core": story_ck_result.get("canonical_core"),
+                            "canonical_affinity": story_ck_result.get("canonical_affinity"),
+                            "analysis_notes": story_ck_result.get("analysis_notes"),
+                            "extraction_model": story_ck_result.get("extraction_model"),
+                        }
+                        if skeleton_info and skeleton_info.get("canonical_core"):
+                            comparison = compare_canonical_cores(
+                                template_core=skeleton_info["canonical_core"],
+                                story_core=story_ck_result.get("canonical_core", {})
+                            )
+                            result["metadata"]["story_canonical_extraction"]["template_comparison"] = comparison
+                            logger.info(f"[StoryCK] Template alignment: {comparison['match_score']:.0%}")
+                except Exception as e:
+                    logger.warning(f"[StoryCK] Extraction failed: {e}")
 
             # Save story
             if save_output:
@@ -1052,6 +1124,31 @@ def generate_with_topic(
             "generation_mode": "topic_based" if topic else "random"
         }
     }
+
+    # Story Canonical Key Extraction (Issue #19)
+    if STORY_CK_AVAILABLE and ENABLE_STORY_CK_EXTRACTION:
+        try:
+            story_ck_result = extract_canonical_from_story(
+                story_text=story_text,
+                config=config,
+                model_spec=model_spec
+            )
+            if story_ck_result:
+                result["metadata"]["story_canonical_extraction"] = {
+                    "canonical_core": story_ck_result.get("canonical_core"),
+                    "canonical_affinity": story_ck_result.get("canonical_affinity"),
+                    "analysis_notes": story_ck_result.get("analysis_notes"),
+                    "extraction_model": story_ck_result.get("extraction_model"),
+                }
+                if skeleton_info and skeleton_info.get("canonical_core"):
+                    comparison = compare_canonical_cores(
+                        template_core=skeleton_info["canonical_core"],
+                        story_core=story_ck_result.get("canonical_core", {})
+                    )
+                    result["metadata"]["story_canonical_extraction"]["template_comparison"] = comparison
+                    logger.info(f"[StoryCK] Template alignment: {comparison['match_score']:.0%}")
+        except Exception as e:
+            logger.warning(f"[StoryCK] Extraction failed: {e}")
 
     # Save story
     if save_output:
