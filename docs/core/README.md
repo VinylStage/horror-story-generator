@@ -309,6 +309,10 @@ TEMPERATURE=0.8
 NOVEL_OUTPUT_DIR=./data/novel
 STORY_REGISTRY_DB_PATH=./data/stories.db
 LOG_LEVEL=INFO
+
+# API Authentication (Optional)
+API_AUTH_ENABLED=false    # true로 설정 시 X-API-Key 인증 활성화
+API_KEY=your-secure-key   # 인증에 사용할 API 키
 ```
 
 ---
