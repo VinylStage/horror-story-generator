@@ -12,7 +12,7 @@ A research-grounded Korean horror story generation system using Claude API with 
 
 - **Research-Grounded Generation**: 52 Knowledge Units and 15 Templates derived from academic horror research
 - **Template-Based Prompts**: Canonical dimension system ensures unique story patterns
-- **Deduplication Control**: SQLite + FAISS-based similarity detection prevents repetitive content
+- **Deduplication Control**: SQLite + FAISS-based similarity detection with hybrid story dedup (v1.4.0)
 - **Research Integration**: Ollama-powered research card generation for fresh concepts
 - **Trigger API**: Non-blocking job execution via FastAPI
 - **Korean Output**: All stories generated in Korean with cultural specificity
@@ -77,10 +77,15 @@ horror-story-generator/
 │   │
 │   ├── dedup/                   # Deduplication logic
 │   │   ├── similarity.py        # Story similarity (in-memory)
-│   │   └── research/            # Research dedup (FAISS)
-│   │       ├── dedup.py         # Duplicate detection
-│   │       ├── embedder.py      # Ollama embeddings
-│   │       └── index.py         # FAISS index management
+│   │   ├── research/            # Research dedup (FAISS)
+│   │   │   ├── dedup.py         # Duplicate detection
+│   │   │   ├── embedder.py      # Ollama embeddings
+│   │   │   └── index.py         # FAISS index management
+│   │   └── story/               # Story semantic dedup (v1.4.0)
+│   │       ├── embedder.py      # Story text embedding
+│   │       ├── index.py         # Story FAISS index
+│   │       ├── semantic_dedup.py # Semantic similarity
+│   │       └── hybrid_dedup.py  # Hybrid scoring
 │   │
 │   ├── story/                   # Story generation pipeline
 │   │   ├── generator.py         # Core generation orchestration
@@ -112,6 +117,7 @@ horror-story-generator/
 │   ├── research/                # Research cards (YYYY/MM/)
 │   ├── seeds/                   # Story seeds
 │   ├── novel/                   # Generated stories (v1.3.1+)
+│   ├── story_vectors/           # Story FAISS index (v1.4.0)
 │   └── *.db                     # SQLite databases
 ├── logs/                        # Execution logs
 ├── tests/                       # Test suite
@@ -273,6 +279,20 @@ See `docs/core/ARCHITECTURE.md` for detailed architecture documentation.
 | MEDIUM | 0.3 - 0.6 | Accept story (logged) |
 | HIGH | > 0.6 | Regenerate (max 2 retries), then skip |
 
+**Story Semantic Dedup (v1.4.0, Hybrid):**
+
+Combines signature-based exact matching with semantic embedding similarity:
+
+```
+hybrid_score = (canonical_score × 0.3) + (semantic_score × 0.7)
+```
+
+| Signal | Score Range | Behavior |
+|--------|-------------|----------|
+| LOW | < 0.70 | Accept story |
+| MEDIUM | 0.70 - 0.85 | Accept story (logged) |
+| HIGH | ≥ 0.85 | Duplicate detected |
+
 **Research Dedup (Semantic Embedding via FAISS):**
 
 | Signal | Score Range | Behavior |
@@ -281,7 +301,7 @@ See `docs/core/ARCHITECTURE.md` for detailed architecture documentation.
 | MEDIUM | 0.70 - 0.85 | Some overlap (logged) |
 | HIGH | ≥ 0.85 | Likely duplicate |
 
-Research embeddings use `nomic-embed-text` model via Ollama (768 dimensions).
+Both story and research embeddings use `nomic-embed-text` model via Ollama (768 dimensions).
 
 ### Canonical Dimensions
 
@@ -309,6 +329,13 @@ TEMPERATURE=0.8
 NOVEL_OUTPUT_DIR=./data/novel
 STORY_REGISTRY_DB_PATH=./data/stories.db
 LOG_LEVEL=INFO
+
+# Story Dedup (v1.4.0)
+ENABLE_STORY_DEDUP=true              # Enable signature-based dedup
+STORY_DEDUP_STRICT=false             # Abort on duplicate detection
+ENABLE_STORY_SEMANTIC_DEDUP=true     # Enable semantic embedding dedup
+STORY_SEMANTIC_THRESHOLD=0.85        # Semantic HIGH threshold
+STORY_HYBRID_THRESHOLD=0.85          # Hybrid duplicate threshold
 ```
 
 ---
@@ -342,6 +369,7 @@ See root `CONTRIBUTING.md` for development guidelines.
 | `docs/technical/canonical_enum.md` | Canonical dimension definitions |
 | `docs/technical/decision_log.md` | Design decision records |
 | `docs/technical/RESEARCH_DEDUP_SETUP.md` | Research embedding setup |
+| `docs/technical/STORY_SEMANTIC_DEDUP.md` | Story semantic dedup setup (v1.4.0) |
 
 ---
 
