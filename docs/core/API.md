@@ -49,6 +49,60 @@ curl http://localhost:8000/jobs/{job_id}
 
 ---
 
+## Authentication (Optional)
+
+API 인증은 기본적으로 **비활성화**되어 있습니다. 외부 노출이 필요한 경우 활성화할 수 있습니다.
+
+### 환경 변수
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_AUTH_ENABLED` | `false` | `true`로 설정 시 인증 활성화 |
+| `API_KEY` | - | 인증에 사용할 API 키 |
+
+### 설정 방법
+
+```bash
+# .env 파일
+API_AUTH_ENABLED=true
+API_KEY=your-secure-api-key-here
+```
+
+### 사용 방법
+
+인증이 활성화된 경우, 모든 요청에 `X-API-Key` 헤더를 포함해야 합니다:
+
+```bash
+# 인증된 요청
+curl -X POST http://localhost:8000/story/generate \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secure-api-key-here" \
+  -d '{"topic": "Korean apartment horror"}'
+```
+
+### 인증 제외 엔드포인트
+
+다음 엔드포인트는 인증 여부와 관계없이 항상 접근 가능합니다:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | 헬스 체크 |
+| `GET /resource/status` | Ollama 리소스 상태 |
+
+### 에러 응답
+
+인증 실패 시 `401 Unauthorized` 응답:
+
+```json
+{"detail": "Missing API key. Provide X-API-Key header."}
+```
+
+```json
+{"detail": "Invalid API key"}
+```
+
+---
+
 ## Model Selection Reference
 
 ### Story Generation Models

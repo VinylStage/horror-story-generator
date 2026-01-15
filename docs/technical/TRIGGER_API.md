@@ -10,6 +10,27 @@ Trigger API는 비동기 작업 실행을 위한 API 레이어입니다. CLI를 
 - **파일 기반 저장소**: jobs/ 디렉토리에 JSON 파일로 저장
 - **PID 추적**: 프로세스 모니터링을 위한 PID 기록
 
+## 인증 (Authentication)
+
+API 인증은 기본적으로 **비활성화**되어 있습니다. 환경 변수로 활성화할 수 있습니다.
+
+```bash
+# .env
+API_AUTH_ENABLED=true
+API_KEY=your-secure-api-key
+```
+
+인증이 활성화된 경우, 모든 요청에 `X-API-Key` 헤더가 필요합니다:
+
+```bash
+curl -X POST http://localhost:8000/jobs/story/trigger \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secure-api-key" \
+  -d '{"max_stories": 1}'
+```
+
+**인증 제외**: `/health`, `/resource/status` 엔드포인트는 인증 없이 접근 가능합니다.
+
 ## 엔드포인트 (Endpoints)
 
 ### Job Trigger 엔드포인트

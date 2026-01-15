@@ -31,6 +31,7 @@
 |------|------|------|
 | 연구 카드 | FAISS 시맨틱 (nomic-embed-text) | 보장됨 |
 | 스토리 | SHA256 시그니처 | 보장됨 |
+| 스토리 | 시맨틱 임베딩 (하이브리드, v1.4.0) | 보장됨 |
 
 ### 3. Canonical 무결성
 
@@ -64,6 +65,16 @@
 | `ENABLE_STORY_DEDUP` | `true` | 스토리 레벨 중복 검사 |
 | `STORY_DEDUP_STRICT` | `false` | 중복 시 생성 중단 |
 
+### 스토리 시맨틱 중복 검사 (v1.4.0)
+
+| 환경 변수 | 기본값 | 설명 |
+|-----------|--------|------|
+| `ENABLE_STORY_SEMANTIC_DEDUP` | `true` | 시맨틱 임베딩 기반 중복 검사 |
+| `STORY_SEMANTIC_THRESHOLD` | `0.85` | 시맨틱 HIGH 신호 기준점 |
+| `STORY_HYBRID_THRESHOLD` | `0.85` | 하이브리드 중복 판정 기준점 |
+| `STORY_HYBRID_CANONICAL_WEIGHT` | `0.3` | 하이브리드 canonical 가중치 |
+| `STORY_HYBRID_SEMANTIC_WEIGHT` | `0.7` | 하이브리드 semantic 가중치 |
+
 ### 스토리 Canonical Key 추출 및 검증 설정
 
 | 환경 변수 | 기본값 | 설명 |
@@ -83,6 +94,16 @@
 | `warn` | 임계값 미달 시 경고만 출력 (기본값) |
 | `retry` | 임계값 미달 시 재생성 시도 |
 | `strict` | 임계값 미달 시 스토리 거부 |
+
+### 벡터 백엔드 설정 (v1.4.0)
+
+| 환경 변수 | 기본값 | 설명 |
+|-----------|--------|------|
+| `VECTOR_BACKEND_ENABLED` | `true` | 벡터 기반 연구 카드 검색/클러스터링 활성화 |
+
+> **Note:** 벡터 백엔드는 Ollama (nomic-embed-text)와 FAISS를 사용합니다.
+> `init_vector_backend()`, `generate_embedding()`, `vector_search_research_cards()`,
+> `compute_semantic_affinity()`, `cluster_research_cards()` 함수를 제공합니다.
 
 ### 경로 설정 (v1.3.1)
 

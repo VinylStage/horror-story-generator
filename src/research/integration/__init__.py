@@ -13,7 +13,17 @@ from .selector import (
     ResearchSelection,
     get_research_context_for_prompt,
 )
-from .vector_backend_hooks import get_vector_backend_status
+from .vector_backend_hooks import (
+    get_vector_backend_status,
+    init_vector_backend,
+    generate_embedding,
+    vector_search_research_cards,
+    index_research_card,
+    compute_semantic_affinity,
+    cluster_research_cards,
+    search_similar_cards,
+    VECTOR_BACKEND_ENABLED,
+)
 
 __all__ = [
     "load_research_cards",
@@ -21,5 +31,14 @@ __all__ = [
     "select_research_for_template",
     "ResearchSelection",
     "get_research_context_for_prompt",
+    # Vector backend hooks (Issue #27)
     "get_vector_backend_status",
+    "init_vector_backend",
+    "generate_embedding",
+    "vector_search_research_cards",
+    "index_research_card",
+    "compute_semantic_affinity",
+    "cluster_research_cards",
+    "search_similar_cards",
+    "VECTOR_BACKEND_ENABLED",
 ]

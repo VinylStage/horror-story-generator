@@ -4,11 +4,11 @@ FastAPI application entry point.
 Local-only server for research operations.
 
 Phase B+: Includes Ollama resource management with auto-cleanup.
+Phase C: Optional API key authentication.
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.openapi.utils import get_openapi
+from fastapi import Depends, FastAPI
 
 from src import __version__
 from .routers import research, dedup, jobs, story
@@ -17,6 +17,7 @@ from .services.ollama_resource import (
     shutdown_resource_manager,
     get_resource_manager,
 )
+from .dependencies.auth import verify_api_key, API_AUTH_ENABLED
 
 
 @asynccontextmanager
@@ -63,6 +64,10 @@ app = FastAPI(
 
 Local-only API server for research card management and deduplication signal evaluation.
 
+### Authentication
+When `API_AUTH_ENABLED=true`, all endpoints except `/health` and `/resource/status` require
+an `X-API-Key` header matching the `API_KEY` environment variable.
+
 ### Features
 - **Research Cards**: Generate horror research cards using local Ollama LLM
 - **Validation**: Validate existing research card quality
@@ -74,8 +79,11 @@ Local-only API server for research card management and deduplication signal eval
 # Start server
 poetry run uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 
-# Generate research
-curl -X POST http://localhost:8000/research/run -H "Content-Type: application/json" -d '{"topic": "Korean apartment horror"}'
+# Generate research (with auth)
+curl -X POST http://localhost:8000/research/run \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: your-api-key" \\
+  -d '{"topic": "Korean apartment horror"}'
 ```
 
 ### Note
@@ -94,16 +102,10 @@ This API is designed for **local use only**. All operations connect to local Oll
     },
 )
 
-# Include routers
-app.include_router(story.router, prefix="/story", tags=["story"])
-app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
-app.include_router(research.router, prefix="/research", tags=["research"])
-app.include_router(dedup.router, prefix="/dedup", tags=["dedup"])
-
-
+# Health check - NO authentication (operational endpoints)
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint. Not authenticated."""
     return {"status": "ok", "version": __version__}
 
 
@@ -113,9 +115,27 @@ async def resource_status():
     Get Ollama resource manager status.
 
     Shows active models, idle timeout configuration, and cleanup status.
+    Not authenticated (operational endpoint).
     """
     manager = get_resource_manager()
     return manager.get_status()
+
+
+# Include routers WITH authentication dependency (when enabled)
+auth_dependency = [Depends(verify_api_key)] if API_AUTH_ENABLED else []
+
+app.include_router(
+    story.router, prefix="/story", tags=["story"], dependencies=auth_dependency
+)
+app.include_router(
+    jobs.router, prefix="/jobs", tags=["jobs"], dependencies=auth_dependency
+)
+app.include_router(
+    research.router, prefix="/research", tags=["research"], dependencies=auth_dependency
+)
+app.include_router(
+    dedup.router, prefix="/dedup", tags=["dedup"], dependencies=auth_dependency
+)
 
 
 if __name__ == "__main__":
