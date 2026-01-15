@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.3](https://github.com/VinylStage/horror-story-generator/compare/v1.4.2...v1.4.3) (2026-01-15)
+
+
+### Code Refactoring
+
+* sync develop branch improvements ([e179aed](https://github.com/VinylStage/horror-story-generator/commit/e179aed990cf8140eea900d65d34e98b9e69e8db))
+
 ## [1.4.2](https://github.com/VinylStage/horror-story-generator/compare/v1.4.1...v1.4.2) (2026-01-15)
 
 
