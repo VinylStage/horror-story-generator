@@ -39,6 +39,8 @@
 | 5차원 정규화 | 보장됨 |
 | 템플릿↔연구 카드 일관성 | 보장됨 |
 | 스토리 시그니처 결정성 | 보장됨 |
+| 스토리 CK 추출 | 보장됨 |
+| 템플릿↔스토리 CK 정렬 점수 | 보장됨 |
 
 ### 4. 데이터 이식성
 
@@ -61,6 +63,16 @@
 | `RESEARCH_INJECT_EXCLUDE_DUP_LEVEL` | `HIGH` | 제외할 중복 레벨 |
 | `ENABLE_STORY_DEDUP` | `true` | 스토리 레벨 중복 검사 |
 | `STORY_DEDUP_STRICT` | `false` | 중복 시 생성 중단 |
+
+### 스토리 Canonical Key 추출 설정
+
+| 환경 변수 | 기본값 | 설명 |
+|-----------|--------|------|
+| `ENABLE_STORY_CK_EXTRACTION` | `true` | 스토리 CK 추출 활성화 |
+| `STORY_CK_MODEL` | (없음) | 추출용 모델 오버라이드 |
+
+> **Note:** 스토리 CK 추출은 생성된 텍스트에서 canonical 차원을 LLM으로 분석합니다.
+> 템플릿 CK와 비교하여 정렬 점수(alignment score)를 메타데이터에 기록합니다.
 
 ### 경로 설정 (v1.3.1)
 
