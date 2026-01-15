@@ -473,6 +473,15 @@ data/novel/horror_story_YYYYMMDD_HHMMSS_metadata.json
           "story": "string (required)"
         }
       ]
+    },
+    "enforcement": {
+      "passed": "boolean (required)",
+      "action": "enum: accept | warn | retry | reject (required)",
+      "reason": "string (required)",
+      "match_score": "float 0.0-1.0 (required)",
+      "threshold": "float 0.0-1.0 (required)",
+      "policy": "enum: none | warn | retry | strict (required)",
+      "divergences": "array (required, same as template_comparison)"
     }
   }
 }
@@ -517,6 +526,21 @@ data/novel/horror_story_YYYYMMDD_HHMMSS_metadata.json
           "story": "collective"
         }
       ]
+    },
+    "enforcement": {
+      "passed": true,
+      "action": "accept",
+      "reason": "Alignment 80% meets threshold 60%",
+      "match_score": 0.8,
+      "threshold": 0.6,
+      "policy": "warn",
+      "divergences": [
+        {
+          "dimension": "antagonist_archetype",
+          "template": "system",
+          "story": "collective"
+        }
+      ]
     }
   }
 }
@@ -535,10 +559,25 @@ alignment_score = matches / 5 × 100%
 
 ### 7.6 환경 변수
 
+**추출 설정:**
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
 | `ENABLE_STORY_CK_EXTRACTION` | `true` | 추출 활성화 |
 | `STORY_CK_MODEL` | (없음) | 추출용 모델 오버라이드 |
+
+**정렬 검증 설정:**
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `STORY_CK_ENFORCEMENT` | `warn` | 검증 정책 (none/warn/retry/strict) |
+| `STORY_CK_MIN_ALIGNMENT` | `0.6` | 최소 정렬 점수 (0.0-1.0) |
+
+**정책 설명:**
+| 정책 | 동작 |
+|------|------|
+| `none` | 검증 비활성화, 항상 수락 |
+| `warn` | 임계값 미달 시 경고만 출력 (기본값) |
+| `retry` | 임계값 미달 시 다른 템플릿으로 재생성 |
+| `strict` | 임계값 미달 시 스토리 거부 |
 
 ### 7.7 관련 코드
 
@@ -553,5 +592,6 @@ alignment_score = matches / 5 × 100%
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
+| 1.2 | 2026-01-15 | Story CK Enforcement 스키마 추가 |
 | 1.1 | 2026-01-15 | Story Canonical Extraction 섹션 추가 |
 | 1.0 | 2026-01-14 | 초기 문서 작성 |
