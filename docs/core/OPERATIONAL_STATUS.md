@@ -40,6 +40,8 @@
 | 5차원 정규화 | 보장됨 |
 | 템플릿↔연구 카드 일관성 | 보장됨 |
 | 스토리 시그니처 결정성 | 보장됨 |
+| 스토리 CK 추출 | 보장됨 |
+| 템플릿↔스토리 CK 정렬 점수 | 보장됨 |
 
 ### 4. 데이터 이식성
 
@@ -72,6 +74,16 @@
 | `STORY_HYBRID_THRESHOLD` | `0.85` | 하이브리드 중복 판정 기준점 |
 | `STORY_HYBRID_CANONICAL_WEIGHT` | `0.3` | 하이브리드 canonical 가중치 |
 | `STORY_HYBRID_SEMANTIC_WEIGHT` | `0.7` | 하이브리드 semantic 가중치 |
+
+### 스토리 Canonical Key 추출 설정
+
+| 환경 변수 | 기본값 | 설명 |
+|-----------|--------|------|
+| `ENABLE_STORY_CK_EXTRACTION` | `true` | 스토리 CK 추출 활성화 |
+| `STORY_CK_MODEL` | (없음) | 추출용 모델 오버라이드 |
+
+> **Note:** 스토리 CK 추출은 생성된 텍스트에서 canonical 차원을 LLM으로 분석합니다.
+> 템플릿 CK와 비교하여 정렬 점수(alignment score)를 메타데이터에 기록합니다.
 
 ### 경로 설정 (v1.3.1)
 

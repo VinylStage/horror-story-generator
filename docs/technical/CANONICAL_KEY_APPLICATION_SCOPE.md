@@ -78,24 +78,75 @@ This document defines the **official application scope** of Canonical Key within
 | Prompt Builder | `src/story/prompt_builder.py` | Includes `canonical_core` in prompt context |
 | Dedup API | `src/api/services/dedup_service.py` | Compares `canonical_core` for similarity |
 | Job Dedup | `src/api/routers/jobs.py` | Extracts `canonical_affinity` from research cards |
+| **Canonical Extractor** | `src/story/canonical_extractor.py` | Extracts story's own CK for alignment scoring |
 
 **Rule:** Story generation MAY consume Canonical Keys from:
 - Template `canonical_core` (for dedup comparison)
 - Research card `canonical_affinity` (via integration)
+- Generated story text `canonical_affinity` (via LLM extraction)
 
 **Note:** Consumption is NOT enforced. Stories can be generated without Canonical Key validation.
 
 ---
 
-### 4. Intentionally NOT Applied (Deferred)
+### 4. Story Canonical Key Extraction (IMPLEMENTED)
+
+**Location:** Story Generation Pipeline (Post-generation)
+
+| Component | File | Description |
+|-----------|------|-------------|
+| Canonical Extractor | `src/story/canonical_extractor.py` | LLM-based extraction of CK from story text |
+| Generator Integration | `src/story/generator.py` | Calls extractor after story generation |
+
+**How It Works:**
+1. After story text is generated, the extractor analyzes the content
+2. LLM identifies the 5 canonical dimensions from actual story text
+3. Multi-value `canonical_affinity` is collapsed to single-value `canonical_core`
+4. Story's CK is compared with template's CK for alignment scoring
+
+**Output Format (in story metadata):**
+```json
+{
+  "story_canonical_extraction": {
+    "canonical_core": {
+      "setting_archetype": "apartment",
+      "primary_fear": "social_displacement",
+      "antagonist_archetype": "system",
+      "threat_mechanism": "surveillance",
+      "twist_family": "inevitability"
+    },
+    "canonical_affinity": {
+      "setting": ["apartment", "domestic_space"],
+      "primary_fear": ["social_displacement", "isolation"],
+      "antagonist": ["system", "collective"],
+      "mechanism": ["surveillance"],
+      "twist": ["inevitability"]
+    },
+    "template_comparison": {
+      "match_score": 0.8,
+      "match_count": 4,
+      "total_dimensions": 5,
+      "matches": ["setting_archetype", "primary_fear", "antagonist_archetype", "threat_mechanism"],
+      "divergences": [{"dimension": "twist_family", "template": "revelation", "story": "inevitability"}]
+    }
+  }
+}
+```
+
+**Configuration:**
+- `ENABLE_STORY_CK_EXTRACTION`: Enable/disable extraction (default: `true`)
+- `STORY_CK_MODEL`: Override model for extraction (default: same as story generation)
+
+---
+
+### 5. Intentionally NOT Applied (Deferred)
 
 The following are **explicitly deferred** to future phases:
 
 | Feature | Status | Rationale |
 |---------|--------|-----------|
-| Story output Canonical Key generation | DEFERRED | Stories do not generate their own Canonical Key |
-| Canonical Key enforcement on story output | DEFERRED | No validation that story content matches template's canonical_core |
-| Cross-pipeline Canonical Key matching | DEFERRED | No automatic matching between research affinity and template core |
+| Canonical Key enforcement on story output | DEFERRED | No validation that story content matches template's canonical_core (Issue #20) |
+| Cross-pipeline Canonical Key matching | DEFERRED | No automatic matching between research affinity and template core (Issue #21) |
 
 ---
 
@@ -107,7 +158,8 @@ The following are **explicitly deferred** to future phases:
 | Research card storage | REQUIRED | canonical_affinity persisted in JSON |
 | Story template definition | PREDEFINED | canonical_core is fixed per template |
 | Story dedup comparison | OPTIONAL | Used if available, not required |
-| Story output generation | NOT APPLIED | Stories do not output Canonical Keys |
+| Story output extraction | IMPLEMENTED | Stories extract own CK for alignment scoring |
+| Story output enforcement | DEFERRED | Alignment score is informational only |
 
 ---
 
@@ -116,6 +168,7 @@ The following are **explicitly deferred** to future phases:
 - Canonical Enum v1.0: `docs/technical/canonical_enum.md`
 - Template Skeletons: `assets/templates/template_skeletons_v1.json`
 - Research Executor: `src/research/executor/`
+- **Story Canonical Extractor: `src/story/canonical_extractor.py`**
 - Dedup System: `docs/core/ARCHITECTURE.md`
 
 ---
