@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.2](https://github.com/VinylStage/horror-story-generator/compare/v1.4.1...v1.4.2) (2026-01-15)
+
+
+### Code Refactoring
+
+* enforce canonical key constraints on story output ([#20](https://github.com/VinylStage/horror-story-generator/issues/20)) ([#67](https://github.com/VinylStage/horror-story-generator/issues/67)) ([463e742](https://github.com/VinylStage/horror-story-generator/commit/463e742ec94cce8b205c010b16b5c8bc7d590e1a))
+
 ## [1.4.1](https://github.com/VinylStage/horror-story-generator/compare/v1.4.0...v1.4.1) (2026-01-14)
 
 
