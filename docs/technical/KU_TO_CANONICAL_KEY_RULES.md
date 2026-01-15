@@ -414,4 +414,101 @@ Current implementations may use abbreviated keys. Map as follows:
 
 ---
 
+## 11. Story-to-Template Alignment Scoring
+
+After story generation, the system extracts a Canonical Key from the **generated story text** and compares it against the template's predefined `canonical_core`. This provides alignment scoring for quality validation.
+
+### 11.1 Purpose
+
+| Goal | Description |
+|------|-------------|
+| Validate output | Verify story matches intended structural pattern |
+| Track divergence | Identify where story deviates from template |
+| Quality signal | Provide metrics for future improvements |
+
+### 11.2 Extraction Process
+
+1. Story text → LLM analysis
+2. LLM outputs `canonical_affinity` (arrays)
+3. Collapse to `canonical_core` (single values) using same rules as Section 6
+4. Compare story CK vs template CK dimension-by-dimension
+
+### 11.3 Alignment Score Calculation
+
+```
+alignment_score = matched_dimensions / 5 × 100%
+```
+
+**Dimension-by-Dimension Comparison:**
+
+| Template Value | Story Value | Match? |
+|----------------|-------------|--------|
+| `apartment` | `apartment` | Yes |
+| `social_displacement` | `social_displacement` | Yes |
+| `system` | `collective` | No |
+| `surveillance` | `surveillance` | Yes |
+| `inevitability` | `inevitability` | Yes |
+
+**Result:** 4/5 = 80% alignment
+
+### 11.4 Interpretation Guide
+
+| Score | Interpretation | Recommended Action |
+|-------|----------------|-------------------|
+| 100% | Perfect alignment | Story matches template structure exactly |
+| 80-99% | High alignment | Minor divergence, usually acceptable |
+| 60-79% | Moderate alignment | Story drifted from template; review recommended |
+| <60% | Low alignment | Significant divergence; may indicate prompt issues |
+
+### 11.5 Handling Divergences
+
+When story CK diverges from template CK:
+
+1. **Enforcement policy** — Action depends on `STORY_CK_ENFORCEMENT` setting
+2. **Retry mode** — Low alignment can trigger regeneration with different template
+3. **Strict mode** — Low alignment can reject the story entirely
+4. **Metadata recorded** — Full comparison and enforcement result stored
+
+**Enforcement Policies:**
+| Policy | Action on Low Alignment |
+|--------|-------------------------|
+| `none` | Always accept (disabled) |
+| `warn` | Log warning, accept anyway (default) |
+| `retry` | Re-attempt with different template |
+| `strict` | Reject story entirely |
+
+**Divergence Example:**
+```json
+{
+  "dimension": "antagonist_archetype",
+  "template": "system",
+  "story": "collective"
+}
+```
+
+This indicates the LLM wrote a story emphasizing collective/mob threat when the template expected systemic/institutional threat.
+
+### 11.6 Configuration
+
+**Extraction:**
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `ENABLE_STORY_CK_EXTRACTION` | `true` | Enable/disable extraction |
+| `STORY_CK_MODEL` | (none) | Override model for extraction |
+
+**Enforcement:**
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `STORY_CK_ENFORCEMENT` | `warn` | Policy: none/warn/retry/strict |
+| `STORY_CK_MIN_ALIGNMENT` | `0.6` | Minimum alignment score (0.0-1.0) |
+
+### 11.7 Related Implementation
+
+| File | Role |
+|------|------|
+| `src/story/canonical_extractor.py` | Extraction logic |
+| `src/story/generator.py` | Integration point |
+
+---
+
 **Note:** This document defines RULES for Canonical Key generation. It does not contain LLM prompts or implementation code. For integration, see the research executor source code.

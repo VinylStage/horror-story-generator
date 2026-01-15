@@ -60,6 +60,26 @@ except ImportError:
     ENABLE_STORY_DEDUP = False
     STORY_DEDUP_STRICT = False
 
+# Story canonical key extraction module (Issue #19)
+# Enforcement module (Issue #20)
+try:
+    from src.story.canonical_extractor import (
+        extract_canonical_from_story,
+        compare_canonical_cores,
+        check_alignment_enforcement,
+        should_retry_for_alignment,
+        should_reject_for_alignment,
+        ENABLE_STORY_CK_EXTRACTION,
+        STORY_CK_ENFORCEMENT,
+        STORY_CK_MIN_ALIGNMENT,
+    )
+    STORY_CK_AVAILABLE = True
+except ImportError:
+    STORY_CK_AVAILABLE = False
+    ENABLE_STORY_CK_EXTRACTION = False
+    STORY_CK_ENFORCEMENT = "none"
+    STORY_CK_MIN_ALIGNMENT = 0.6
+
 # Config flags (can be overridden by environment)
 AUTO_INJECT_RESEARCH = os.getenv("AUTO_INJECT_RESEARCH", "true").lower() == "true"
 RESEARCH_INJECT_TOP_K = int(os.getenv("RESEARCH_INJECT_TOP_K", "1"))
@@ -560,6 +580,47 @@ def generate_horror_story(
     # End Phase 2B
     # ==========================================================================
 
+    # ==========================================================================
+    # Story Canonical Key Extraction (Issue #19) & Enforcement (Issue #20)
+    # ==========================================================================
+    # Extract canonical dimensions from the ACTUAL story content
+    # This is independent of the template's predefined canonical_core
+    # ==========================================================================
+    if STORY_CK_AVAILABLE and ENABLE_STORY_CK_EXTRACTION:
+        try:
+            story_ck_result = extract_canonical_from_story(
+                story_text=story_text,
+                config=config,
+                model_spec=model_spec
+            )
+            if story_ck_result:
+                result["metadata"]["story_canonical_extraction"] = {
+                    "canonical_core": story_ck_result.get("canonical_core"),
+                    "canonical_affinity": story_ck_result.get("canonical_affinity"),
+                    "analysis_notes": story_ck_result.get("analysis_notes"),
+                    "extraction_model": story_ck_result.get("extraction_model"),
+                }
+                # Compare with template canonical_core if available
+                if skeleton_info and skeleton_info.get("canonical_core"):
+                    comparison = compare_canonical_cores(
+                        template_core=skeleton_info["canonical_core"],
+                        story_core=story_ck_result.get("canonical_core", {})
+                    )
+                    result["metadata"]["story_canonical_extraction"]["template_comparison"] = comparison
+                    logger.info(f"[StoryCK] Template alignment: {comparison['match_score']:.0%} ({comparison['match_count']}/{comparison['total_dimensions']})")
+
+                    # Issue #20: Check alignment enforcement (logging only for basic function)
+                    alignment_enforcement = check_alignment_enforcement(comparison)
+                    result["metadata"]["story_canonical_extraction"]["enforcement"] = alignment_enforcement
+                    if not alignment_enforcement.get("passed"):
+                        logger.warning(f"[StoryCK][Enforcement] {alignment_enforcement['reason']}")
+        except Exception as e:
+            logger.warning(f"[StoryCK] Extraction failed: {e}")
+
+    # ==========================================================================
+    # End Story Canonical Key Extraction
+    # ==========================================================================
+
     # 6. 파일 저장
     if save_output:
         file_path = save_story(
@@ -789,6 +850,59 @@ def generate_with_dedup_control(
 
             if similarity_observation:
                 result["metadata"]["similarity_observation"] = similarity_observation
+
+            # Story Canonical Key Extraction (Issue #19) & Enforcement (Issue #20)
+            alignment_enforcement = None
+            if STORY_CK_AVAILABLE and ENABLE_STORY_CK_EXTRACTION:
+                try:
+                    story_ck_result = extract_canonical_from_story(
+                        story_text=story_text,
+                        config=config,
+                        model_spec=model_spec
+                    )
+                    if story_ck_result:
+                        result["metadata"]["story_canonical_extraction"] = {
+                            "canonical_core": story_ck_result.get("canonical_core"),
+                            "canonical_affinity": story_ck_result.get("canonical_affinity"),
+                            "analysis_notes": story_ck_result.get("analysis_notes"),
+                            "extraction_model": story_ck_result.get("extraction_model"),
+                        }
+                        if skeleton_info and skeleton_info.get("canonical_core"):
+                            comparison = compare_canonical_cores(
+                                template_core=skeleton_info["canonical_core"],
+                                story_core=story_ck_result.get("canonical_core", {})
+                            )
+                            result["metadata"]["story_canonical_extraction"]["template_comparison"] = comparison
+                            logger.info(f"[StoryCK] Template alignment: {comparison['match_score']:.0%}")
+
+                            # Issue #20: Check alignment enforcement
+                            alignment_enforcement = check_alignment_enforcement(comparison)
+                            result["metadata"]["story_canonical_extraction"]["enforcement"] = alignment_enforcement
+
+                            # Handle enforcement actions
+                            if should_retry_for_alignment(alignment_enforcement):
+                                logger.info(f"[StoryCK][Enforcement] Retry requested: {alignment_enforcement['reason']}")
+                                if attempt < max_attempts - 1:
+                                    continue  # Retry with next attempt
+
+                            if should_reject_for_alignment(alignment_enforcement):
+                                logger.warning(f"[StoryCK][Enforcement] Rejected: {alignment_enforcement['reason']}")
+                                # Record rejection in registry and skip
+                                registry.add_story(
+                                    story_id=story_id,
+                                    title=title,
+                                    template_id=template_id,
+                                    template_name=template_name,
+                                    semantic_summary=semantic_summary,
+                                    accepted=False,
+                                    decision_reason=f"canonical_alignment_rejected: {alignment_enforcement['reason']}"
+                                )
+                                if attempt < max_attempts - 1:
+                                    continue  # Try again
+                                else:
+                                    return None  # All attempts exhausted
+                except Exception as e:
+                    logger.warning(f"[StoryCK] Extraction failed: {e}")
 
             # Save story
             if save_output:
@@ -1052,6 +1166,37 @@ def generate_with_topic(
             "generation_mode": "topic_based" if topic else "random"
         }
     }
+
+    # Story Canonical Key Extraction (Issue #19) & Enforcement (Issue #20)
+    if STORY_CK_AVAILABLE and ENABLE_STORY_CK_EXTRACTION:
+        try:
+            story_ck_result = extract_canonical_from_story(
+                story_text=story_text,
+                config=config,
+                model_spec=model_spec
+            )
+            if story_ck_result:
+                result["metadata"]["story_canonical_extraction"] = {
+                    "canonical_core": story_ck_result.get("canonical_core"),
+                    "canonical_affinity": story_ck_result.get("canonical_affinity"),
+                    "analysis_notes": story_ck_result.get("analysis_notes"),
+                    "extraction_model": story_ck_result.get("extraction_model"),
+                }
+                if skeleton_info and skeleton_info.get("canonical_core"):
+                    comparison = compare_canonical_cores(
+                        template_core=skeleton_info["canonical_core"],
+                        story_core=story_ck_result.get("canonical_core", {})
+                    )
+                    result["metadata"]["story_canonical_extraction"]["template_comparison"] = comparison
+                    logger.info(f"[StoryCK] Template alignment: {comparison['match_score']:.0%}")
+
+                    # Issue #20: Check alignment enforcement
+                    alignment_enforcement = check_alignment_enforcement(comparison)
+                    result["metadata"]["story_canonical_extraction"]["enforcement"] = alignment_enforcement
+                    if not alignment_enforcement.get("passed"):
+                        logger.warning(f"[StoryCK][Enforcement] {alignment_enforcement['reason']}")
+        except Exception as e:
+            logger.warning(f"[StoryCK] Extraction failed: {e}")
 
     # Save story
     if save_output:

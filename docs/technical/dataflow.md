@@ -139,6 +139,13 @@ flowchart TB
         C3["Response Processing"]
     end
 
+    subgraph CKExtraction["CK Extraction & Enforcement"]
+        CK1["LLM Analysis<br/>(canonical_extractor.py)"]
+        CK2["Collapse to<br/>canonical_core"]
+        CK3["Compare with<br/>Template CK"]
+        CK4{"Enforcement<br/>Policy?"}
+    end
+
     subgraph SemanticDedup["Semantic Dedup (Post)"]
         D1["Generate Semantic Summary"]
         D2["Similarity Check"]
@@ -148,7 +155,7 @@ flowchart TB
     subgraph Decision["결정"]
         E1["Accept"]
         E2["Retry"]
-        E3["Skip"]
+        E3["Skip/Reject"]
     end
 
     subgraph Output["출력"]
@@ -164,7 +171,13 @@ flowchart TB
     B2 -->|Yes, WARN| E2
     C1 --> C2
     C2 --> C3
-    C3 --> D1
+    C3 --> CK1
+    CK1 --> CK2
+    CK2 --> CK3
+    CK3 --> CK4
+    CK4 -->|pass/warn| D1
+    CK4 -->|retry| E2
+    CK4 -->|strict reject| E3
     D1 --> D2
     D2 --> D3
     D3 -->|LOW/MED| E1
@@ -212,7 +225,20 @@ flowchart TB
 - **API:** Anthropic Messages API
 - **모델:** 환경변수 `CLAUDE_MODEL` (기본: claude-sonnet-4-5)
 
-#### Step 6: Semantic Dedup (Post-generation)
+#### Step 6: Canonical Key Extraction & Enforcement
+- **모듈:** `src/story/canonical_extractor.py`
+- **처리:**
+  1. 생성된 스토리 텍스트를 LLM으로 분석
+  2. 5개 canonical 차원 추출 (canonical_affinity → canonical_core)
+  3. 템플릿의 canonical_core와 비교하여 정렬 점수 계산
+  4. 정책에 따라 액션 결정 (accept/warn/retry/reject)
+- **정책:**
+  - `none`: 검증 비활성화
+  - `warn`: 경고 후 진행 (기본값)
+  - `retry`: 임계값 미달 시 재생성
+  - `strict`: 임계값 미달 시 거부
+
+#### Step 7: Semantic Dedup (Post-generation)
 - **모듈:** `src/dedup/similarity.py`
 - **처리:**
   1. LLM으로 semantic summary 생성
@@ -220,10 +246,11 @@ flowchart TB
   3. canonical key 일치도 계산
   4. 복합 신호 레벨 결정
 
-#### Step 7: Decision & Output
+#### Step 8: Decision & Output
 - **LOW/MEDIUM:** 수락 → 파일 저장 + Registry 등록
 - **HIGH (retry < 2):** 다른 템플릿으로 재생성
 - **HIGH (retry >= 2):** 스킵 (Registry에 기록)
+- **CK Enforcement reject:** 스킵 (strict 정책일 때)
 
 ---
 
@@ -348,4 +375,5 @@ flowchart TD
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
+| 1.1 | 2026-01-15 | Story CK Extraction & Enforcement 단계 추가 |
 | 1.0 | 2026-01-14 | 초기 문서 작성 |
