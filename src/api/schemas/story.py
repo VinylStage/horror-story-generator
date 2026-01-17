@@ -34,6 +34,12 @@ class StoryGenerateRequest(BaseModel):
         default=True,
         description="Save generated story to file"
     )
+    # v1.4.3: Webhook support for sync endpoints
+    webhook_url: Optional[str] = Field(
+        default=None,
+        description="Webhook URL for completion notification (fire-and-forget)",
+        json_schema_extra={"examples": ["https://example.com/webhook"]}
+    )
 
 
 class StoryGenerateResponse(BaseModel):
@@ -47,6 +53,11 @@ class StoryGenerateResponse(BaseModel):
     word_count: Optional[int] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     error: Optional[str] = None
+    # v1.4.3: Webhook notification status
+    webhook_triggered: bool = Field(
+        default=False,
+        description="Whether a webhook notification was triggered"
+    )
 
 
 class StoryListItem(BaseModel):

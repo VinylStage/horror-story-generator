@@ -6,6 +6,8 @@ Endpoints:
 - POST /research/validate - Validate a research card
 - GET /research/list - List research cards
 - POST /research/dedup - Check semantic duplicates via FAISS
+
+v1.4.3: Added webhook support for /research/run endpoint.
 """
 
 from typing import Optional
@@ -23,6 +25,7 @@ from ..schemas.research import (
     SimilarCard,
 )
 from ..services import research_service
+from src.infra.webhook import fire_and_forget_webhook
 
 router = APIRouter()
 
@@ -33,6 +36,8 @@ async def run_research(request: ResearchRunRequest):
     Execute research generation via Ollama.
 
     This endpoint triggers src.research.executor CLI via subprocess.
+
+    v1.4.3: Supports webhook_url for completion notification (fire-and-forget).
 
     Raises:
         HTTPException: 502 on LLM/model errors, 504 on timeout
@@ -47,14 +52,44 @@ async def run_research(request: ResearchRunRequest):
     # Propagate errors as HTTP errors (Issue #2)
     status = result.get("status", "error")
     if status == "error":
+        # v1.4.3: Fire webhook for error case before raising
+        if request.webhook_url:
+            fire_and_forget_webhook(
+                url=request.webhook_url,
+                endpoint="/research/run",
+                status="error",
+                result={"error": result.get("message") or "Research generation failed"},
+            )
         raise HTTPException(
             status_code=502,
             detail=result.get("message") or "Research generation failed"
         )
     elif status == "timeout":
+        # v1.4.3: Fire webhook for timeout case before raising
+        if request.webhook_url:
+            fire_and_forget_webhook(
+                url=request.webhook_url,
+                endpoint="/research/run",
+                status="error",
+                result={"error": result.get("message") or "Research generation timed out"},
+            )
         raise HTTPException(
             status_code=504,
             detail=result.get("message") or "Research generation timed out"
+        )
+
+    # v1.4.3: Fire webhook for success case
+    webhook_triggered = False
+    if request.webhook_url:
+        webhook_triggered = fire_and_forget_webhook(
+            url=request.webhook_url,
+            endpoint="/research/run",
+            status="success",
+            result={
+                "card_id": result.get("card_id", ""),
+                "output_path": result.get("output_path"),
+                "message": result.get("message"),
+            },
         )
 
     return ResearchRunResponse(
@@ -62,6 +97,7 @@ async def run_research(request: ResearchRunRequest):
         status=status,
         message=result.get("message"),
         output_path=result.get("output_path"),
+        webhook_triggered=webhook_triggered,
     )
 
 
