@@ -278,7 +278,100 @@ def process_webhook_for_job(job: Job) -> Job:
 
 # =============================================================================
 # Fire-and-Forget Webhook for Sync Endpoints (v1.4.3)
+# v1.4.4: Discord webhook format support
 # =============================================================================
+
+# Discord embed colors
+DISCORD_COLOR_SUCCESS = 0x57F287  # Green
+DISCORD_COLOR_ERROR = 0xED4245    # Red
+
+
+def is_discord_webhook_url(url: str) -> bool:
+    """
+    Check if URL is a Discord webhook URL.
+
+    Args:
+        url: Webhook URL to check
+
+    Returns:
+        True if URL matches Discord webhook pattern
+    """
+    if not url:
+        return False
+    # Check for exact domain match (with or without www)
+    discord_patterns = [
+        "https://discord.com/api/webhooks/",
+        "https://www.discord.com/api/webhooks/",
+        "https://discordapp.com/api/webhooks/",
+        "https://www.discordapp.com/api/webhooks/",
+    ]
+    return any(url.startswith(pattern) for pattern in discord_patterns)
+
+
+def build_discord_embed_payload(
+    endpoint: str,
+    status: str,
+    result: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Build Discord-compatible webhook payload with embeds.
+
+    Args:
+        endpoint: The API endpoint path (e.g., "/research/run")
+        status: Result status ("success" or "error")
+        result: The response data to include
+
+    Returns:
+        Discord-compatible payload with embeds
+    """
+    is_success = status == "success"
+    color = DISCORD_COLOR_SUCCESS if is_success else DISCORD_COLOR_ERROR
+    emoji = "✅" if is_success else "❌"
+
+    # Determine title based on endpoint
+    if "/research" in endpoint:
+        title = f"{emoji} Research {'Completed' if is_success else 'Failed'}"
+    elif "/story" in endpoint:
+        title = f"{emoji} Story Generation {'Completed' if is_success else 'Failed'}"
+    else:
+        title = f"{emoji} Operation {'Completed' if is_success else 'Failed'}"
+
+    # Build fields from result
+    fields = []
+
+    if is_success:
+        # Success fields
+        if result.get("card_id"):
+            fields.append({"name": "Card ID", "value": result["card_id"], "inline": True})
+        if result.get("story_id"):
+            fields.append({"name": "Story ID", "value": result["story_id"], "inline": True})
+        if result.get("title"):
+            fields.append({"name": "Title", "value": result["title"], "inline": True})
+        if result.get("output_path"):
+            fields.append({"name": "Output", "value": f"`{result['output_path']}`", "inline": False})
+        if result.get("file_path"):
+            fields.append({"name": "File", "value": f"`{result['file_path']}`", "inline": False})
+        if result.get("word_count"):
+            fields.append({"name": "Word Count", "value": str(result["word_count"]), "inline": True})
+    else:
+        # Error fields
+        if result.get("error"):
+            fields.append({"name": "Error", "value": result["error"][:1000], "inline": False})
+
+    # Always add endpoint field
+    fields.append({"name": "Endpoint", "value": f"`{endpoint}`", "inline": True})
+
+    embed = {
+        "title": title,
+        "color": color,
+        "fields": fields,
+        "timestamp": datetime.now().isoformat(),
+        "footer": {"text": "Horror Story Generator v1.4"},
+    }
+
+    return {
+        "embeds": [embed],
+    }
 
 
 def build_sync_webhook_payload(
@@ -316,21 +409,28 @@ def _send_webhook_in_thread(
     Internal function to send webhook in a background thread.
 
     This runs in a separate thread for fire-and-forget behavior.
+    v1.4.4: Supports both standard and Discord webhook formats.
     """
     last_error: Optional[str] = None
+    is_discord = is_discord_webhook_url(url)
 
     for attempt in range(max_retries):
         try:
             with httpx.Client(timeout=timeout) as client:
+                # Build headers based on webhook type
+                headers = {
+                    "Content-Type": "application/json",
+                    "User-Agent": "HorrorStoryGenerator/1.4",
+                }
+                # Add custom headers only for non-Discord webhooks
+                if not is_discord:
+                    headers["X-Webhook-Event"] = payload.get("event", "completed")
+                    headers["X-Webhook-Endpoint"] = payload.get("endpoint", "unknown")
+
                 response = client.post(
                     url,
                     json=payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "User-Agent": "HorrorStoryGenerator/1.4",
-                        "X-Webhook-Event": payload.get("event", "completed"),
-                        "X-Webhook-Endpoint": payload.get("endpoint", "unknown"),
-                    },
+                    headers=headers,
                 )
 
                 if 200 <= response.status_code < 300:
@@ -394,6 +494,9 @@ def fire_and_forget_webhook(
     to send the webhook. The webhook is sent asynchronously and any
     errors are logged but do not affect the caller.
 
+    v1.4.4: Automatically detects Discord webhook URLs and uses
+    Discord-compatible embed format.
+
     Args:
         url: Webhook URL to POST to
         endpoint: The API endpoint path (e.g., "/research/run")
@@ -406,9 +509,13 @@ def fire_and_forget_webhook(
     if not url:
         return False
 
-    payload = build_sync_webhook_payload(endpoint, status, result)
-
-    logger.info(f"Triggering fire-and-forget webhook to {url} for {endpoint}")
+    # v1.4.4: Use Discord format for Discord webhook URLs
+    if is_discord_webhook_url(url):
+        payload = build_discord_embed_payload(endpoint, status, result)
+        logger.info(f"Triggering Discord webhook to {url} for {endpoint}")
+    else:
+        payload = build_sync_webhook_payload(endpoint, status, result)
+        logger.info(f"Triggering fire-and-forget webhook to {url} for {endpoint}")
 
     # Start webhook in background thread
     thread = threading.Thread(
