@@ -426,3 +426,72 @@ async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
             "index_size": 0,
             "message": f"Dedup error: {str(e)}",
         }
+
+
+# =============================================================================
+# Issue #21: Cross-pipeline Canonical Key Matching (Research → Templates)
+# =============================================================================
+
+
+async def get_matching_templates(
+    card_id: str,
+    max_templates: int = 5,
+    min_score: float = 0.5,
+) -> Dict[str, Any]:
+    """
+    Find matching templates for a research card based on canonical affinity.
+
+    Uses reverse direction matching: research card's canonical_affinity
+    is matched against each template's canonical_core.
+
+    Args:
+        card_id: Research card ID to match
+        max_templates: Maximum templates to return
+        min_score: Minimum match score threshold
+
+    Returns:
+        Dict with matching_templates list and metadata
+    """
+    from src.infra.research_context.repository import get_card_by_id, get_canonical_affinity
+    from src.infra.research_context.selector import select_templates_for_research
+
+    # Load the research card
+    card = get_card_by_id(card_id)
+
+    if card is None:
+        return {
+            "card_id": card_id,
+            "matching_templates": [],
+            "total_templates": 0,
+            "card_affinity": None,
+            "message": f"Research card not found: {card_id}",
+        }
+
+    # Get card's canonical affinity for response
+    card_affinity = get_canonical_affinity(card)
+
+    # Select matching templates
+    selection = select_templates_for_research(
+        card=card,
+        max_templates=max_templates,
+        min_score=min_score,
+    )
+
+    # Build response
+    matching_templates = []
+    for i, template in enumerate(selection.templates):
+        matching_templates.append({
+            "template_id": template.get("template_id", "unknown"),
+            "template_name": template.get("template_name", "Unknown"),
+            "match_score": round(selection.scores[i], 4),
+            "canonical_core": template.get("canonical_core", {}),
+            "match_details": selection.match_details[i] if i < len(selection.match_details) else None,
+        })
+
+    return {
+        "card_id": card_id,
+        "matching_templates": matching_templates,
+        "total_templates": selection.total_available,
+        "card_affinity": card_affinity,
+        "message": selection.reason if not selection.has_matches else None,
+    }

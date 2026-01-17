@@ -16,8 +16,11 @@ from src.infra.research_context.policy import (
 )
 from src.infra.research_context.selector import (
     ResearchSelection,
+    TemplateSelection,
     compute_affinity_score,
+    compute_reverse_affinity_score,
     select_research_for_template,
+    select_templates_for_research,
 )
 from src.infra.research_context.formatter import (
     build_research_context,
@@ -362,3 +365,260 @@ class TestIntegration:
         # Format for metadata
         metadata = format_research_for_metadata(selection)
         assert metadata["research_used"] == ["RC-TEST"]
+
+
+# =============================================================================
+# Issue #21: Reverse Matching Tests (Research → Templates)
+# =============================================================================
+
+
+class TestReverseAffinityScoring:
+    """Tests for reverse canonical affinity scoring (Issue #21)."""
+
+    def test_reverse_perfect_match(self):
+        """All dimensions match should score 1.0 (reverse direction)."""
+        card_affinity = {
+            "setting": ["apartment", "urban"],
+            "primary_fear": ["isolation"],
+            "antagonist": ["system"],
+            "mechanism": ["surveillance", "confinement"]
+        }
+        template_canonical = {
+            "setting": "apartment",
+            "primary_fear": "isolation",
+            "antagonist": "system",
+            "mechanism": "surveillance"
+        }
+        score, details = compute_reverse_affinity_score(card_affinity, template_canonical)
+        assert score == 1.0
+
+    def test_reverse_no_match(self):
+        """No matching dimensions should score 0.0."""
+        card_affinity = {
+            "setting": ["rural"],
+            "primary_fear": ["annihilation"],
+            "antagonist": ["ghost"],
+            "mechanism": ["possession"]
+        }
+        template_canonical = {
+            "setting": "apartment",
+            "primary_fear": "isolation",
+            "antagonist": "system",
+            "mechanism": "surveillance"
+        }
+        score, details = compute_reverse_affinity_score(card_affinity, template_canonical)
+        assert score == 0.0
+
+    def test_reverse_partial_match(self):
+        """Partial matches should score proportionally."""
+        card_affinity = {
+            "setting": ["apartment"],  # match
+            "primary_fear": ["annihilation"],  # no match
+            "antagonist": ["system"],  # match
+            "mechanism": ["possession"]  # no match
+        }
+        template_canonical = {
+            "setting": "apartment",
+            "primary_fear": "isolation",
+            "antagonist": "system",
+            "mechanism": "surveillance"
+        }
+        score, details = compute_reverse_affinity_score(card_affinity, template_canonical)
+        # 2 matches out of 4 dimensions (with weighting)
+        assert 0.3 < score < 0.7
+
+    def test_reverse_empty_affinity(self):
+        """Empty card affinity should score 0.0."""
+        card_affinity = {}
+        template_canonical = {
+            "setting": "apartment",
+            "primary_fear": "isolation"
+        }
+        score, details = compute_reverse_affinity_score(card_affinity, template_canonical)
+        assert score == 0.0
+
+    def test_symmetry_with_forward_matching(self):
+        """Reverse matching should produce same score as forward for same data."""
+        template_canonical = {
+            "setting": "apartment",
+            "primary_fear": "isolation",
+            "antagonist": "system",
+            "mechanism": "surveillance"
+        }
+        card_affinity = {
+            "setting": ["apartment", "urban"],
+            "primary_fear": ["isolation"],
+            "antagonist": ["system"],
+            "mechanism": ["surveillance", "confinement"]
+        }
+
+        forward_score, _ = compute_affinity_score(template_canonical, card_affinity)
+        reverse_score, _ = compute_reverse_affinity_score(card_affinity, template_canonical)
+
+        assert forward_score == reverse_score
+
+
+class TestTemplateSelection:
+    """Tests for template selection from research card (Issue #21)."""
+
+    def test_template_selection_basic(self):
+        """select_templates_for_research should return matching templates."""
+        mock_card = {
+            "card_id": "RC-TEST",
+            "output": {
+                "canonical_affinity": {
+                    "setting": ["apartment", "domestic_space"],
+                    "primary_fear": ["isolation", "loss_of_autonomy"],
+                    "antagonist": ["system"],
+                    "mechanism": ["surveillance", "confinement"]
+                }
+            }
+        }
+
+        mock_templates = [
+            {
+                "template_id": "T-APT-001",
+                "template_name": "Apartment Social Surveillance",
+                "canonical_core": {
+                    "setting": "apartment",
+                    "primary_fear": "social_displacement",  # no match
+                    "antagonist": "system",
+                    "mechanism": "surveillance"
+                }
+            },
+            {
+                "template_id": "T-DOM-002",
+                "template_name": "Smart Home Surveillance",
+                "canonical_core": {
+                    "setting": "domestic_space",
+                    "primary_fear": "loss_of_autonomy",
+                    "antagonist": "technology",  # no match
+                    "mechanism": "surveillance"
+                }
+            },
+            {
+                "template_id": "T-NO-MATCH",
+                "template_name": "No Match Template",
+                "canonical_core": {
+                    "setting": "rural",
+                    "primary_fear": "annihilation",
+                    "antagonist": "ghost",
+                    "mechanism": "possession"
+                }
+            }
+        ]
+
+        # Use lower threshold for this test
+        selection = select_templates_for_research(
+            card=mock_card,
+            templates=mock_templates,
+            min_score=0.25  # Lower threshold for test
+        )
+
+        # Should have matches
+        assert selection.has_matches
+        assert len(selection.templates) >= 1
+        # T-NO-MATCH should not be in results
+        assert "T-NO-MATCH" not in selection.template_ids
+
+    def test_template_selection_traceability(self):
+        """TemplateSelection should provide template_ids for traceability."""
+        selection = TemplateSelection(
+            templates=[
+                {"template_id": "T-001", "template_name": "Test 1"},
+                {"template_id": "T-002", "template_name": "Test 2"}
+            ],
+            scores=[0.8, 0.6],
+            match_details=[{}, {}],
+            total_available=15,
+            reason="test",
+            template_ids=["T-001", "T-002"]
+        )
+
+        trace = selection.to_traceability_dict()
+        assert trace["matching_templates"] == ["T-001", "T-002"]
+        assert trace["best_match_score"] == 0.8
+
+    def test_template_selection_empty_affinity(self):
+        """Card with empty affinity should return no matches."""
+        mock_card = {
+            "card_id": "RC-EMPTY",
+            "output": {
+                "canonical_affinity": {}
+            }
+        }
+
+        mock_templates = [
+            {
+                "template_id": "T-001",
+                "template_name": "Test Template",
+                "canonical_core": {
+                    "setting": "apartment",
+                    "primary_fear": "isolation",
+                    "antagonist": "system",
+                    "mechanism": "surveillance"
+                }
+            }
+        ]
+
+        selection = select_templates_for_research(
+            card=mock_card,
+            templates=mock_templates,
+            min_score=0.5
+        )
+
+        assert not selection.has_matches
+        assert len(selection.templates) == 0
+
+    def test_template_selection_higher_threshold(self):
+        """Higher min_score threshold should filter out partial matches."""
+        mock_card = {
+            "card_id": "RC-PARTIAL",
+            "output": {
+                "canonical_affinity": {
+                    "setting": ["apartment"],  # 1 match
+                    "primary_fear": ["annihilation"],  # different
+                    "antagonist": ["ghost"],  # different
+                    "mechanism": ["possession"]  # different
+                }
+            }
+        }
+
+        mock_templates = [
+            {
+                "template_id": "T-001",
+                "template_name": "Test Template",
+                "canonical_core": {
+                    "setting": "apartment",
+                    "primary_fear": "isolation",
+                    "antagonist": "system",
+                    "mechanism": "surveillance"
+                }
+            }
+        ]
+
+        # With high threshold (0.5), should not match (only 1/4 match ~= 0.2)
+        selection = select_templates_for_research(
+            card=mock_card,
+            templates=mock_templates,
+            min_score=0.5
+        )
+
+        assert not selection.has_matches
+
+    def test_best_template_property(self):
+        """best_template should return highest-scoring template."""
+        selection = TemplateSelection(
+            templates=[
+                {"template_id": "T-001"},
+                {"template_id": "T-002"}
+            ],
+            scores=[0.9, 0.7],
+            match_details=[{}, {}],
+            total_available=15,
+            reason="test",
+            template_ids=["T-001", "T-002"]
+        )
+
+        assert selection.best_template["template_id"] == "T-001"
+        assert selection.best_score == 0.9

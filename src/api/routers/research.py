@@ -6,6 +6,7 @@ Endpoints:
 - POST /research/validate - Validate a research card
 - GET /research/list - List research cards
 - POST /research/dedup - Check semantic duplicates via FAISS
+- POST /research/matching-templates - Find matching templates for a research card (Issue #21)
 
 v1.4.3: Added webhook support for /research/run endpoint.
 """
@@ -23,6 +24,10 @@ from ..schemas.research import (
     ResearchDedupCheckRequest,
     ResearchDedupCheckResponse,
     SimilarCard,
+    # Issue #21: Cross-pipeline matching
+    ResearchMatchingTemplatesRequest,
+    ResearchMatchingTemplatesResponse,
+    MatchingTemplateItem,
 )
 from ..services import research_service
 from src.infra.webhook import fire_and_forget_webhook
@@ -177,5 +182,60 @@ async def check_research_dedup(request: ResearchDedupCheckRequest):
         nearest_card_id=result.get("nearest_card_id"),
         similar_cards=similar_cards,
         index_size=result.get("index_size", 0),
+        message=result.get("message"),
+    )
+
+
+# =============================================================================
+# Issue #21: Cross-pipeline Canonical Key Matching (Research → Templates)
+# =============================================================================
+
+
+@router.post("/matching-templates", response_model=ResearchMatchingTemplatesResponse)
+async def get_matching_templates(request: ResearchMatchingTemplatesRequest):
+    """
+    Find matching templates for a research card based on canonical affinity.
+
+    This endpoint implements bi-directional cross-pipeline matching (Issue #21):
+    Given a research card's canonical_affinity (arrays), find templates whose
+    canonical_core values (single values) match.
+
+    Uses weighted scoring (same as forward matching):
+    - primary_fear: 1.5
+    - mechanism: 1.3
+    - antagonist: 1.2
+    - setting: 1.0
+
+    Default minimum score threshold is 0.5 (stricter than forward matching's 0.25).
+    """
+    result = await research_service.get_matching_templates(
+        card_id=request.card_id,
+        max_templates=request.max_templates,
+        min_score=request.min_score,
+    )
+
+    # Check if card was not found
+    if result.get("message") and "not found" in result.get("message", ""):
+        raise HTTPException(
+            status_code=404,
+            detail=result.get("message")
+        )
+
+    matching_templates = [
+        MatchingTemplateItem(
+            template_id=t["template_id"],
+            template_name=t["template_name"],
+            match_score=t["match_score"],
+            canonical_core=t.get("canonical_core", {}),
+            match_details=t.get("match_details"),
+        )
+        for t in result.get("matching_templates", [])
+    ]
+
+    return ResearchMatchingTemplatesResponse(
+        card_id=result.get("card_id", request.card_id),
+        matching_templates=matching_templates,
+        total_templates=result.get("total_templates", 0),
+        card_affinity=result.get("card_affinity"),
         message=result.get("message"),
     )
