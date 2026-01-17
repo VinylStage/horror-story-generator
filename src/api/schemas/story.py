@@ -37,9 +37,15 @@ class StoryGenerateRequest(BaseModel):
     target_length: Optional[int] = Field(
         default=None,
         ge=300,
-        le=5000,
+        le=10000,
         description="Target story length in characters (soft limit, ±10%). If not provided, uses default (~3000-4000 chars).",
         json_schema_extra={"examples": [1500, 3000, 4500]}
+    )
+    # v1.4.3: Webhook support for sync endpoints
+    webhook_url: Optional[str] = Field(
+        default=None,
+        description="Webhook URL for completion notification (fire-and-forget)",
+        json_schema_extra={"examples": ["https://example.com/webhook"]}
     )
 
 
@@ -54,6 +60,11 @@ class StoryGenerateResponse(BaseModel):
     word_count: Optional[int] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     error: Optional[str] = None
+    # v1.4.3: Webhook notification status
+    webhook_triggered: bool = Field(
+        default=False,
+        description="Whether a webhook notification was triggered"
+    )
 
 
 class StoryListItem(BaseModel):

@@ -277,7 +277,7 @@ def parse_args():
         "--target-length",
         type=int,
         default=None,
-        help="목표 스토리 길이(자). 300-5000 범위. 미지정시 기본값 (~3000-4000자) 사용"
+        help="목표 스토리 길이(자). 300-10000 범위. 미지정시 기본값 (~3000-4000자) 사용"
     )
     return parser.parse_args()
 

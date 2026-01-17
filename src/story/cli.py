@@ -66,7 +66,7 @@ def main():
         "--target-length",
         type=int,
         default=None,
-        help="Target story length in characters (300-5000). Default: ~3000-4000"
+        help="Target story length in characters (300-10000). Default: ~3000-4000"
     )
 
     args = parser.parse_args()

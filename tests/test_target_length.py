@@ -31,8 +31,8 @@ class TestStoryGenerateRequestSchema:
         assert request.target_length == 300
 
         # Maximum
-        request = StoryGenerateRequest(target_length=5000)
-        assert request.target_length == 5000
+        request = StoryGenerateRequest(target_length=10000)
+        assert request.target_length == 10000
 
         # Middle value
         request = StoryGenerateRequest(target_length=2500)
@@ -48,13 +48,13 @@ class TestStoryGenerateRequestSchema:
         assert "greater than or equal to 300" in str(exc_info.value)
 
     def test_target_length_above_maximum(self):
-        """Should reject target_length above 5000."""
+        """Should reject target_length above 10000."""
         from src.api.schemas.story import StoryGenerateRequest
 
         with pytest.raises(ValidationError) as exc_info:
-            StoryGenerateRequest(target_length=5001)
+            StoryGenerateRequest(target_length=10001)
 
-        assert "less than or equal to 5000" in str(exc_info.value)
+        assert "less than or equal to 10000" in str(exc_info.value)
 
     def test_target_length_with_other_params(self):
         """Should work with other parameters."""
@@ -100,7 +100,7 @@ class TestStoryTriggerRequestSchema:
             StoryTriggerRequest(target_length=100)  # Too small
 
         with pytest.raises(ValidationError):
-            StoryTriggerRequest(target_length=10000)  # Too large
+            StoryTriggerRequest(target_length=10001)  # Too large
 
 
 class TestBatchJobSpecSchema:

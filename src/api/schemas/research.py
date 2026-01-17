@@ -29,6 +29,12 @@ class ResearchRunRequest(BaseModel):
         description="Timeout in seconds. Recommended: 60 (Ollama), 120 (gemini), 300-600 (deep-research)",
         json_schema_extra={"examples": [60, 120, 300]}
     )
+    # v1.4.3: Webhook support for sync endpoints
+    webhook_url: Optional[str] = Field(
+        default=None,
+        description="Webhook URL for completion notification (fire-and-forget)",
+        json_schema_extra={"examples": ["https://example.com/webhook"]}
+    )
 
 
 class ResearchRunResponse(BaseModel):
@@ -38,6 +44,11 @@ class ResearchRunResponse(BaseModel):
     status: str = Field(..., description="Execution status")
     message: Optional[str] = Field(default=None, description="Status message")
     output_path: Optional[str] = Field(default=None, description="Path to output file")
+    # v1.4.3: Webhook notification status
+    webhook_triggered: bool = Field(
+        default=False,
+        description="Whether a webhook notification was triggered"
+    )
 
 
 class ResearchValidateRequest(BaseModel):

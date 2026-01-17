@@ -142,7 +142,7 @@ Options:
   --db-path PATH           SQLite database path
   --load-history           Load existing stories into memory
   --model MODEL            Model selection (see below)
-  --target-length N        Target story length in characters (300-5000, soft limit)
+  --target-length N        Target story length in characters (300-10000, soft limit)
 ```
 
 **Model Options:**

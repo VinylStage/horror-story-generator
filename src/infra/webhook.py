@@ -2,12 +2,14 @@
 Webhook notification service for job completion callbacks.
 
 v1.3.0: Sends HTTP POST notifications when jobs reach terminal states.
+v1.4.3: Fire-and-forget webhook support for sync endpoints.
 """
 
 import asyncio
 import logging
+import threading
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, Optional
 import httpx
 
 from src.infra.job_manager import Job, WebhookEvent, save_job
@@ -272,3 +274,148 @@ def process_webhook_for_job(job: Job) -> Job:
     save_job(job)
 
     return job
+
+
+# =============================================================================
+# Fire-and-Forget Webhook for Sync Endpoints (v1.4.3)
+# =============================================================================
+
+
+def build_sync_webhook_payload(
+    endpoint: str,
+    status: str,
+    result: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Build webhook payload for sync endpoint notifications.
+
+    Args:
+        endpoint: The API endpoint path (e.g., "/research/run")
+        status: Result status ("success" or "error")
+        result: The response data to include
+
+    Returns:
+        Dictionary payload for webhook POST
+    """
+    return {
+        "event": "completed" if status == "success" else "error",
+        "endpoint": endpoint,
+        "status": status,
+        "result": result,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+def _send_webhook_in_thread(
+    url: str,
+    payload: Dict[str, Any],
+    timeout: float = WEBHOOK_TIMEOUT_SECONDS,
+    max_retries: int = WEBHOOK_MAX_RETRIES,
+) -> None:
+    """
+    Internal function to send webhook in a background thread.
+
+    This runs in a separate thread for fire-and-forget behavior.
+    """
+    last_error: Optional[str] = None
+
+    for attempt in range(max_retries):
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                response = client.post(
+                    url,
+                    json=payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "HorrorStoryGenerator/1.4",
+                        "X-Webhook-Event": payload.get("event", "completed"),
+                        "X-Webhook-Endpoint": payload.get("endpoint", "unknown"),
+                    },
+                )
+
+                if 200 <= response.status_code < 300:
+                    logger.info(
+                        f"Sync webhook sent successfully to {url} "
+                        f"(attempt {attempt + 1}/{max_retries}, status={response.status_code})"
+                    )
+                    return
+
+                last_error = f"HTTP {response.status_code}: {response.text[:200]}"
+                logger.warning(
+                    f"Sync webhook failed to {url} "
+                    f"(attempt {attempt + 1}/{max_retries}): {last_error}"
+                )
+
+        except httpx.TimeoutException:
+            last_error = f"Timeout after {timeout}s"
+            logger.warning(
+                f"Sync webhook timeout to {url} "
+                f"(attempt {attempt + 1}/{max_retries})"
+            )
+
+        except httpx.RequestError as e:
+            last_error = f"Request error: {str(e)}"
+            logger.warning(
+                f"Sync webhook request error to {url} "
+                f"(attempt {attempt + 1}/{max_retries}): {e}"
+            )
+
+        except Exception as e:
+            last_error = f"Unexpected error: {str(e)}"
+            logger.error(
+                f"Sync webhook unexpected error to {url} "
+                f"(attempt {attempt + 1}/{max_retries}): {e}"
+            )
+
+        # Exponential backoff before retry
+        if attempt < max_retries - 1:
+            import time
+            delay = min(
+                WEBHOOK_RETRY_BASE_DELAY * (2 ** attempt),
+                WEBHOOK_RETRY_MAX_DELAY
+            )
+            time.sleep(delay)
+
+    logger.error(
+        f"Sync webhook failed after {max_retries} attempts to {url}: {last_error}"
+    )
+
+
+def fire_and_forget_webhook(
+    url: str,
+    endpoint: str,
+    status: str,
+    result: Dict[str, Any],
+) -> bool:
+    """
+    Send a webhook notification in fire-and-forget mode.
+
+    This function returns immediately after spawning a background thread
+    to send the webhook. The webhook is sent asynchronously and any
+    errors are logged but do not affect the caller.
+
+    Args:
+        url: Webhook URL to POST to
+        endpoint: The API endpoint path (e.g., "/research/run")
+        status: Result status ("success" or "error")
+        result: The response data to include in the webhook
+
+    Returns:
+        True if the webhook thread was started, False if url was empty
+    """
+    if not url:
+        return False
+
+    payload = build_sync_webhook_payload(endpoint, status, result)
+
+    logger.info(f"Triggering fire-and-forget webhook to {url} for {endpoint}")
+
+    # Start webhook in background thread
+    thread = threading.Thread(
+        target=_send_webhook_in_thread,
+        args=(url, payload),
+        daemon=True,  # Daemon thread won't prevent process exit
+    )
+    thread.start()
+
+    return True

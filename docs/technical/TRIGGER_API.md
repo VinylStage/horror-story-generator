@@ -126,7 +126,7 @@ sequenceDiagram
 | `db_path` | string | null | 커스텀 DB 경로 |
 | `load_history` | bool | false | 히스토리 로드 여부 |
 | `model` | string | null | 모델 선택 (Claude/Ollama) |
-| `target_length` | int | null | 목표 스토리 길이 (300-5000자, soft limit) |
+| `target_length` | int | null | 목표 스토리 길이 (300-10000자, soft limit) |
 | `webhook_url` | string | null | 완료 시 웹훅 URL |
 | `webhook_events` | string[] | ["succeeded", "failed", "skipped"] | 웹훅 트리거 이벤트 |
 
