@@ -124,7 +124,8 @@ def build_system_prompt(
     template: Optional[Dict[str, Any]] = None,
     skeleton: Optional[Dict[str, Any]] = None,
     research_context: Optional[Dict[str, Any]] = None,
-    seed_context: Optional[Dict[str, Any]] = None
+    seed_context: Optional[Dict[str, Any]] = None,
+    target_length: Optional[int] = None
 ) -> str:
     """
     시스템 프롬프트를 생성합니다.
@@ -140,6 +141,7 @@ def build_system_prompt(
         skeleton (Optional[Dict[str, Any]]): Phase 2A 템플릿 스켈레톤
         research_context (Optional[Dict[str, Any]]): Research context for injection
         seed_context (Optional[Dict[str, Any]]): Story seed context for injection
+        target_length (Optional[int]): Target story length in characters (soft limit, ±10%)
 
     Returns:
         str: 완성된 시스템 프롬프트 문자열
@@ -150,12 +152,20 @@ def build_system_prompt(
         >>> system_prompt = build_system_prompt(skeleton=selected_skeleton)  # Phase 2A 스켈레톤 기반
         >>> system_prompt = build_system_prompt(skeleton=skel, research_context=ctx)  # with research
         >>> system_prompt = build_system_prompt(skeleton=skel, seed_context=seed)  # with seed
+        >>> system_prompt = build_system_prompt(target_length=2000)  # with custom length
     """
     logger.debug("시스템 프롬프트 생성 시작")
 
+    # Determine length instruction based on target_length parameter
+    if target_length is not None:
+        length_instruction = f"Approximately {target_length:,} characters (±10%, Korean text). Do not mention character counts in the output."
+        logger.debug(f"[TargetLength] Custom target: {target_length} chars")
+    else:
+        length_instruction = "3,000–4,000 characters (Korean text)"
+
     # 템플릿이 없으면 새로운 기본 프롬프트 사용
     if template is None:
-        system_prompt = """You are a specialist in quiet psychological horror rooted in ordinary daily life.
+        system_prompt = f"""You are a specialist in quiet psychological horror rooted in ordinary daily life.
 Your stories make readers feel that the same thing could happen in their own mundane reality.
 
 ## Core Principles
@@ -200,7 +210,7 @@ Your stories make readers feel that the same thing could happen in their own mun
 - **Ending**: Unresolved threat, cyclical implication (20%)
 
 ### 6. Target Length
-- 3,000–4,000 characters (Korean text)
+- {length_instruction}
 - Short story format
 
 ## Pre-Ending Checklist
@@ -297,7 +307,12 @@ Follow the guidelines below to craft your horror story:
     requirements = template.get("additional_requirements", {})
     if requirements:
         system_prompt += "\n## Additional Requirements\n"
-        system_prompt += f"- Target word count: {requirements.get('word_count', 3000)} characters\n"
+        # Use target_length if provided, otherwise use template's word_count
+        effective_length = target_length if target_length is not None else requirements.get('word_count', 3000)
+        if target_length is not None:
+            system_prompt += f"- Target length: approximately {effective_length:,} characters (±10%). Do not mention character counts in the output.\n"
+        else:
+            system_prompt += f"- Target word count: {effective_length} characters\n"
         system_prompt += f"- Structure: {requirements.get('chapter_structure', '단편')}\n"
 
         if "avoid" in requirements:

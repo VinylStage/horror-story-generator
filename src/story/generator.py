@@ -391,7 +391,8 @@ def generate_horror_story(
     template_path: Optional[str] = None,
     custom_request: Optional[str] = None,
     save_output: bool = True,
-    model_spec: Optional[str] = None
+    model_spec: Optional[str] = None,
+    target_length: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     호러 소설 생성의 전체 파이프라인을 실행합니다.
@@ -405,6 +406,7 @@ def generate_horror_story(
         save_output (bool): 결과를 파일로 저장할지 여부. 기본값 True
         model_spec (Optional[str]): 모델 선택. None이면 기본 Claude 모델 사용.
             형식: "ollama:llama3", "ollama:qwen", 또는 Claude 모델명
+        target_length (Optional[int]): 목표 스토리 길이 (자). None이면 기본값 (3000-4000자) 사용.
 
     Returns:
         Dict[str, Any]: 생성 결과 및 메타데이터
@@ -424,7 +426,8 @@ def generate_horror_story(
 
         >>> result = generate_horror_story(
         ...     custom_request="1980년대 시골 마을 배경의 귀신 이야기",
-        ...     save_output=True
+        ...     save_output=True,
+        ...     target_length=2000
         ... )
     """
     logger.info("=" * 80)
@@ -488,7 +491,9 @@ def generate_horror_story(
 
     # 3. 프롬프트 빌드
     logger.info("프롬프트 생성 중...")
-    system_prompt = build_system_prompt(template, skeleton=skeleton, research_context=research_context)
+    if target_length:
+        logger.info(f"[TargetLength] 목표 길이: {target_length}자")
+    system_prompt = build_system_prompt(template, skeleton=skeleton, research_context=research_context, target_length=target_length)
     user_prompt = build_user_prompt(custom_request, template)
     logger.info("프롬프트 생성 완료")
 
@@ -515,6 +520,14 @@ def generate_horror_story(
             "canonical_core": skeleton.get("canonical_core")
         }
 
+    # Compute length metadata
+    actual_length = len(story_text)
+    generation_length_meta = {
+        "target_length": target_length,
+        "actual_length": actual_length,
+        "length_delta": actual_length - target_length if target_length else None
+    }
+
     result = {
         "story": story_text,
         "metadata": {
@@ -528,8 +541,10 @@ def generate_horror_story(
                 "max_tokens": config["max_tokens"],
                 "temperature": config["temperature"]
             },
-            "word_count": len(story_text),
+            "word_count": actual_length,
             "usage": usage,
+            # Length metadata (Issue #73)
+            "generation": generation_length_meta,
             # Research traceability (unified pipeline)
             **research_metadata
         }
@@ -647,7 +662,8 @@ def generate_with_dedup_control(
     registry: Any,  # StoryRegistry instance
     max_attempts: int = 3,
     save_output: bool = True,
-    model_spec: Optional[str] = None
+    model_spec: Optional[str] = None,
+    target_length: Optional[int] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Phase 2C: HIGH-only 중복 제어가 적용된 스토리 생성.
@@ -663,6 +679,7 @@ def generate_with_dedup_control(
         registry: StoryRegistry 인스턴스 (persistent storage)
         max_attempts: 최대 시도 횟수 (기본 3: 초기 + 2회 재생성)
         save_output: 파일 저장 여부
+        target_length: 목표 스토리 길이 (자). None이면 기본값 사용.
 
     Returns:
         Optional[Dict]: 수락된 스토리 결과, SKIP 시 None
@@ -753,7 +770,9 @@ def generate_with_dedup_control(
                 continue
 
         # Build prompts
-        system_prompt = build_system_prompt(template=None, skeleton=skeleton, research_context=research_context)
+        if target_length:
+            logger.info(f"[TargetLength] 목표 길이: {target_length}자")
+        system_prompt = build_system_prompt(template=None, skeleton=skeleton, research_context=research_context, target_length=target_length)
         user_prompt = build_user_prompt(custom_request=None, template=None)
 
         # Call API (model_spec이 있으면 call_llm_api 사용)
@@ -821,6 +840,14 @@ def generate_with_dedup_control(
                     research_metadata.get("research_used", [])
                 )
 
+            # Compute length metadata
+            actual_length = len(story_text)
+            generation_length_meta = {
+                "target_length": target_length,
+                "actual_length": actual_length,
+                "length_delta": actual_length - target_length if target_length else None
+            }
+
             result = {
                 "story": story_text,
                 "metadata": {
@@ -834,8 +861,10 @@ def generate_with_dedup_control(
                         "max_tokens": config["max_tokens"],
                         "temperature": config["temperature"]
                     },
-                    "word_count": len(story_text),
+                    "word_count": actual_length,
                     "usage": usage,
+                    # Length metadata (Issue #73)
+                    "generation": generation_length_meta,
                     "phase2c_attempt": attempt,
                     "phase2c_signal": signal,
                     "phase2c_decision": "accepted",
@@ -976,7 +1005,8 @@ def generate_with_topic(
     model_spec: Optional[str] = None,
     research_model_spec: Optional[str] = None,
     save_output: bool = True,
-    registry: Any = None
+    registry: Any = None,
+    target_length: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Topic 기반 스토리 생성 (v1.2.0+)
@@ -995,6 +1025,7 @@ def generate_with_topic(
         research_model_spec: research 생성 모델 (Ollama/Gemini)
         save_output: 파일 저장 여부
         registry: StoryRegistry 인스턴스 (중복 체크용)
+        target_length: 목표 스토리 길이 (자). None이면 기본값 사용.
 
     Returns:
         Dict with story, metadata, file_path (if saved)
@@ -1095,10 +1126,13 @@ def generate_with_topic(
 
     # Build prompts with topic as custom request if provided
     custom_request = topic if topic else None
+    if target_length:
+        logger.info(f"[TargetLength] 목표 길이: {target_length}자")
     system_prompt = build_system_prompt(
         template=None,
         skeleton=skeleton,
-        research_context=research_context
+        research_context=research_context,
+        target_length=target_length
     )
     user_prompt = build_user_prompt(custom_request, template=None)
 
@@ -1143,6 +1177,14 @@ def generate_with_topic(
             research_metadata.get("research_used", [])
         )
 
+    # Compute length metadata
+    actual_length = len(story_text)
+    generation_length_meta = {
+        "target_length": target_length,
+        "actual_length": actual_length,
+        "length_delta": actual_length - target_length if target_length else None
+    }
+
     result = {
         "success": True,
         "story": story_text,
@@ -1159,8 +1201,10 @@ def generate_with_topic(
                 "max_tokens": config["max_tokens"],
                 "temperature": config["temperature"]
             },
-            "word_count": len(story_text),
+            "word_count": actual_length,
             "usage": usage,
+            # Length metadata (Issue #73)
+            "generation": generation_length_meta,
             **research_metadata,
             "story_signature": story_signature,
             "generation_mode": "topic_based" if topic else "random"

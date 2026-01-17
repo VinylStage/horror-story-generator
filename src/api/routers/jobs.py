@@ -98,6 +98,9 @@ def build_story_command(params: dict) -> list[str]:
     if params.get("model"):
         cmd.extend(["--model", params["model"]])
 
+    if params.get("target_length"):
+        cmd.extend(["--target-length", str(params["target_length"])])
+
     return cmd
 
 
