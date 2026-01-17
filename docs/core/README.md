@@ -142,6 +142,7 @@ Options:
   --db-path PATH           SQLite database path
   --load-history           Load existing stories into memory
   --model MODEL            Model selection (see below)
+  --target-length N        Target story length in characters (300-5000, soft limit)
 ```
 
 **Model Options:**
@@ -160,6 +161,9 @@ python main.py --max-stories 3 --enable-dedup
 
 # Ollama 로컬 모델
 python main.py --model ollama:qwen3:30b
+
+# 목표 길이 지정 (1500자)
+python main.py --target-length 1500
 ```
 
 ### Research Generation

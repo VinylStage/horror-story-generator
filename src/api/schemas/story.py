@@ -34,6 +34,13 @@ class StoryGenerateRequest(BaseModel):
         default=True,
         description="Save generated story to file"
     )
+    target_length: Optional[int] = Field(
+        default=None,
+        ge=300,
+        le=5000,
+        description="Target story length in characters (soft limit, ±10%). If not provided, uses default (~3000-4000 chars).",
+        json_schema_extra={"examples": [1500, 3000, 4500]}
+    )
 
 
 class StoryGenerateResponse(BaseModel):

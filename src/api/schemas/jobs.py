@@ -28,6 +28,13 @@ class StoryTriggerRequest(BaseModel):
         description="Model selection. Options: null (Claude Sonnet default), 'claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101', 'ollama:qwen3:30b' (local Ollama)",
         json_schema_extra={"examples": [None, "claude-sonnet-4-5-20250929", "ollama:qwen3:30b"]}
     )
+    target_length: Optional[int] = Field(
+        default=None,
+        ge=300,
+        le=5000,
+        description="Target story length in characters (soft limit, ±10%). If not provided, uses default (~3000-4000 chars).",
+        json_schema_extra={"examples": [1500, 3000, 4500]}
+    )
     # Webhook fields (v1.3.0)
     webhook_url: Optional[str] = Field(
         default=None,
@@ -159,6 +166,12 @@ class BatchJobSpec(BaseModel):
     # Story job fields
     max_stories: int = Field(default=1, ge=1, le=100, description="Max stories for story job")
     enable_dedup: bool = Field(default=False, description="Enable dedup for story job")
+    target_length: Optional[int] = Field(
+        default=None,
+        ge=300,
+        le=5000,
+        description="Target story length in characters (soft limit, story jobs only)"
+    )
     # Common fields
     model: Optional[str] = Field(default=None, description="Model override")
     timeout: Optional[int] = Field(default=None, description="Timeout in seconds")

@@ -55,7 +55,7 @@ def signal_handler(signum, frame):
     shutdown_requested = True
 
 
-def run_basic_generation(model_spec: Optional[str] = None) -> Dict[str, Any]:
+def run_basic_generation(model_spec: Optional[str] = None, target_length: Optional[int] = None) -> Dict[str, Any]:
     """
     기본 호러 소설 생성 테스트.
 
@@ -63,6 +63,7 @@ def run_basic_generation(model_spec: Optional[str] = None) -> Dict[str, Any]:
 
     Args:
         model_spec: 모델 선택. None이면 기본 Claude 모델 사용.
+        target_length: 목표 스토리 길이 (자). None이면 기본값 사용.
 
     Returns:
         Dict[str, Any]: 생성 결과 (story, metadata, file_path 포함)
@@ -70,7 +71,9 @@ def run_basic_generation(model_spec: Optional[str] = None) -> Dict[str, Any]:
     logger.info("기본 호러 소설 생성 테스트 시작")
     if model_spec:
         logger.info(f"사용 모델: {model_spec}")
-    result = generate_horror_story(model_spec=model_spec)
+    if target_length:
+        logger.info(f"목표 길이: {target_length}자")
+    result = generate_horror_story(model_spec=model_spec, target_length=target_length)
     logger.info(f"생성 완료 - 파일: {result.get('file_path', 'N/A')}")
     return result
 
@@ -269,6 +272,13 @@ def parse_args():
         default=None,
         help="모델 선택. 기본=Claude Sonnet. 형식: 'ollama:llama3', 'ollama:qwen', 또는 Claude 모델명"
     )
+    # Target length (Issue #73)
+    parser.add_argument(
+        "--target-length",
+        type=int,
+        default=None,
+        help="목표 스토리 길이(자). 300-5000 범위. 미지정시 기본값 (~3000-4000자) 사용"
+    )
     return parser.parse_args()
 
 
@@ -376,6 +386,7 @@ def main() -> None:
     logger.info(f"  - 생성 간격: {args.interval_seconds}초")
     logger.info(f"  - 중복 제어: {'활성화 (HIGH만 거부)' if args.enable_dedup else '비활성화'}")
     logger.info(f"  - 모델: {args.model or '기본 Claude Sonnet'}")
+    logger.info(f"  - 목표 길이: {args.target_length or '기본값 (~3000-4000자)'}자")
     logger.info("=" * 80)
 
     # 통계 추적
@@ -413,7 +424,7 @@ def main() -> None:
 
             # Phase 2C: 중복 제어 모드에 따른 생성
             if args.enable_dedup and registry:
-                result = generate_with_dedup_control(registry=registry, model_spec=args.model)
+                result = generate_with_dedup_control(registry=registry, model_spec=args.model, target_length=args.target_length)
                 if result is None:
                     # SKIP - story was too similar after all attempts
                     stories_skipped += 1
@@ -422,7 +433,7 @@ def main() -> None:
                     logger.info(f"✓ 소요 시간: {iteration_duration:.1f}초")
                     continue  # Move to next iteration without counting as generated
             else:
-                result = run_basic_generation(model_spec=args.model)
+                result = run_basic_generation(model_spec=args.model, target_length=args.target_length)
 
             # 통계 업데이트
             stories_generated += 1

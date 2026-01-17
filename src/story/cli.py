@@ -62,6 +62,12 @@ def main():
         default=False,
         help="Enable story registry dedup control"
     )
+    run_parser.add_argument(
+        "--target-length",
+        type=int,
+        default=None,
+        help="Target story length in characters (300-5000). Default: ~3000-4000"
+    )
 
     args = parser.parse_args()
 
@@ -95,6 +101,7 @@ def run_story_generation(args):
     logger.info(f"[CLI] Model: {args.model or '(default Claude)'}")
     logger.info(f"[CLI] Auto-research: {auto_research}")
     logger.info(f"[CLI] Save output: {save_output}")
+    logger.info(f"[CLI] Target length: {args.target_length or '(default ~3000-4000)'}")
     logger.info("=" * 80)
 
     # Use topic-based generation if topic provided
@@ -105,13 +112,15 @@ def run_story_generation(args):
             model_spec=args.model,
             research_model_spec=args.research_model,
             save_output=save_output,
-            registry=registry
+            registry=registry,
+            target_length=args.target_length
         )
     else:
         # Use standard generation
         result = generate_horror_story(
             save_output=save_output,
-            model_spec=args.model
+            model_spec=args.model,
+            target_length=args.target_length
         )
         result["success"] = True
 

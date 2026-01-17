@@ -70,7 +70,8 @@ async def generate_story(request: StoryGenerateRequest):
             model_spec=request.model,
             research_model_spec=request.research_model,
             save_output=request.save_output,
-            registry=registry
+            registry=registry,
+            target_length=request.target_length
         )
 
         if not result.get("success", True):

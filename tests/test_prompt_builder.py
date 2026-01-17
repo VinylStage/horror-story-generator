@@ -437,3 +437,100 @@ class TestPromptBuilderIntegration:
 
         assert isinstance(result, str)
         assert len(result) > 0
+
+
+class TestTargetLength:
+    """Tests for target_length parameter (Issue #73)."""
+
+    def test_default_length_when_not_provided(self):
+        """Should use default length instruction when target_length is None."""
+        from src.story.prompt_builder import build_system_prompt
+
+        result = build_system_prompt(target_length=None)
+
+        assert "3,000–4,000 characters" in result
+
+    def test_custom_length_injection(self):
+        """Should inject custom target length into prompt."""
+        from src.story.prompt_builder import build_system_prompt
+
+        result = build_system_prompt(target_length=2000)
+
+        assert "2,000 characters" in result
+        assert "±10%" in result
+        # Should NOT contain default length
+        assert "3,000–4,000" not in result
+
+    def test_custom_length_with_large_value(self):
+        """Should format large target length with thousands separator."""
+        from src.story.prompt_builder import build_system_prompt
+
+        result = build_system_prompt(target_length=4500)
+
+        assert "4,500 characters" in result
+
+    def test_custom_length_does_not_mention_counts_in_output(self):
+        """Should include instruction to not mention character counts."""
+        from src.story.prompt_builder import build_system_prompt
+
+        result = build_system_prompt(target_length=1500)
+
+        assert "Do not mention character counts" in result
+
+    def test_custom_length_with_skeleton(self):
+        """Should work with skeleton template."""
+        from src.story.prompt_builder import build_system_prompt
+
+        skeleton = {
+            "template_name": "test_template",
+            "canonical_core": {"setting": "apartment"},
+            "story_skeleton": {"act_1": "Test"}
+        }
+
+        result = build_system_prompt(skeleton=skeleton, target_length=3000)
+
+        assert "test_template" in result
+        assert "3,000 characters" in result
+
+    def test_custom_length_with_research_context(self):
+        """Should work with research context."""
+        from src.story.prompt_builder import build_system_prompt
+
+        research_context = {
+            "key_concepts": ["test concept"],
+            "horror_applications": ["test app"]
+        }
+
+        result = build_system_prompt(research_context=research_context, target_length=2500)
+
+        assert "Research Context" in result
+        assert "2,500 characters" in result
+
+    def test_legacy_template_with_custom_length(self):
+        """Should override template word_count when target_length provided."""
+        from src.story.prompt_builder import build_system_prompt
+
+        template = {
+            "story_config": {"genre": "horror"},
+            "additional_requirements": {"word_count": 5000}
+        }
+
+        result = build_system_prompt(template=template, target_length=2000)
+
+        # Should use target_length, not template's word_count
+        assert "2,000 characters" in result
+        assert "±10%" in result
+
+    def test_legacy_template_without_custom_length(self):
+        """Should use template word_count when target_length not provided."""
+        from src.story.prompt_builder import build_system_prompt
+
+        template = {
+            "story_config": {"genre": "horror"},
+            "additional_requirements": {"word_count": 4000}
+        }
+
+        result = build_system_prompt(template=template, target_length=None)
+
+        # Should use template's word_count
+        assert "4000 characters" in result or "4,000 characters" in result
