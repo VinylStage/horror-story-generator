@@ -2,6 +2,7 @@
 Story router for direct story generation and listing API.
 
 v1.2.0: Adds synchronous story generation endpoint (mirrors CLI behavior).
+v1.4.3: Added webhook support for /story/generate endpoint.
 
 Endpoints:
 - POST /story/generate - Generate a story directly (blocking)
@@ -22,6 +23,7 @@ from ..schemas.story import (
     StoryListResponse,
     StoryDetailResponse,
 )
+from src.infra.webhook import fire_and_forget_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,8 @@ async def generate_story(request: StoryGenerateRequest):
 
     This endpoint generates a story synchronously and returns the result.
     Use the jobs API for non-blocking generation.
+
+    v1.4.3: Supports webhook_url for completion notification (fire-and-forget).
 
     If topic is provided:
     - Searches for existing research cards matching the topic
@@ -74,10 +78,20 @@ async def generate_story(request: StoryGenerateRequest):
         )
 
         if not result.get("success", True):
+            # v1.4.3: Fire webhook for failure case
+            webhook_triggered = False
+            if request.webhook_url:
+                webhook_triggered = fire_and_forget_webhook(
+                    url=request.webhook_url,
+                    endpoint="/story/generate",
+                    status="error",
+                    result={"error": result.get("error", "Generation failed")},
+                )
             return StoryGenerateResponse(
                 success=False,
                 error=result.get("error", "Generation failed"),
-                metadata=result.get("metadata", {})
+                metadata=result.get("metadata", {}),
+                webhook_triggered=webhook_triggered,
             )
 
         metadata = result.get("metadata", {})
@@ -91,6 +105,21 @@ async def generate_story(request: StoryGenerateRequest):
             if lines and lines[0].startswith("#"):
                 title = lines[0].lstrip("#").strip()
 
+        # v1.4.3: Fire webhook for success case
+        webhook_triggered = False
+        if request.webhook_url:
+            webhook_triggered = fire_and_forget_webhook(
+                url=request.webhook_url,
+                endpoint="/story/generate",
+                status="success",
+                result={
+                    "story_id": metadata.get("story_id"),
+                    "title": title or extract_title_from_metadata(metadata),
+                    "file_path": result.get("file_path"),
+                    "word_count": metadata.get("word_count"),
+                },
+            )
+
         return StoryGenerateResponse(
             success=True,
             story_id=metadata.get("story_id"),
@@ -98,14 +127,25 @@ async def generate_story(request: StoryGenerateRequest):
             title=title or extract_title_from_metadata(metadata),
             file_path=result.get("file_path"),
             word_count=metadata.get("word_count"),
-            metadata=metadata
+            metadata=metadata,
+            webhook_triggered=webhook_triggered,
         )
 
     except Exception as e:
         logger.error(f"[StoryAPI] Generation error: {e}", exc_info=True)
+        # v1.4.3: Fire webhook for exception case
+        webhook_triggered = False
+        if request.webhook_url:
+            webhook_triggered = fire_and_forget_webhook(
+                url=request.webhook_url,
+                endpoint="/story/generate",
+                status="error",
+                result={"error": str(e)},
+            )
         return StoryGenerateResponse(
             success=False,
-            error=str(e)
+            error=str(e),
+            webhook_triggered=webhook_triggered,
         )
 
 

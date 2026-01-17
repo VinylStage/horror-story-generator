@@ -192,6 +192,8 @@ Direct story generation and registry access. These endpoints execute synchronous
 
 Generate a story directly (blocking).
 
+**v1.4.3:** Supports `webhook_url` for fire-and-forget completion notification.
+
 **Request Body:**
 
 ```json
@@ -200,7 +202,8 @@ Generate a story directly (blocking).
   "auto_research": true,
   "model": "ollama:qwen3:30b",
   "research_model": null,
-  "save_output": true
+  "save_output": true,
+  "webhook_url": "https://your-server.com/callback"
 }
 ```
 
@@ -211,6 +214,7 @@ Generate a story directly (blocking).
 | `model` | string | No | null | Story model. Format: `ollama:qwen3:30b` or Claude model name |
 | `research_model` | string | No | null | Research model for auto-research |
 | `save_output` | boolean | No | true | Save story to file |
+| `webhook_url` | string | No | null | Webhook URL for completion notification (v1.4.3) |
 
 **Response:** `200 OK`
 
@@ -228,7 +232,8 @@ Generate a story directly (blocking).
     "topic": "Korean apartment horror",
     "research_used": ["RC-20260113-084040"],
     "research_injection_mode": "topic_based"
-  }
+  },
+  "webhook_triggered": true
 }
 ```
 
@@ -585,6 +590,8 @@ Only available for research jobs with completed artifacts.
 
 연구 카드 생성 (blocking).
 
+**v1.4.3:** Supports `webhook_url` for fire-and-forget completion notification.
+
 **Request Body:**
 
 ```json
@@ -592,7 +599,8 @@ Only available for research jobs with completed artifacts.
   "topic": "Korean apartment horror",
   "tags": ["urban", "isolation"],
   "model": "deep-research",
-  "timeout": 300
+  "timeout": 300,
+  "webhook_url": "https://your-server.com/callback"
 }
 ```
 
@@ -602,6 +610,7 @@ Only available for research jobs with completed artifacts.
 | `tags` | array | No | [] | 분류 태그 |
 | `model` | string | No | "qwen3:30b" | 모델 선택 (위 Model Selection Reference 참조) |
 | `timeout` | integer | No | 60 | 타임아웃 (초). deep-research는 300-600 권장 |
+| `webhook_url` | string | No | null | Webhook URL for completion notification (v1.4.3) |
 
 **Response:** `200 OK`
 
@@ -610,7 +619,8 @@ Only available for research jobs with completed artifacts.
   "card_id": "RC-20260113-120000",
   "status": "completed",
   "message": "Research card generated successfully",
-  "output_path": "data/research/RC-20260113-120000.json"
+  "output_path": "data/research/RC-20260113-120000.json",
+  "webhook_triggered": true
 }
 ```
 
@@ -900,6 +910,65 @@ Jobs can be configured to send HTTP POST notifications on completion:
 | `skipped` | Job skipped (duplicate detection) |
 
 Note: `cancelled` events do not trigger webhooks by default.
+
+### Sync Endpoint Webhooks (v1.4.3)
+
+The sync endpoints (`/research/run`, `/story/generate`) support fire-and-forget webhooks.
+
+**Configuration (in request body):**
+
+```json
+{
+  "topic": "Korean apartment horror",
+  "webhook_url": "https://your-server.com/callback"
+}
+```
+
+**Fire-and-Forget Behavior:**
+
+- The HTTP response is returned immediately after the operation completes
+- The webhook is sent asynchronously in a background thread
+- Webhook failures do not affect the API response
+
+**Sync Webhook Payload:**
+
+```json
+{
+  "event": "completed",
+  "endpoint": "/research/run",
+  "status": "success",
+  "result": {
+    "card_id": "RC-20260113-120000",
+    "output_path": "data/research/RC-20260113-120000.json"
+  },
+  "timestamp": "2026-01-13T12:05:01"
+}
+```
+
+**Error Payload:**
+
+```json
+{
+  "event": "error",
+  "endpoint": "/story/generate",
+  "status": "error",
+  "result": {
+    "error": "Generation failed"
+  },
+  "timestamp": "2026-01-13T12:05:01"
+}
+```
+
+**Sync Webhook Headers:**
+
+| Header | Description |
+|--------|-------------|
+| `Content-Type` | `application/json` |
+| `User-Agent` | `HorrorStoryGenerator/1.4` |
+| `X-Webhook-Event` | Event type (completed, error) |
+| `X-Webhook-Endpoint` | Source endpoint path |
+
+**Retry Logic:** Same as job webhooks (3 attempts, exponential backoff).
 
 ---
 
