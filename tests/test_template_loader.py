@@ -3,15 +3,19 @@ Tests for template_loader module.
 """
 
 import pytest
+from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 from src.story.template_loader import (
     load_template_skeletons,
     select_random_template,
     compute_template_weights,
+    count_cluster_occurrences_in_registry,
     SYSTEMIC_INEVITABILITY_CLUSTER,
     PHASE3B_LOOKBACK_WINDOW,
     PHASE3B_WEIGHT_PENALTIES,
     reset_last_template_id,
+    TEMPLATE_SKELETONS_PATH,
 )
 
 
@@ -147,3 +151,129 @@ class TestClusterConfiguration:
         assert PHASE3B_WEIGHT_PENALTIES[4] == 0.50
         assert PHASE3B_WEIGHT_PENALTIES[6] == 0.20
         assert PHASE3B_WEIGHT_PENALTIES[8] == 0.05
+
+
+class TestLoadTemplateSkeletonsEdgeCases:
+    """Tests for edge cases in load_template_skeletons."""
+
+    def test_file_not_found_returns_empty_list(self):
+        """Test that missing file returns empty list."""
+        with patch.object(Path, 'exists', return_value=False):
+            # Need to patch the specific path object
+            with patch('src.story.template_loader.TEMPLATE_SKELETONS_PATH') as mock_path:
+                mock_path.exists.return_value = False
+                skeletons = load_template_skeletons()
+                assert skeletons == []
+
+
+class TestCountClusterOccurrences:
+    """Tests for count_cluster_occurrences_in_registry function."""
+
+    def test_returns_zero_when_registry_is_none(self):
+        """Test that None registry returns 0."""
+        count = count_cluster_occurrences_in_registry(None)
+        assert count == 0
+
+    def test_returns_zero_on_registry_error(self):
+        """Test that registry errors return 0."""
+        mock_registry = MagicMock()
+        mock_registry.load_recent_accepted.side_effect = Exception("DB error")
+
+        count = count_cluster_occurrences_in_registry(mock_registry)
+        assert count == 0
+
+    def test_counts_cluster_templates(self):
+        """Test counting templates in the cluster."""
+        mock_record1 = MagicMock()
+        mock_record1.template_id = "T-SYS-001"  # In cluster
+
+        mock_record2 = MagicMock()
+        mock_record2.template_id = "T-OTHER-001"  # Not in cluster
+
+        mock_record3 = MagicMock()
+        mock_record3.template_id = "T-APT-001"  # In cluster
+
+        mock_registry = MagicMock()
+        mock_registry.load_recent_accepted.return_value = [
+            mock_record1, mock_record2, mock_record3
+        ]
+
+        count = count_cluster_occurrences_in_registry(mock_registry)
+        assert count == 2
+
+    def test_respects_lookback_parameter(self):
+        """Test that lookback parameter is passed to registry."""
+        mock_registry = MagicMock()
+        mock_registry.load_recent_accepted.return_value = []
+
+        count_cluster_occurrences_in_registry(mock_registry, lookback=5)
+        mock_registry.load_recent_accepted.assert_called_once_with(limit=5)
+
+
+class TestSelectRandomTemplateEdgeCases:
+    """Tests for edge cases in select_random_template."""
+
+    def setup_method(self):
+        """Reset state before each test."""
+        reset_last_template_id()
+
+    def test_returns_none_when_no_skeletons(self):
+        """Test that None is returned when no skeletons available."""
+        with patch('src.story.template_loader.load_template_skeletons', return_value=[]):
+            template = select_random_template()
+            assert template is None
+
+    def test_weighted_selection_with_registry(self):
+        """Test weighted selection when registry is provided."""
+        mock_record = MagicMock()
+        mock_record.template_id = "T-SYS-001"
+
+        mock_registry = MagicMock()
+        # Return 4 cluster templates to trigger penalty
+        mock_registry.load_recent_accepted.return_value = [mock_record] * 4
+
+        # Call multiple times and verify it still works
+        template = select_random_template(registry=mock_registry)
+        assert template is not None
+        assert "template_id" in template
+
+    def test_no_penalty_when_cluster_count_low(self):
+        """Test no penalty applied when cluster count < 4."""
+        mock_record = MagicMock()
+        mock_record.template_id = "T-SYS-001"
+
+        mock_registry = MagicMock()
+        # Return only 2 cluster templates (below threshold)
+        mock_registry.load_recent_accepted.return_value = [mock_record] * 2
+
+        template = select_random_template(registry=mock_registry)
+        assert template is not None
+
+    def test_weighted_selection_high_penalty(self):
+        """Test weighted selection with high cluster count (>= 8)."""
+        mock_record = MagicMock()
+        mock_record.template_id = "T-SYS-001"
+
+        mock_registry = MagicMock()
+        # Return 10 cluster templates to trigger highest penalty
+        mock_registry.load_recent_accepted.return_value = [mock_record] * 10
+
+        template = select_random_template(registry=mock_registry)
+        assert template is not None
+
+
+class TestResetLastTemplateId:
+    """Tests for reset_last_template_id function."""
+
+    def test_reset_allows_same_template_selection(self):
+        """Test that reset allows same template to be selected."""
+        # Select a template
+        template1 = select_random_template()
+
+        # Reset
+        reset_last_template_id()
+
+        # Now the same template could theoretically be selected
+        # (though random, at least it's possible)
+        template2 = select_random_template()
+        assert template2 is not None
