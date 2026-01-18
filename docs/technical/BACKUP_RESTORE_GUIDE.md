@@ -44,7 +44,8 @@ Bash 스크립트로 구현되어 Python 의존성 없이 독립적으로 실행
 scripts/
 ├── backup_config.sh   # 공통 설정 및 유틸리티 함수
 ├── backup.sh          # 백업 실행 스크립트
-└── restore.sh         # 복구 실행 스크립트
+├── restore.sh         # 복구 실행 스크립트
+└── verify_backup.sh   # 백업/복구 검증 스크립트
 ```
 
 ---
@@ -204,6 +205,65 @@ Existing data will be overwritten. Continue? [y/N] y
 ========================================
 Restore Complete
 ========================================
+```
+
+---
+
+## verify_backup.sh
+
+백업/복구 기능의 무결성을 검증하는 스크립트입니다.
+
+### 사용법
+
+```bash
+./scripts/verify_backup.sh [OPTIONS]
+```
+
+### 옵션
+
+| 옵션 | 설명 |
+|------|------|
+| `--test-dir <path>` | 테스트 파일 디렉토리 (기본: 임시 디렉토리) |
+| `--no-cleanup` | 테스트 후 파일 유지 |
+| `--verbose` | 상세 출력 |
+
+### 수행 테스트
+
+| # | 테스트 | 설명 |
+|---|--------|------|
+| 1 | Backup Creation | 백업 파일 생성 확인 |
+| 2 | Archive Integrity | SHA256 체크섬 검증 |
+| 3 | Manifest Validation | manifest.json 형식 검증 |
+| 4 | Restore Dry-Run | 복구 미리보기 테스트 |
+| 5 | Data Integrity | 파일 수/체크섬 비교 |
+| 6 | SQLite Integrity | DB PRAGMA integrity_check |
+| 7 | Full Restore Cycle | 전체 복구 사이클 테스트 |
+
+### 출력 예시
+
+```
+========================================
+Backup/Restore Verification
+========================================
+[INFO] Test directory: /tmp/xxx
+[INFO] Cleanup after tests: true
+
+[STEP] Test 1: Backup Creation
+[INFO] Backup created: /tmp/xxx/backup_test/backup_xxx.tar.gz
+[SUCCESS] PASSED: Backup Creation
+
+[STEP] Test 2: Archive Integrity
+[INFO] Checksum verified: abc123...
+[SUCCESS] PASSED: Archive Integrity
+
+...
+
+========================================
+Test Results
+========================================
+
+[INFO] Total: 7 tests
+[SUCCESS] Passed: 7
 ```
 
 ---
