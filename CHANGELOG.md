@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0](https://github.com/VinylStage/horror-story-generator/compare/v1.4.3...v1.5.0) (2026-01-18)
+
+
+### Features
+
+* **api:** add fire-and-forget webhook support for sync endpoints ([#26](https://github.com/VinylStage/horror-story-generator/issues/26)) ([f8f979c](https://github.com/VinylStage/horror-story-generator/commit/f8f979c6961916670b4142eb95be2777e12cb7d1))
+* **api:** add fire-and-forget webhook support for sync endpoints ([#26](https://github.com/VinylStage/horror-story-generator/issues/26)) ([1ed8f72](https://github.com/VinylStage/horror-story-generator/commit/1ed8f726d7f958cc5238bc8822a70e010eed6e70))
+* **scripts:** add unified backup/restore CLI scripts ([#82](https://github.com/VinylStage/horror-story-generator/issues/82)) ([#84](https://github.com/VinylStage/horror-story-generator/issues/84)) ([4bce2ab](https://github.com/VinylStage/horror-story-generator/commit/4bce2ab3949b655da560be09561a6804d6f60d9a))
+* support optional target story length override via API parameter ([#73](https://github.com/VinylStage/horror-story-generator/issues/73)) ([#77](https://github.com/VinylStage/horror-story-generator/issues/77)) ([0e052ac](https://github.com/VinylStage/horror-story-generator/commit/0e052ac66965788594f9c9bf675839651e978cb6))
+* **webhook:** add Discord-compatible embed format for sync webhooks ([#76](https://github.com/VinylStage/horror-story-generator/issues/76)) ([21fa055](https://github.com/VinylStage/horror-story-generator/commit/21fa055aaa8c3a3c808659e594bb40b5157cc150))
+* **webhook:** add Discord-compatible embed format for sync webhooks ([#76](https://github.com/VinylStage/horror-story-generator/issues/76)) ([5e63300](https://github.com/VinylStage/horror-story-generator/commit/5e63300b52b8e1baf398540a3428430de37c06a7))
+
+
+### Code Refactoring
+
+* **api:** implement cross-pipeline canonical key matching ([#21](https://github.com/VinylStage/horror-story-generator/issues/21)) ([#80](https://github.com/VinylStage/horror-story-generator/issues/80)) ([d665ee3](https://github.com/VinylStage/horror-story-generator/commit/d665ee35c153e3ccb0799000c3f6060c0d8e5e75))
+
+
+### Documentation
+
+* add release guide for develop→main workflow ([cf874bf](https://github.com/VinylStage/horror-story-generator/commit/cf874bf2509c55bcc73c463ca85bfde13945e723))
+* add sync webhook design documentation ([0dc8cab](https://github.com/VinylStage/horror-story-generator/commit/0dc8cabb31a1eb809e79432498f65a2c31e677dc))
+
+
+### Technical Improvements
+
+* **tests:** improve test coverage to 79% ([#23](https://github.com/VinylStage/horror-story-generator/issues/23)) ([#78](https://github.com/VinylStage/horror-story-generator/issues/78)) ([f281df3](https://github.com/VinylStage/horror-story-generator/commit/f281df3a4fb8657b0313a735224cc0d383ab078e))
+
 ## [1.4.3](https://github.com/VinylStage/horror-story-generator/compare/v1.4.2...v1.4.3) (2026-01-15)
 
 

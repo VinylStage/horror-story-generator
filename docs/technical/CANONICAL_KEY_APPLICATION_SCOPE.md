@@ -1,6 +1,6 @@
 # Canonical Key Application Scope
 
-> **Version:** v1.4.3 <!-- x-release-please-version -->
+> **Version:** v1.5.0 <!-- x-release-please-version -->
 
 **Date:** 2026-01-12
 **Status:** ACTIVE

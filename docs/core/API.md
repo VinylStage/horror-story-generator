@@ -1,7 +1,7 @@
 # API Reference
 
 **Status:** Active
-**Version:** v1.4.3 <!-- x-release-please-version -->
+**Version:** v1.5.0 <!-- x-release-please-version -->
 **Base URL:** `http://localhost:8000`
 **Swagger UI:** `http://localhost:8000/docs`
 **ReDoc:** `http://localhost:8000/redoc`
