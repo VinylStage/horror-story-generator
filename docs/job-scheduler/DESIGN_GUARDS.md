@@ -1,7 +1,7 @@
 # Job Scheduler Design Guards
 
 > **Status:** DRAFT
-> **Version:** 0.2.0
+> **Version:** 0.3.0
 > **Last Updated:** 2026-01-18
 
 ---
@@ -304,36 +304,60 @@ def compute_group_status(group: JobGroup) -> GroupStatus:
 
 ---
 
-## Open Questions (Do Not Implement Until Resolved)
+### DEC-011: Concurrency Limit Strategy
 
-### OQ-001: Concurrency Limit Strategy
+**Decision**: Global single concurrency — maximum 1 job running at any time.
 
-**Question**: How should we limit concurrent job execution?
+**Behavior**:
+1. Dispatcher checks for any RUNNING job before dispatch
+2. If any job is RUNNING, new dispatch waits
+3. No type-based or resource-based partitioning in Phase 4
 
-**Options**:
-1. **Global limit**: Max N jobs running across all types
-2. **Per-type limit**: Max N story jobs, M research jobs
-3. **Resource-based**: Based on available GPU/memory
-4. **Group-based**: Jobs in same group share concurrency budget
+**Alternatives Considered**:
+1. Per-type concurrency (deferred: adds complexity without immediate benefit)
+2. Resource-based pools (deferred: over-engineering for current scale)
 
-**Current Thinking**: Per-type limit seems most practical for this use case.
+**Rationale**: Matches CON-002 (Ollama exclusivity). Simplest implementation with zero configuration risk.
 
-**Blocking**: Dispatcher implementation
+**Migration Path**:
+- Phase 5+: Add per-type or resource-based limits when remote API parallelization needed
+- Existing single-worker tests remain valid (single-worker is subset)
+
+**Reference**: See `CONCURRENCY_OPTIONS.md` for full decision analysis.
 
 ---
 
-### OQ-002: JobGroup Sequential Failure Behavior
+### DEC-012: JobGroup Sequential Failure Behavior
 
-**Question**: In a sequential JobGroup, what happens when one job fails?
+**Decision**: Stop-on-failure — if any job in a sequential group fails, cancel remaining jobs.
 
-**Options**:
-1. **Stop immediately**: Don't execute remaining jobs
-2. **Continue all**: Execute remaining regardless of failure
-3. **Configurable**: `on_failure: stop | continue | skip`
+**Behavior**:
+1. Sequential group executes jobs in order
+2. If Job N fails (after retry exhaustion), cancel Job N+1, N+2, ...
+3. Cancelled jobs get status `CANCELLED` with reason "predecessor failed"
+4. Group status becomes `PARTIAL`
 
-**Current Thinking**: Configurable with default of "stop".
+**Alternatives Considered**:
+1. Continue-on-failure (deferred: may waste resources on doomed work)
+2. Configurable policy (deferred: adds API complexity without demand signal)
 
-**Blocking**: JobGroup execution logic
+**Rationale**: Safest default — prevents cascading failures. Users expect sequential to mean "dependent".
+
+**Retry Interaction**:
+- Failed job is retried per DEC-007 before group decides to stop
+- Remaining jobs cancelled only after retry chain exhaustion
+
+**Migration Path**:
+- Phase 5+: Add `on_failure: stop | continue | skip` field when user requests flexibility
+- Default value `stop` ensures backward compatibility
+
+**Reference**: See `JOBGROUP_BEHAVIOR_OPTIONS.md` for full decision analysis.
+
+---
+
+## Open Questions (Do Not Implement Until Resolved)
+
+*No open questions. All blocking questions have been resolved.*
 
 ---
 
@@ -343,7 +367,9 @@ The following questions have been resolved and documented as decisions:
 
 | Former ID | Resolution | Decision |
 |-----------|------------|----------|
-| OQ-002 | Retry Policy | DEC-007: Automatic up to 3, then manual |
+| OQ-001 | Concurrency Limit Strategy | DEC-011: Global single concurrency |
+| OQ-002 (orig) | Retry Policy | DEC-007: Automatic up to 3, then manual |
+| OQ-002 (new) | JobGroup Failure Behavior | DEC-012: Stop-on-failure for sequential groups |
 | OQ-003 | Queue Persistence | DEC-008: Resume from SQLite |
 | OQ-004 | Direct API Conflict | DEC-004: Next-slot reservation |
 | OQ-006 | Timezone Handling | DEC-010: Per-schedule with UTC default |
@@ -448,4 +474,5 @@ Before implementation of any component:
 |---------|------|--------|---------|
 | 0.1.0 | 2026-01-18 | - | Initial draft |
 | 0.2.0 | 2026-01-18 | - | Aligned with API_CONTRACT.md: unified status model, promoted 5 OQs to decisions, updated DEC-004 to next-slot reservation |
+| 0.3.0 | 2026-01-18 | - | Locked DEC-011 (concurrency) and DEC-012 (JobGroup failure); all open questions resolved |
 
