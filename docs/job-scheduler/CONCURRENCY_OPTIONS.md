@@ -1,8 +1,12 @@
 # OQ-001: Concurrency Limit Strategy — Decision Pack
 
-> **Status:** DECISION PENDING
-> **Phase:** 3-B
+> **Status:** RESOLVED → DEC-011
+> **Document Version:** 1.0.0
+> **Application Version:** 1.5.0 (managed by release-please)
 > **Last Updated:** 2026-01-18
+>
+> **Decision**: Option A selected — Global single concurrency.
+> See DESIGN_GUARDS.md DEC-011 for the canonical decision.
 
 ---
 

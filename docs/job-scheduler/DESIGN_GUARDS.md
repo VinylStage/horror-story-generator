@@ -1,7 +1,8 @@
 # Job Scheduler Design Guards
 
-> **Status:** DRAFT
-> **Version:** 0.3.0
+> **Status:** FINAL (Phase 5 Complete)
+> **Document Version:** 1.0.0
+> **Application Version:** 1.5.0 (managed by release-please)
 > **Last Updated:** 2026-01-18
 
 ---
@@ -9,6 +10,16 @@
 ## Overview
 
 This document captures the **invariants, constraints, and critical decisions** that guard the Job Scheduler design. It serves as a contract for implementation and a reference for design reviews.
+
+### Implementation Status
+
+| Design Guard | Status | Verified By |
+|--------------|--------|-------------|
+| INV-001 to INV-006 | Implemented | test_invariants.py |
+| DEC-004 | Implemented | test_e2e.py::TestE2EDirectExecution |
+| DEC-007 | Implemented | test_e2e.py::TestE2ERetryFlow |
+| DEC-011 | Implemented | Single-worker constraint enforced |
+| DEC-012 | Implemented | test_e2e.py::TestE2EJobGroup |
 
 ---
 

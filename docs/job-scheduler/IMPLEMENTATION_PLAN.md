@@ -1,8 +1,8 @@
 # Job Scheduler Implementation Plan
 
-> **Status:** DRAFT
-> **Version:** 0.1.0
-> **Phase:** 2 (Implementation Planning)
+> **Status:** FINAL (Phase 5 Complete)
+> **Document Version:** 1.0.0
+> **Application Version:** 1.5.0 (managed by release-please)
 > **Last Updated:** 2026-01-18
 
 ---
@@ -620,61 +620,46 @@ The following are **explicitly out of scope** for this implementation:
 
 ---
 
-## 6. Open Questions (NOT RESOLVED)
+## 6. Resolved Questions
 
-The following questions remain open. Implementation must accommodate multiple possible resolutions.
+The following questions have been resolved and implemented.
 
-### OQ-001: Concurrency Limit Strategy
+### OQ-001 → DEC-011: Concurrency Limit Strategy
 
-**Question**: How should we limit concurrent job execution?
+**Resolution**: Global single concurrency - maximum 1 job running at any time.
 
-**Implementation Options**:
+**Decision Reference**: See DESIGN_GUARDS.md DEC-011
 
-| Option | Description | Trade-offs |
-|--------|-------------|------------|
-| **Global limit** | Max N jobs running total | Simple; doesn't distinguish resource needs |
-| **Per-type limit** | Max N story, M research | Flexible; requires type registry |
-| **Resource-based** | Based on tagged resources | Most flexible; complex configuration |
+**Implementation**:
+- Dispatcher checks for any RUNNING job before dispatch
+- If any job is RUNNING, new dispatch waits
+- No type-based or resource-based partitioning in Phase 4
 
-**Implementation Guidance**:
-- Design Dispatcher with pluggable concurrency policy
-- Default: single worker (CON-002 constraint for Ollama)
-- Interface should support future policy changes
-
-**Placeholder Interface**:
-```
-ConcurrencyPolicy:
-  can_dispatch(job) → bool
-  on_job_started(job)
-  on_job_completed(job)
-```
+**Migration Path**:
+- Phase 5+: Add per-type or resource-based limits when remote API parallelization needed
+- Existing single-worker tests remain valid (single-worker is subset)
 
 ---
 
-### OQ-002: JobGroup Sequential Failure Behavior
+### OQ-002 → DEC-012: JobGroup Sequential Failure Behavior
 
-**Question**: In a sequential JobGroup, what happens when one job fails?
+**Resolution**: Stop-on-failure - if any job in a sequential group fails, cancel remaining jobs.
 
-**Implementation Options**:
+**Decision Reference**: See DESIGN_GUARDS.md DEC-012
 
-| Option | Description | Trade-offs |
-|--------|-------------|------------|
-| **Stop immediately** | Cancel remaining jobs | Safest; may waste prep work |
-| **Continue all** | Execute all regardless | Runs everything; may cascade failures |
-| **Configurable** | `on_failure: stop \| continue \| skip` | Flexible; more complex API |
+**Implementation**:
+- Sequential group executes jobs in order
+- If Job N fails (after retry exhaustion), cancel Job N+1, N+2, ...
+- Cancelled jobs get status `CANCELLED` with reason "predecessor failed"
+- Group status becomes `PARTIAL`
 
-**Implementation Guidance**:
-- Design JobGroup executor with injectable failure handler
-- Store policy in JobGroup entity (if configurable option chosen)
-- Default behavior: stop (safest)
+**Retry Interaction**:
+- Failed job is retried per DEC-007 before group decides to stop
+- Remaining jobs cancelled only after retry chain exhaustion
 
-**Placeholder Interface**:
-```
-GroupFailurePolicy:
-  on_member_failed(group, failed_job) → Action
-
-Action: STOP | CONTINUE | SKIP_REMAINING
-```
+**Migration Path**:
+- Phase 5+: Add `on_failure: stop | continue | skip` field when user requests flexibility
+- Default value `stop` ensures backward compatibility
 
 ---
 

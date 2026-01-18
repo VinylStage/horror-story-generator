@@ -1,8 +1,8 @@
 # Job Scheduler Recovery Scenarios
 
-> **Status:** DRAFT
-> **Version:** 0.1.0
-> **Phase:** 3-A (Persistence & Queue Schema)
+> **Status:** FINAL (Phase 5 Complete)
+> **Document Version:** 1.0.0
+> **Application Version:** 1.5.0 (managed by release-please)
 > **Last Updated:** 2026-01-18
 
 ---

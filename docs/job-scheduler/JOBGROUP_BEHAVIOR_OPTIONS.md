@@ -1,8 +1,12 @@
 # OQ-002: JobGroup Sequential Failure Behavior — Decision Pack
 
-> **Status:** DECISION PENDING
-> **Phase:** 3-B
+> **Status:** RESOLVED → DEC-012
+> **Document Version:** 1.0.0
+> **Application Version:** 1.5.0 (managed by release-please)
 > **Last Updated:** 2026-01-18
+>
+> **Decision**: Option A selected — Stop-on-failure.
+> See DESIGN_GUARDS.md DEC-012 for the canonical decision.
 
 ---
 

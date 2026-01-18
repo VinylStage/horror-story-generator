@@ -1,8 +1,8 @@
 # Job Scheduler Test Strategy
 
-> **Status:** DRAFT
-> **Version:** 0.1.0
-> **Phase:** 3-C (Test Strategy)
+> **Status:** FINAL (Phase 6-A Validated)
+> **Document Version:** 1.0.0
+> **Application Version:** 1.5.0 (managed by release-please)
 > **Last Updated:** 2026-01-18
 
 ---
@@ -496,15 +496,20 @@ Count traversal: 3 retries after original
 
 ### 7.3 Optional for Later Phases
 
-| Category | Reason |
-|----------|--------|
-| Schedule trigger tests (EP-SCHED-*) | Requires APScheduler integration |
-| Full webhook delivery tests (WH-DELIV-*) | Requires external endpoint |
-| INV-006 (JobGroup) tests | Depends on OQ-002 resolution |
+| Category | Reason | Status |
+|----------|--------|--------|
+| Schedule trigger tests (EP-SCHED-*) | Requires APScheduler integration | Pending |
+| Full webhook delivery tests (WH-DELIV-*) | Requires external endpoint | Pending |
+| INV-006 (JobGroup) tests | OQ-002 resolved as DEC-012 | **COMPLETE** |
 
 ### 7.4 No Regressions Criteria
 
-**When OQ-001 or OQ-002 decisions land**:
+**OQ-001 and OQ-002 have been resolved**:
+
+| Decision | Resolution | Test Status |
+|----------|------------|-------------|
+| OQ-001 → DEC-011 | Global single concurrency | Implemented, tested |
+| OQ-002 → DEC-012 | Stop-on-failure for sequential groups | Implemented, tested |
 
 | Criteria | Enforcement |
 |----------|-------------|
@@ -513,14 +518,14 @@ Count traversal: 3 retries after original
 | New tests may be added | But not replace existing |
 | Single-worker tests | Remain valid (subset of multi-worker) |
 
-**Test Extension Pattern**:
+**Future Test Extension Pattern**:
 ```
-OQ-001 resolved (e.g., per-type limit):
+DEC-011 future changes (e.g., per-type limit):
   - Add new tests: INV-003-C, INV-003-D for multi-worker
   - Keep INV-003-A, INV-003-B (still valid for single-worker case)
 
-OQ-002 resolved (e.g., configurable):
-  - Add new tests for on_failure options
+DEC-012 future changes (e.g., configurable on_failure):
+  - Add new tests for on_failure options (continue, skip)
   - Keep INV-006-* (still valid for status derivation)
 ```
 
