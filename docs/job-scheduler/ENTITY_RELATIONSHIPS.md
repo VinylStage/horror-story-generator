@@ -215,12 +215,12 @@ We chose 1:1 over 1:N (retry model) for clarity:
 Job
 ├── JobRun (attempt 1, FAILED)
 ├── JobRun (attempt 2, FAILED)
-└── JobRun (attempt 3, SUCCEEDED)
+└── JobRun (attempt 3, COMPLETED)
 
 # Accepted: 1:1 model with retry chain
-Job1 (FAILED, retry_of: null)
-Job2 (FAILED, retry_of: Job1)
-Job3 (SUCCEEDED, retry_of: Job2)
+Job1 → JobRun1 (FAILED), retry_of: null
+Job2 → JobRun2 (FAILED), retry_of: Job1
+Job3 → JobRun3 (COMPLETED), retry_of: Job2
 ```
 
 #### Creation Trigger
@@ -231,13 +231,13 @@ JobRun is created when:
 
 ```
 Job.status = QUEUED
-        ↓ (dispatcher assigns to worker)
-Job.status = DISPATCHED
-        ↓ (worker begins execution)
-Job.status = RUNNING + JobRun created (status: STARTED)
+        ↓ (worker claims job)
+Job.status = RUNNING + JobRun created
         ↓ (execution completes)
-Job.status = COMPLETED + JobRun.status = SUCCEEDED/FAILED
+JobRun.status = COMPLETED | FAILED | SKIPPED
 ```
+
+> Note: DISPATCHED is an internal transition state, not externally visible.
 
 ---
 
@@ -269,17 +269,17 @@ JobGroup (mode: parallel)
 
 #### Group Status Derivation
 
-Group status is derived from member Job statuses:
+Group status is derived from member Job and JobRun statuses:
 
 ```
-All Jobs PENDING        → Group PENDING
-Any Job RUNNING         → Group RUNNING
-All Jobs terminal       → Group terminal (see below)
+All Jobs QUEUED             → Group QUEUED
+Any Job RUNNING             → Group RUNNING
+All Jobs reach terminal     → Group terminal (see below)
 
-Terminal derivation:
-- All COMPLETED (success) → Group COMPLETED
-- Any FAILED              → Group PARTIAL
-- All CANCELLED           → Group CANCELLED
+Terminal derivation (based on JobRun results):
+- All JobRuns COMPLETED     → Group COMPLETED
+- Any JobRun FAILED         → Group PARTIAL
+- All Jobs CANCELLED        → Group CANCELLED
 ```
 
 ---
