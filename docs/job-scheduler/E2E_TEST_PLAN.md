@@ -1,8 +1,8 @@
 # Job Scheduler End-to-End Test Plan
 
-**Document Version:** 1.0.0
+**Document Version:** 1.1.0
 **Application Version:** 1.5.0 (managed by release-please - DO NOT CHANGE)
-**Phase:** 6-A Merge Validation
+**Phase:** 6-B Real Pipeline Validation
 **Last Updated:** 2026-01-18
 
 ---
@@ -24,7 +24,15 @@ integrated, ensuring the system behaves correctly as a whole.
 ### 1.2 Test Categories
 
 1. **Scheduler E2E (test_e2e.py)** - Tests scheduler mechanics with mock handlers
-2. **Pipeline E2E (optional)** - Tests real data generation pipelines
+2. **Pipeline E2E (Phase 6-B)** - Tests real data generation pipelines via API
+
+### 1.3 Critical Constraints
+
+| Constraint | Description |
+|------------|-------------|
+| **API-ONLY** | All Pipeline E2E tests MUST execute through HTTP API. No direct CLI invocation. |
+| **NO MOCKS** | Pipeline tests use real generation (Claude API, Ollama). Mock execution is not acceptable. |
+| **RESOURCE SAFE** | Only ONE Ollama workload at a time. Concurrent jobs must use external APIs. |
 
 ---
 
@@ -124,10 +132,12 @@ integrated, ensuring the system behaves correctly as a whole.
 
 ---
 
-## 4. Pipeline E2E Test Scenarios (Optional)
+## 4. Pipeline E2E Test Scenarios (Phase 6-B - MANDATORY)
 
-**Note:** These tests require actual API keys or local Ollama setup.
-They validate real data generation pipelines.
+**Note:** These tests require actual API keys and local Ollama setup.
+They validate real data generation pipelines through HTTP API.
+
+**Execution Rule:** All tests MUST be executed via HTTP API requests to the running server.
 
 ### 4.1 PIPE-01: Story Generation via External API
 
