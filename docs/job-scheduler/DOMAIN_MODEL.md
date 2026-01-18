@@ -137,20 +137,22 @@ A Job represents a **single unit of work** that has been queued for execution. I
 
 #### Lifecycle
 
+**External (API/Webhook visible):**
 ```
-PENDING → QUEUED → DISPATCHED → [terminal state]
-
-Terminal states:
-- RUNNING → COMPLETED
-- CANCELLED
+QUEUED → RUNNING → CANCELLED
 ```
 
-- **PENDING**: Job created but not yet queued (e.g., awaiting group)
-- **QUEUED**: Job in queue, awaiting execution
-- **DISPATCHED**: Job assigned to worker
-- **RUNNING**: Job actively executing (managed by JobRun)
-- **COMPLETED**: Execution finished (success or failure)
-- **CANCELLED**: Job cancelled before completion
+| Status | Meaning |
+|--------|---------|
+| **QUEUED** | Job in queue, awaiting execution |
+| **RUNNING** | Job actively executing |
+| **CANCELLED** | Job cancelled before completion |
+
+**Internal only (not exposed via API):**
+- `PENDING`: Job created but not yet queued (e.g., awaiting group)
+- `DISPATCHED`: Job assigned to worker (brief transition state)
+
+> Note: Execution outcome (success/failure) is recorded in JobRun, not Job.
 
 #### What Job is NOT
 
@@ -195,19 +197,19 @@ A JobRun represents a **historical record** of a single execution attempt. It is
 
 #### Lifecycle
 
+**External (API/Webhook visible):**
 ```
-STARTED → [terminal state]
-
-Terminal states:
-- SUCCEEDED
-- FAILED
-- SKIPPED
+COMPLETED | FAILED | SKIPPED
 ```
 
-- **STARTED**: Execution began
-- **SUCCEEDED**: Execution completed successfully
-- **FAILED**: Execution encountered an error
-- **SKIPPED**: Execution was skipped (e.g., duplicate detection)
+| Status | Meaning |
+|--------|---------|
+| **COMPLETED** | Execution finished successfully |
+| **FAILED** | Execution encountered an error |
+| **SKIPPED** | Execution was skipped (e.g., duplicate detection) |
+
+**Internal only:**
+- `STARTED`: Execution began (brief transition, recorded as timestamp)
 
 #### What JobRun is NOT
 
