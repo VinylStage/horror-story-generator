@@ -24,6 +24,7 @@ from .entities import (
     Job,
     JobRun,
     JobRunStatus,
+    JobStatus,
     JobTemplate,
 )
 from .persistence import PersistenceAdapter
@@ -358,6 +359,73 @@ class SchedulerService:
             "has_active_reservation": self.queue_manager.has_active_reservation(),
             "is_running": self.is_running,
         }
+
+    def get_current_job_id(self) -> Optional[str]:
+        """Get the ID of the currently executing job, if any."""
+        current_job = self.dispatcher.current_job
+        return current_job.job_id if current_job else None
+
+    def get_scheduler_status(self) -> dict:
+        """
+        Get comprehensive scheduler status for API response.
+
+        Returns:
+            Dict containing:
+            - scheduler_running: bool
+            - current_job_id: Optional[str]
+            - queue_length: int
+            - cumulative_stats: dict
+            - has_active_reservation: bool
+        """
+        # Get job run statistics
+        run_stats = self.persistence.get_job_run_stats()
+        cancelled_count = self.persistence.count_cancelled_jobs()
+
+        return {
+            "scheduler_running": self.is_running,
+            "current_job_id": self.get_current_job_id(),
+            "queue_length": self.queue_manager.count_queued(),
+            "cumulative_stats": {
+                "total_executed": run_stats["total_executed"],
+                "succeeded": run_stats["succeeded"],
+                "failed": run_stats["failed"],
+                "cancelled": cancelled_count,
+                "skipped": run_stats["skipped"],
+            },
+            "has_active_reservation": self.queue_manager.has_active_reservation(),
+        }
+
+    def update_job_priority(self, job_id: str, priority: int) -> Job:
+        """
+        Update job priority (QUEUED jobs only).
+
+        Args:
+            job_id: Job to update
+            priority: New priority value
+
+        Returns:
+            Updated Job
+
+        Raises:
+            JobNotFoundError: If job doesn't exist
+            InvalidOperationError: If job is not QUEUED
+        """
+        job = self.persistence.get_job(job_id)
+        if job is None:
+            from .errors import JobNotFoundError
+            raise JobNotFoundError(job_id)
+
+        if job.status != JobStatus.QUEUED:
+            from .errors import InvalidOperationError
+            raise InvalidOperationError(
+                f"Cannot update priority of job in {job.status.value} status"
+            )
+
+        return self.persistence.update_job(job_id, priority=priority)
+
+    def list_all_jobs(self, limit: int = 100) -> list[Job]:
+        """List all jobs (QUEUED, RUNNING, CANCELLED) ordered by created_at DESC."""
+        return self.persistence.list_jobs(limit=limit)
 
     # =========================================================================
     # Direct API Support

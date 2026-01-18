@@ -709,6 +709,20 @@ class PersistenceAdapter:
 
         return [self._row_to_job(row) for row in rows]
 
+    def list_jobs(self, limit: int = 100) -> list[Job]:
+        """List all jobs ordered by created_at DESC."""
+        with self._connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM jobs
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+
+        return [self._row_to_job(row) for row in rows]
+
     def get_next_queued_job(self) -> Optional[Job]:
         """
         Get the next job to dispatch based on queue order.
@@ -919,6 +933,54 @@ class PersistenceAdapter:
             ).fetchall()
 
         return [self._row_to_job_run(row) for row in rows]
+
+    def get_job_run_stats(self) -> dict[str, int]:
+        """
+        Get cumulative job run statistics by status.
+
+        Returns:
+            Dict with keys: total_executed, succeeded, failed, skipped
+        """
+        with self._connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT status, COUNT(*) as count
+                FROM job_runs
+                WHERE status IS NOT NULL
+                GROUP BY status
+                """
+            ).fetchall()
+
+        stats = {
+            "total_executed": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "skipped": 0,
+        }
+
+        for row in rows:
+            status = row["status"]
+            count = row["count"]
+            stats["total_executed"] += count
+
+            if status == JobRunStatus.COMPLETED.value:
+                stats["succeeded"] = count
+            elif status == JobRunStatus.FAILED.value:
+                stats["failed"] = count
+            elif status == JobRunStatus.SKIPPED.value:
+                stats["skipped"] = count
+
+        return stats
+
+    def count_cancelled_jobs(self) -> int:
+        """Count jobs with CANCELLED status."""
+        with self._connection() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) as count FROM jobs WHERE status = ?",
+                (JobStatus.CANCELLED.value,),
+            ).fetchone()
+
+        return row["count"]
 
     # =========================================================================
     # Direct Reservation Operations (DEC-004)
