@@ -1,9 +1,10 @@
 # Job Scheduler API Contract
 
-> **Status:** FINAL (Phase 5 Complete)
-> **Document Version:** 1.0.0
+> **Status:** IMPLEMENTED (Phase 3 API Integration Complete)
+> **Document Version:** 2.0.0
 > **Application Version:** 1.5.0 (managed by release-please)
 > **Last Updated:** 2026-01-18
+> **Implementation Branch:** feat/88-scheduler-api-integration
 
 ---
 
@@ -13,6 +14,17 @@ This document defines the **external API contract** for the Job Scheduler system
 It is intentionally **UI-agnostic** and serves as the authoritative reference for backend behavior, API semantics, and integration guarantees.
 
 This contract aligns **API responses, internal state, and webhook payloads** to a single, consistent model.
+
+### 1.1 Implementation Status
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Scheduler Control (`/scheduler/*`) | ✅ Implemented | start, stop, status |
+| Jobs CRUD (`/jobs`) | ✅ Implemented | POST, GET, PATCH, DELETE |
+| Job Runs (`/jobs/{id}/runs`) | ✅ Implemented | 1:1 Job-to-Run relationship |
+| Legacy Trigger Endpoints | ✅ Deprecated | Maintained for compatibility |
+| JobTemplate APIs | 🔮 Planned | Phase 4+ |
+| Schedule (Cron) APIs | 🔮 Planned | Phase 4+ |
 
 ---
 
@@ -52,7 +64,78 @@ Used for:
 
 ---
 
-## 3. JobTemplate APIs
+## 3. Implemented APIs (Phase 3)
+
+### 3.1 Scheduler Control APIs
+
+Scheduler is an **independent system control plane**, NOT a sub-resource of Job.
+This design enables future extensibility (`/scheduler/config`, `/scheduler/metrics`).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/scheduler/start` | Start scheduler (idempotent) |
+| POST | `/scheduler/stop` | Stop scheduler (graceful) |
+| GET | `/scheduler/status` | Get scheduler status + cumulative stats |
+
+**Scheduler Status Response:**
+```json
+{
+  "scheduler_running": true,
+  "current_job_id": "job-123",
+  "queue_length": 5,
+  "cumulative_stats": {
+    "total_executed": 42,
+    "succeeded": 38,
+    "failed": 3,
+    "cancelled": 1,
+    "skipped": 0
+  },
+  "has_active_reservation": false
+}
+```
+
+### 3.2 Jobs CRUD APIs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/jobs` | Create job (enqueue to scheduler) |
+| GET | `/jobs` | List all jobs |
+| GET | `/jobs/{job_id}` | Get job details |
+| PATCH | `/jobs/{job_id}` | Update job priority (QUEUED only) |
+| DELETE | `/jobs/{job_id}` | Cancel job (QUEUED only) |
+| GET | `/jobs/{job_id}/runs` | Get job execution history |
+
+**Create Job Request:**
+```json
+{
+  "type": "story",
+  "params": {
+    "max_stories": 1,
+    "enable_dedup": true
+  },
+  "priority": 10
+}
+```
+
+**Job Response:**
+```json
+{
+  "job_id": "job-550e8400...",
+  "job_type": "story",
+  "status": "QUEUED",
+  "params": {...},
+  "priority": 10,
+  "position": 3,
+  "created_at": "2026-01-18T10:00:00",
+  "queued_at": "2026-01-18T10:00:00",
+  "started_at": null,
+  "finished_at": null
+}
+```
+
+---
+
+## 4. JobTemplate APIs (Planned)
 
 ### Create Template
 ```

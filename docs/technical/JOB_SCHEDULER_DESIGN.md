@@ -1,8 +1,32 @@
 # Job Scheduler System Design
 
-> **Status:** DRAFT - 협의 필요
+> **Status:** IMPLEMENTED (Phase 3 Complete)
 > **Date:** 2026-01-18
 > **Author:** Claude Code (with VinylStage)
+> **Implementation:** `feat/88-scheduler-api-integration`
+
+---
+
+## Implementation Status
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| Phase 0-2 | Core Scheduler Engine | ✅ Complete |
+| Phase 3 | API Integration | ✅ Complete |
+| Phase 4+ | Templates, Cron | 🔮 Planned |
+
+### Phase 3 Implementation Summary
+
+**New Files:**
+- `src/api/_scheduler_state.py` - Singleton scheduler service management
+- `src/api/schemas/scheduler.py` - Pydantic API schemas
+- `src/api/routers/scheduler.py` - `/scheduler/*` endpoints
+
+**Modified Files:**
+- `src/api/main.py` - Lifespan + router registration
+- `src/api/routers/jobs.py` - CRUD + deprecated triggers
+- `src/scheduler/service.py` - Status methods
+- `src/scheduler/persistence.py` - Stats queries
 
 ---
 
@@ -777,28 +801,32 @@ Q3: Group 전체 완료를 기다릴 것인가, 개별 Job 완료 후 인터럽�
 
 ---
 
-## 9. 구현 로드맵 (Draft)
+## 9. 구현 로드맵
 
-### Phase 1: Core Queue System
-- [ ] SQLite 기반 Job/Queue storage 구현
-- [ ] Priority Queue 로직 구현
-- [ ] Basic Worker (단일)
-- [ ] Queue Management APIs
+### Phase 0-2: Core Scheduler Engine ✅ COMPLETE
+- [x] SQLite 기반 Job/Queue storage 구현
+- [x] Priority Queue 로직 구현
+- [x] Dispatcher 및 Executor
+- [x] JobGroup sequential execution
+- [x] Crash recovery
 
-### Phase 2: Direct API Integration
-- [ ] Direct API 인터럽트 로직
-- [ ] Concurrency Manager
-- [ ] 기존 API 마이그레이션
+### Phase 3: API Integration ✅ COMPLETE
+- [x] `/scheduler/*` Control APIs (start, stop, status)
+- [x] `/jobs` CRUD APIs
+- [x] `/jobs/{id}/runs` 실행 이력 조회
+- [x] Legacy trigger 엔드포인트 deprecated 마킹
+- [x] CumulativeStats 통계 제공
+- [x] Singleton SchedulerService 관리
 
-### Phase 3: Group & Scheduling
-- [ ] Group 모델 및 API
-- [ ] APScheduler 통합
+### Phase 4: Templates & Scheduling (Planned)
+- [ ] JobTemplate CRUD APIs
 - [ ] Cron Schedule APIs
+- [ ] APScheduler 통합
 
-### Phase 4: Monitoring & Polish
-- [ ] Queue 상태 모니터링 API
+### Phase 5: Monitoring & Polish (Planned)
+- [ ] `/scheduler/metrics` 상세 통계
 - [ ] Webhook 통합
-- [ ] 문서화 및 테스트
+- [ ] UI Dashboard 연동
 
 ---
 
