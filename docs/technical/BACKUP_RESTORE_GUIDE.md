@@ -237,7 +237,13 @@ Restore Complete
 | 4 | Restore Dry-Run | 복구 미리보기 테스트 |
 | 5 | Data Integrity | 파일 수/체크섬 비교 |
 | 6 | SQLite Integrity | DB PRAGMA integrity_check |
-| 7 | Full Restore Cycle | 전체 복구 사이클 테스트 |
+| 7 | Schema Validation | DB 테이블/컬럼 스키마 검증 |
+| 8 | Research Card JSON | 연구 카드 JSON 구조 검증 |
+| 9 | Story Metadata JSON | 스토리 메타데이터 JSON 검증 |
+| 10 | Story File Pairs | .md와 _metadata.json 쌍 검증 |
+| 11 | FAISS Consistency | FAISS 인덱스/메타데이터 일관성 |
+| 12 | Cross-References | 스토리↔연구 카드 참조 검증 |
+| 13 | Full Restore Cycle | 전체 복구 사이클 테스트 |
 
 ### 출력 예시
 
@@ -258,12 +264,25 @@ Backup/Restore Verification
 
 ...
 
+[STEP] Test 7: Schema Validation
+[INFO] story_registry: 'stories' table exists
+[INFO] story_registry: 'meta' table exists
+[INFO] story_registry: schema version = 1.1.0
+[SUCCESS] PASSED: Schema Validation
+
+[STEP] Test 11: FAISS Consistency
+[INFO] FAISS dimension: 768
+[INFO] FAISS mappings consistent: 28 entries
+[SUCCESS] PASSED: FAISS Consistency
+
+...
+
 ========================================
 Test Results
 ========================================
 
-[INFO] Total: 7 tests
-[SUCCESS] Passed: 7
+[INFO] Total: 13 tests
+[SUCCESS] Passed: 13
 ```
 
 ---
