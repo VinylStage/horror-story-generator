@@ -1,0 +1,5 @@
+# Backup files
+backup_*
+*.tar.gz
+*.sha256
+!.gitignore

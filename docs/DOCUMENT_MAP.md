@@ -56,6 +56,8 @@ docs/
 | [KU_TO_CANONICAL_KEY_RULES.md](technical/KU_TO_CANONICAL_KEY_RULES.md) | KU → Canonical Key 변환 규칙 |
 | [CANONICAL_KEY_APPLICATION_SCOPE.md](technical/CANONICAL_KEY_APPLICATION_SCOPE.md) | Canonical Key 적용 범위 |
 | [FUTURE_VECTOR_BACKEND_NOTE.md](technical/FUTURE_VECTOR_BACKEND_NOTE.md) | 향후 벡터 백엔드 노트 |
+| [BACKUP_RESTORE_GUIDE.md](technical/BACKUP_RESTORE_GUIDE.md) | **통합 백업/복구 CLI 가이드** |
+| [SYNC_WEBHOOK_DESIGN.md](technical/SYNC_WEBHOOK_DESIGN.md) | 동기 웹훅 설계 문서 |
 
 ---
 
@@ -135,7 +137,8 @@ docs/archive/
 
 1. [OPERATIONAL_STATUS.md](core/OPERATIONAL_STATUS.md) - 운영 상태
 2. [runbook_24h_test.md](technical/runbook_24h_test.md) - 테스트 런북
-3. [REGISTRY_BACKUP_GUIDE.md](technical/REGISTRY_BACKUP_GUIDE.md) - 백업 가이드
+3. [BACKUP_RESTORE_GUIDE.md](technical/BACKUP_RESTORE_GUIDE.md) - **통합 백업/복구 가이드** (권장)
+4. [REGISTRY_BACKUP_GUIDE.md](technical/REGISTRY_BACKUP_GUIDE.md) - 레지스트리 자동 백업
 
 ### For Development
 

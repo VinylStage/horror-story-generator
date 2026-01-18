@@ -920,6 +920,67 @@ data/story_registry.backup.1.0.0.20260112_130012.db
 
 ---
 
+## Unified Backup/Restore System (v1.4.3+)
+
+In addition to the automatic schema-migration backup, the system provides unified CLI scripts for comprehensive backup and restore of all data components.
+
+### Backup Targets
+
+| Component | Path | Description |
+|-----------|------|-------------|
+| `story-registry` | `data/story_registry.db` | Story metadata & dedup records |
+| `research` | `data/research/` | Research DB, FAISS index, card JSON files |
+| `stories` | `data/novel/` | Generated story files (md + metadata) |
+| `story-vectors` | `data/story_vectors/` | Story FAISS index for semantic dedup |
+| `seeds` | `data/seeds/` | Seed registry |
+
+### CLI Scripts
+
+```
+scripts/
+├── backup_config.sh   # Common configuration
+├── backup.sh          # Create backups (supports compression)
+├── restore.sh         # Restore from backup (with dry-run)
+└── verify_backup.sh   # 13-test integrity verification
+```
+
+### Quick Usage
+
+```bash
+# Full backup with compression
+./scripts/backup.sh --compress
+
+# Restore from backup
+./scripts/restore.sh backups/backup_20260118_120000.tar.gz
+
+# Verify backup integrity (13 tests)
+./scripts/verify_backup.sh
+```
+
+### Verification Tests
+
+The `verify_backup.sh` script runs 13 integrity tests:
+
+| Test | Description |
+|------|-------------|
+| Backup Creation | Validates backup file generation |
+| Archive Integrity | SHA256 checksum verification |
+| Manifest Validation | manifest.json structure check |
+| Restore Dry-Run | Non-destructive restore test |
+| Data Integrity | File count/checksum comparison |
+| SQLite Integrity | `PRAGMA integrity_check` |
+| **Schema Validation** | DB table/column structure validation |
+| **Research Card JSON** | JSON structure and required fields |
+| **Story Metadata JSON** | Metadata JSON validation |
+| **Story File Pairs** | .md ↔ _metadata.json pairing |
+| **FAISS Consistency** | Dimension and mapping validation |
+| **Cross-References** | Story → Research card references |
+| Full Restore Cycle | End-to-end restore simulation |
+
+**See also:** [Backup & Restore Guide](../technical/BACKUP_RESTORE_GUIDE.md)
+
+---
+
 ## Unified Research Context Module
 
 Located at `src/infra/research_context/`, this module provides a single source of truth for research card selection and injection, used by both CLI and API.

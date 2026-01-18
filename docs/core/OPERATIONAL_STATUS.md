@@ -188,7 +188,8 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 | `README.md` | 빠른 시작 |
 | `docs/core/ARCHITECTURE.md` | 시스템 아키텍처 |
 | `docs/technical/runbook_24h_test.md` | 24시간 테스트 절차 |
-| `docs/technical/REGISTRY_BACKUP_GUIDE.md` | 백업 및 복구 |
+| `docs/technical/BACKUP_RESTORE_GUIDE.md` | **통합 백업/복구 CLI** (권장) |
+| `docs/technical/REGISTRY_BACKUP_GUIDE.md` | 레지스트리 자동 백업 |
 
 ---
 
