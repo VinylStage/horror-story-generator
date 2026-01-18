@@ -27,8 +27,10 @@ from .entities import (
     JobTemplate,
     Schedule,
     DirectReservation,
+    JobGroup,
     JobStatus,
     JobRunStatus,
+    JobGroupStatus,
     ReservationStatus,
 )
 from .errors import (
@@ -133,6 +135,18 @@ class PersistenceAdapter:
                 )
             """)
 
+            # JobGroup table (DEC-012)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS job_groups (
+                    group_id TEXT PRIMARY KEY,
+                    name TEXT,
+                    status TEXT NOT NULL DEFAULT 'CREATED',
+                    created_at TEXT NOT NULL,
+                    started_at TEXT,
+                    finished_at TEXT
+                )
+            """)
+
             # Job table
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS jobs (
@@ -140,6 +154,7 @@ class PersistenceAdapter:
                     template_id TEXT,
                     schedule_id TEXT,
                     group_id TEXT,
+                    sequence_number INTEGER,
                     job_type TEXT NOT NULL,
                     params TEXT NOT NULL,
                     status TEXT NOT NULL,
@@ -152,6 +167,7 @@ class PersistenceAdapter:
                     finished_at TEXT,
                     FOREIGN KEY (template_id) REFERENCES job_templates(template_id),
                     FOREIGN KEY (schedule_id) REFERENCES schedules(schedule_id),
+                    FOREIGN KEY (group_id) REFERENCES job_groups(group_id),
                     FOREIGN KEY (retry_of) REFERENCES jobs(job_id)
                 )
             """)
@@ -160,6 +176,12 @@ class PersistenceAdapter:
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_jobs_queue_order
                 ON jobs (status, priority DESC, position ASC, created_at ASC)
+            """)
+
+            # Index for JobGroup ordering (DEC-012)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_jobs_group_sequence
+                ON jobs (group_id, sequence_number)
             """)
 
             # JobRun table
@@ -472,15 +494,16 @@ class PersistenceAdapter:
             conn.execute(
                 """
                 INSERT INTO jobs
-                (job_id, template_id, schedule_id, group_id, job_type, params, status,
+                (job_id, template_id, schedule_id, group_id, sequence_number, job_type, params, status,
                  priority, position, retry_of, created_at, queued_at, started_at, finished_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     job.job_id,
                     job.template_id,
                     job.schedule_id,
                     job.group_id,
+                    job.sequence_number,
                     job.job_type,
                     json.dumps(job.params),
                     job.status.value,
@@ -515,6 +538,7 @@ class PersistenceAdapter:
             template_id=row["template_id"],
             schedule_id=row["schedule_id"],
             group_id=row["group_id"],
+            sequence_number=row["sequence_number"],
             job_type=row["job_type"],
             params=json.loads(row["params"]),
             status=JobStatus(row["status"]),
@@ -1094,3 +1118,357 @@ class PersistenceAdapter:
             )
             for row in rows
         ]
+
+    # =========================================================================
+    # JobGroup Operations (DEC-012)
+    # =========================================================================
+
+    def create_job_group(self, group: JobGroup) -> JobGroup:
+        """Create a new job group."""
+        with self._transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO job_groups
+                (group_id, name, status, created_at, started_at, finished_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    group.group_id,
+                    group.name,
+                    group.status.value,
+                    group.created_at,
+                    group.started_at,
+                    group.finished_at,
+                ),
+            )
+        return group
+
+    def get_job_group(self, group_id: str) -> Optional[JobGroup]:
+        """Get a job group by ID."""
+        with self._connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM job_groups WHERE group_id = ?",
+                (group_id,),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return self._row_to_job_group(row)
+
+    def _row_to_job_group(self, row: sqlite3.Row) -> JobGroup:
+        """Convert a database row to a JobGroup entity."""
+        return JobGroup(
+            group_id=row["group_id"],
+            name=row["name"],
+            status=JobGroupStatus(row["status"]),
+            created_at=row["created_at"],
+            started_at=row["started_at"],
+            finished_at=row["finished_at"],
+        )
+
+    def update_job_group(
+        self,
+        group_id: str,
+        status: Optional[JobGroupStatus] = None,
+        started_at: Optional[str] = None,
+        finished_at: Optional[str] = None,
+    ) -> JobGroup:
+        """Update a job group."""
+        group = self.get_job_group(group_id)
+        if group is None:
+            raise InvalidOperationError(f"JobGroup not found: {group_id}")
+
+        updates = []
+        values = []
+
+        if status is not None:
+            updates.append("status = ?")
+            values.append(status.value)
+        if started_at is not None:
+            updates.append("started_at = ?")
+            values.append(started_at)
+        if finished_at is not None:
+            updates.append("finished_at = ?")
+            values.append(finished_at)
+
+        if updates:
+            values.append(group_id)
+            with self._transaction() as conn:
+                conn.execute(
+                    f"UPDATE job_groups SET {', '.join(updates)} WHERE group_id = ?",
+                    values,
+                )
+
+        return self.get_job_group(group_id)
+
+    def get_jobs_by_group(self, group_id: str) -> list[Job]:
+        """
+        Get all jobs in a group, ordered by sequence_number.
+
+        From DEC-012: Jobs execute in order by sequence_number.
+        """
+        with self._connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM jobs
+                WHERE group_id = ?
+                ORDER BY sequence_number ASC
+                """,
+                (group_id,),
+            ).fetchall()
+
+        return [self._row_to_job(row) for row in rows]
+
+    def get_next_pending_job_in_group(self, group_id: str) -> Optional[Job]:
+        """
+        Get the next QUEUED job in a group by sequence order.
+
+        Used for sequential execution: after one job completes,
+        get the next one to dispatch.
+        """
+        with self._connection() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM jobs
+                WHERE group_id = ? AND status = ?
+                ORDER BY sequence_number ASC
+                LIMIT 1
+                """,
+                (group_id, JobStatus.QUEUED.value),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return self._row_to_job(row)
+
+    def get_running_job_in_group(self, group_id: str) -> Optional[Job]:
+        """
+        Get the currently RUNNING job in a group, if any.
+
+        From DEC-012: Only one job in a group runs at a time.
+        """
+        with self._connection() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM jobs
+                WHERE group_id = ? AND status = ?
+                LIMIT 1
+                """,
+                (group_id, JobStatus.RUNNING.value),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return self._row_to_job(row)
+
+    def count_jobs_in_group_by_status(self, group_id: str) -> dict[str, int]:
+        """
+        Count jobs in a group by status.
+
+        Used for INV-006: JobGroup Completion Atomicity.
+        Returns dict with status -> count mapping.
+        """
+        with self._connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT status, COUNT(*) as count FROM jobs
+                WHERE group_id = ?
+                GROUP BY status
+                """,
+                (group_id,),
+            ).fetchall()
+
+        result = {status.value: 0 for status in JobStatus}
+        for row in rows:
+            result[row["status"]] = row["count"]
+
+        return result
+
+    def get_groups_with_running_jobs(self) -> list[JobGroup]:
+        """
+        Get all groups that have at least one RUNNING job.
+
+        Used for recovery: identify groups that need completion handling.
+        """
+        with self._connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT DISTINCT g.* FROM job_groups g
+                JOIN jobs j ON g.group_id = j.group_id
+                WHERE j.status = ?
+                """,
+                (JobStatus.RUNNING.value,),
+            ).fetchall()
+
+        return [self._row_to_job_group(row) for row in rows]
+
+    def get_non_terminal_groups(self) -> list[JobGroup]:
+        """
+        Get all job groups that are not in a terminal state.
+
+        Used for recovery: identify groups that may need status updates.
+        """
+        with self._connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM job_groups
+                WHERE status NOT IN (?, ?, ?)
+                """,
+                (
+                    JobGroupStatus.COMPLETED.value,
+                    JobGroupStatus.PARTIAL.value,
+                    JobGroupStatus.CANCELLED.value,
+                ),
+            ).fetchall()
+
+        return [self._row_to_job_group(row) for row in rows]
+
+    def compute_group_status(self, group_id: str) -> JobGroupStatus:
+        """
+        Compute a JobGroup's status from its member Jobs.
+
+        From INV-006 (JobGroup Completion Atomicity):
+        - Group terminal status determined only when ALL member jobs terminal
+        - RUNNING if any job actively RUNNING (status=RUNNING and no finished_at)
+        - PARTIAL if all terminal and any had FAILED JobRun
+        - COMPLETED if all terminal and all had COMPLETED JobRuns
+        - CANCELLED if all terminal and all CANCELLED (no FAILED runs)
+
+        A job is terminal if:
+        - status == CANCELLED, OR
+        - finished_at is set (execution completed)
+
+        Args:
+            group_id: The group to compute status for
+
+        Returns:
+            The computed JobGroupStatus
+        """
+        jobs = self.get_jobs_by_group(group_id)
+        if not jobs:
+            return JobGroupStatus.CREATED
+
+        has_active_running = False  # RUNNING with no finished_at
+        has_queued = False
+        has_cancelled = False
+        has_failed_run = False
+        all_terminal = True
+
+        for job in jobs:
+            # Determine if job is terminal
+            # A job is terminal if: cancelled OR finished_at is set
+            job_is_terminal = (
+                job.status == JobStatus.CANCELLED or
+                job.finished_at is not None
+            )
+
+            if not job_is_terminal:
+                all_terminal = False
+
+                if job.status == JobStatus.RUNNING:
+                    # Actively running (not yet finished)
+                    has_active_running = True
+                elif job.status == JobStatus.QUEUED:
+                    has_queued = True
+            else:
+                # Job is terminal - check the outcome
+                if job.status == JobStatus.CANCELLED:
+                    has_cancelled = True
+
+                # Check JobRun status for outcome
+                job_run = self.get_job_run_for_job(job.job_id)
+                if job_run and job_run.status == JobRunStatus.FAILED:
+                    has_failed_run = True
+
+        # Determine status based on job states
+        if has_active_running:
+            return JobGroupStatus.RUNNING
+
+        if has_queued:
+            # Still jobs to process
+            return JobGroupStatus.QUEUED
+
+        # All jobs are terminal
+        if all_terminal:
+            if has_failed_run:
+                return JobGroupStatus.PARTIAL
+            elif has_cancelled and not has_failed_run:
+                # All cancelled but no failures (manual cancellation)
+                return JobGroupStatus.CANCELLED
+            else:
+                return JobGroupStatus.COMPLETED
+
+        # Default: still running
+        return JobGroupStatus.RUNNING
+
+    def is_job_blocked_by_group(self, job: Job) -> bool:
+        """
+        Check if a job is blocked from execution due to group constraints.
+
+        From DEC-012: Jobs in a group execute sequentially by sequence_number.
+        A job is blocked if:
+        1. It belongs to a group
+        2. Another job in the same group is RUNNING, OR
+        3. There's a job in the same group with lower sequence_number that is QUEUED
+
+        Args:
+            job: The job to check
+
+        Returns:
+            True if job is blocked, False if eligible for dispatch
+        """
+        if job.group_id is None:
+            return False
+
+        # Check if any job in the group is RUNNING
+        running_job = self.get_running_job_in_group(job.group_id)
+        if running_job is not None:
+            return True
+
+        # Check if there's a QUEUED job with lower sequence number
+        with self._connection() as conn:
+            row = conn.execute(
+                """
+                SELECT COUNT(*) as count FROM jobs
+                WHERE group_id = ?
+                AND status = ?
+                AND sequence_number < ?
+                """,
+                (job.group_id, JobStatus.QUEUED.value, job.sequence_number),
+            ).fetchone()
+
+        return row["count"] > 0
+
+    def get_next_dispatchable_job(self) -> Optional[Job]:
+        """
+        Get the next job eligible for dispatch, respecting group constraints.
+
+        This extends get_next_queued_job() to handle JobGroup sequencing:
+        - Non-group jobs: dispatch by normal priority/position order
+        - Group jobs: only dispatch if no prior sequence job is QUEUED/RUNNING
+
+        From INV-004: priority DESC, position ASC, created_at ASC
+        From DEC-012: JobGroup sequential execution
+        """
+        with self._connection() as conn:
+            # Get all QUEUED jobs in dispatch order
+            rows = conn.execute(
+                """
+                SELECT * FROM jobs
+                WHERE status = ?
+                ORDER BY priority DESC, position ASC, created_at ASC
+                """,
+                (JobStatus.QUEUED.value,),
+            ).fetchall()
+
+        for row in rows:
+            job = self._row_to_job(row)
+
+            # Check if blocked by group constraints
+            if not self.is_job_blocked_by_group(job):
+                return job
+
+        return None

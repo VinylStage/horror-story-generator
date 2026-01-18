@@ -17,8 +17,10 @@ from typing import Tuple
 from .entities import (
     Job,
     JobRun,
+    JobGroup,
     JobStatus,
     JobRunStatus,
+    JobGroupStatus,
     ReservationStatus,
 )
 from .persistence import PersistenceAdapter
@@ -76,6 +78,7 @@ class RecoveryManager:
             "running_jobs_recovered": 0,
             "reservations_expired": 0,
             "retries_created": 0,
+            "job_groups_recovered": 0,
             "errors": [],
         }
 
@@ -105,11 +108,20 @@ class RecoveryManager:
             logger.error(f"Error creating retry jobs: {e}")
             stats["errors"].append(f"Retries: {e}")
 
+        # 4. Recover JobGroups (DEC-012)
+        try:
+            groups_recovered = self._recover_job_groups()
+            stats["job_groups_recovered"] = len(groups_recovered)
+        except Exception as e:
+            logger.error(f"Error recovering JobGroups: {e}")
+            stats["errors"].append(f"JobGroups: {e}")
+
         logger.info(
             f"Recovery complete: "
             f"{stats['running_jobs_recovered']} running jobs recovered, "
             f"{stats['reservations_expired']} reservations expired, "
-            f"{stats['retries_created']} retries created"
+            f"{stats['retries_created']} retries created, "
+            f"{stats['job_groups_recovered']} job groups recovered"
         )
 
         return stats
@@ -211,3 +223,100 @@ class RecoveryManager:
             expired_ids.append(reservation.reservation_id)
 
         return expired_ids
+
+    def _recover_job_groups(self) -> list[JobGroup]:
+        """
+        Recover JobGroups that may have inconsistent status.
+
+        From DEC-012 and INV-006:
+        - Recompute group status from member jobs
+        - Handle groups that had jobs crash during execution
+
+        This runs AFTER job recovery, so all RUNNING jobs have been handled.
+
+        Returns:
+            List of JobGroups that were updated
+        """
+        recovered = []
+        now = datetime.utcnow().isoformat() + "Z"
+
+        # Get all non-terminal groups
+        non_terminal_groups = self.persistence.get_non_terminal_groups()
+
+        for group in non_terminal_groups:
+            logger.info(f"Checking JobGroup {group.group_id} status")
+
+            # Recompute status from member jobs
+            new_status = self.persistence.compute_group_status(group.group_id)
+
+            if new_status != group.status:
+                logger.info(
+                    f"JobGroup {group.group_id}: updating status "
+                    f"{group.status.value} -> {new_status.value}"
+                )
+
+                # Update group with new status
+                update_kwargs = {"status": new_status}
+
+                # Set started_at if transitioning to RUNNING
+                if group.started_at is None and new_status == JobGroupStatus.RUNNING:
+                    update_kwargs["started_at"] = now
+
+                # Set finished_at if transitioning to terminal
+                if new_status in (
+                    JobGroupStatus.COMPLETED,
+                    JobGroupStatus.PARTIAL,
+                    JobGroupStatus.CANCELLED,
+                ):
+                    update_kwargs["finished_at"] = now
+
+                self.persistence.update_job_group(group.group_id, **update_kwargs)
+                recovered.append(group)
+
+            # Check for stop-on-failure: if any job failed without retry,
+            # we need to cancel remaining jobs
+            jobs_in_group = self.persistence.get_jobs_by_group(group.group_id)
+            failed_without_retry = False
+
+            for job in jobs_in_group:
+                if job.finished_at is not None:
+                    job_run = self.persistence.get_job_run_for_job(job.job_id)
+                    if job_run and job_run.status == JobRunStatus.FAILED:
+                        # Check if a retry exists
+                        retry_job = self.persistence.get_retry_job_for(job.job_id)
+                        if retry_job is None:
+                            failed_without_retry = True
+                            break
+
+            if failed_without_retry:
+                # Cancel remaining QUEUED jobs
+                for job in jobs_in_group:
+                    if job.status == JobStatus.QUEUED:
+                        logger.info(
+                            f"Recovery: cancelling job {job.job_id} "
+                            f"in group {group.group_id} due to predecessor failure"
+                        )
+                        self.queue_manager.cancel(job.job_id)
+
+                        # Create SKIPPED JobRun
+                        skipped_run = JobRun.create(
+                            job_id=job.job_id,
+                            params_snapshot=job.params,
+                            template_id=job.template_id,
+                        )
+                        skipped_run.status = JobRunStatus.SKIPPED
+                        skipped_run.finished_at = now
+                        skipped_run.error = "Skipped: predecessor job failed (recovery)"
+                        self.persistence.create_job_run(skipped_run)
+
+                # Update group to PARTIAL
+                self.persistence.update_job_group(
+                    group.group_id,
+                    status=JobGroupStatus.PARTIAL,
+                    finished_at=now,
+                )
+
+                if group not in recovered:
+                    recovered.append(group)
+
+        return recovered

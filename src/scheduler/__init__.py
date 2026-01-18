@@ -11,12 +11,14 @@ Phase 4 Implementation following design documents:
 from .entities import (
     JobStatus,
     JobRunStatus,
+    JobGroupStatus,
     Job,
     JobRun,
     JobTemplate,
     Schedule,
     DirectReservation,
     ReservationStatus,
+    JobGroup,
 )
 from .errors import (
     SchedulerError,
@@ -40,8 +42,10 @@ __all__ = [
     # Entities
     "JobStatus",
     "JobRunStatus",
+    "JobGroupStatus",
     "Job",
     "JobRun",
+    "JobGroup",
     "JobTemplate",
     "Schedule",
     "DirectReservation",

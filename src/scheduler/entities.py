@@ -64,6 +64,27 @@ class ReservationStatus(str, Enum):
     EXPIRED = "EXPIRED"
 
 
+class JobGroupStatus(str, Enum):
+    """
+    JobGroup aggregate status.
+
+    From DOMAIN_MODEL.md Section 5:
+    - CREATED: Group defined, jobs being added
+    - QUEUED: Group in queue, awaiting execution
+    - RUNNING: At least one job in group is executing
+    - COMPLETED: All jobs finished successfully
+    - PARTIAL: Some jobs failed (stop-on-failure triggered per DEC-012)
+    - CANCELLED: Group cancelled
+    """
+
+    CREATED = "CREATED"
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    PARTIAL = "PARTIAL"
+    CANCELLED = "CANCELLED"
+
+
 def generate_uuid() -> str:
     """Generate a new UUID string."""
     return str(uuid.uuid4())
@@ -178,6 +199,7 @@ class Job:
     template_id: Optional[str] = None
     schedule_id: Optional[str] = None
     group_id: Optional[str] = None
+    sequence_number: Optional[int] = None  # Order within JobGroup (0-indexed)
     retry_of: Optional[str] = None
     created_at: str = field(default_factory=now_iso)
     queued_at: str = field(default_factory=now_iso)
@@ -194,6 +216,7 @@ class Job:
         template_id: Optional[str] = None,
         schedule_id: Optional[str] = None,
         group_id: Optional[str] = None,
+        sequence_number: Optional[int] = None,
         retry_of: Optional[str] = None,
     ) -> "Job":
         """Create a new Job with generated ID and QUEUED status."""
@@ -208,6 +231,7 @@ class Job:
             template_id=template_id,
             schedule_id=schedule_id,
             group_id=group_id,
+            sequence_number=sequence_number,
             retry_of=retry_of,
             created_at=now,
             queued_at=now,
@@ -303,4 +327,51 @@ class DirectReservation:
             reserved_at=now_iso(),
             expires_at=expires_at,
             status=ReservationStatus.ACTIVE,
+        )
+
+
+@dataclass
+class JobGroup:
+    """
+    Logical collection of Jobs that execute sequentially.
+
+    From DOMAIN_MODEL.md Section 5 and DEC-012:
+    - Groups related Jobs together
+    - Enforces sequential execution order
+    - Implements stop-on-failure: if any job fails after retry exhaustion,
+      remaining jobs are marked SKIPPED and group becomes PARTIAL
+    - Tracks aggregate completion status (INV-006)
+
+    Sequential Execution Rules:
+    1. Jobs execute in order by their sequence_number
+    2. Next job starts only after previous job completes
+    3. On FAILED JobRun (after retries exhausted), stop group execution
+    4. Remaining jobs get Job.status=CANCELLED and JobRun.status=SKIPPED
+    """
+
+    group_id: str
+    name: Optional[str] = None
+    status: JobGroupStatus = JobGroupStatus.CREATED
+    created_at: str = field(default_factory=now_iso)
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+
+    @classmethod
+    def create(
+        cls,
+        name: Optional[str] = None,
+    ) -> "JobGroup":
+        """Create a new JobGroup with generated ID."""
+        return cls(
+            group_id=generate_uuid(),
+            name=name,
+            status=JobGroupStatus.CREATED,
+        )
+
+    def is_terminal(self) -> bool:
+        """Check if group is in a terminal state."""
+        return self.status in (
+            JobGroupStatus.COMPLETED,
+            JobGroupStatus.PARTIAL,
+            JobGroupStatus.CANCELLED,
         )

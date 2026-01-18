@@ -602,18 +602,14 @@ class TestINV005ScheduleJobIsolation:
 
 
 # =============================================================================
-# INV-006: JobGroup Completion Atomicity (xfail - not implemented)
+# INV-006: JobGroup Completion Atomicity
 # =============================================================================
 
 
-@pytest.mark.xfail(reason="JobGroup not implemented yet (OQ-002 unresolved)")
 class TestINV006JobGroupAtomicity:
     """
     INV-006: A JobGroup's terminal status MUST be determined only
     when ALL member Jobs reach terminal status.
-
-    NOTE: JobGroup is not implemented in Phase 4. These tests are
-    marked xfail per TEST_STRATEGY.md Section 7.3.
     """
 
     def test_inv_006_a_group_running_if_any_job_running(
@@ -626,7 +622,43 @@ class TestINV006JobGroupAtomicity:
         Action: compute_group_status()
         Assertion: RUNNING
         """
-        pytest.skip("JobGroup not implemented")
+        from src.scheduler import JobGroup, JobGroupStatus, JobRunStatus
+
+        # Create a group
+        group = JobGroup.create(name="test-group")
+        group = persistence.create_job_group(group)
+
+        # Create 3 jobs in the group
+        job1 = Job.create(
+            job_type="story",
+            params={"seq": 1},
+            group_id=group.group_id,
+            sequence_number=0,
+        )
+        job2 = Job.create(
+            job_type="story",
+            params={"seq": 2},
+            group_id=group.group_id,
+            sequence_number=1,
+        )
+        job3 = Job.create(
+            job_type="story",
+            params={"seq": 3},
+            group_id=group.group_id,
+            sequence_number=2,
+        )
+        job1 = persistence.create_job(job1)
+        job2 = persistence.create_job(job2)
+        job3 = persistence.create_job(job3)
+
+        # Mark job1 as RUNNING using atomic_claim_job
+        job1, job_run1 = persistence.atomic_claim_job(job1.job_id)
+
+        # Action: compute group status
+        status = persistence.compute_group_status(group.group_id)
+
+        # Assertion: should be RUNNING
+        assert status == JobGroupStatus.RUNNING
 
     def test_inv_006_b_group_terminal_only_when_all_terminal(
         self, persistence: PersistenceAdapter
@@ -634,11 +666,67 @@ class TestINV006JobGroupAtomicity:
         """
         INV-006-B: Group terminal only when all terminal.
 
-        Setup: 2 jobs COMPLETED, 1 QUEUED
+        Setup: 2 jobs COMPLETED (finished_at set), 1 QUEUED
         Action: compute_group_status()
-        Assertion: RUNNING (not COMPLETED)
+        Assertion: QUEUED (not terminal yet)
         """
-        pytest.skip("JobGroup not implemented")
+        from src.scheduler import JobGroup, JobGroupStatus, JobRunStatus
+
+        # Create a group
+        group = JobGroup.create(name="test-group")
+        group = persistence.create_job_group(group)
+
+        # Create 3 jobs in the group
+        job1 = Job.create(
+            job_type="story",
+            params={"seq": 1},
+            group_id=group.group_id,
+            sequence_number=0,
+        )
+        job2 = Job.create(
+            job_type="story",
+            params={"seq": 2},
+            group_id=group.group_id,
+            sequence_number=1,
+        )
+        job3 = Job.create(
+            job_type="story",
+            params={"seq": 3},
+            group_id=group.group_id,
+            sequence_number=2,
+        )
+        job1 = persistence.create_job(job1)
+        job2 = persistence.create_job(job2)
+        job3 = persistence.create_job(job3)
+
+        # Complete job1 and job2
+        now = "2024-01-01T00:00:00Z"
+
+        # Job1: RUNNING -> completed
+        job1, job_run1 = persistence.atomic_claim_job(job1.job_id)
+        persistence.update_job_run(
+            job_run1.run_id,
+            status=JobRunStatus.COMPLETED,
+            finished_at=now,
+        )
+        persistence.update_job(job1.job_id, finished_at=now)
+
+        # Job2: RUNNING -> completed
+        job2, job_run2 = persistence.atomic_claim_job(job2.job_id)
+        persistence.update_job_run(
+            job_run2.run_id,
+            status=JobRunStatus.COMPLETED,
+            finished_at=now,
+        )
+        persistence.update_job(job2.job_id, finished_at=now)
+
+        # Job3 remains QUEUED
+
+        # Action: compute group status
+        status = persistence.compute_group_status(group.group_id)
+
+        # Assertion: should be QUEUED (not terminal because job3 is still QUEUED)
+        assert status == JobGroupStatus.QUEUED
 
     def test_inv_006_c_group_partial_if_any_failed(
         self, persistence: PersistenceAdapter
@@ -650,4 +738,65 @@ class TestINV006JobGroupAtomicity:
         Action: compute_group_status()
         Assertion: PARTIAL
         """
-        pytest.skip("JobGroup not implemented")
+        from src.scheduler import JobGroup, JobGroupStatus, JobRunStatus
+
+        # Create a group
+        group = JobGroup.create(name="test-group")
+        group = persistence.create_job_group(group)
+
+        # Create 3 jobs in the group
+        job1 = Job.create(
+            job_type="story",
+            params={"seq": 1},
+            group_id=group.group_id,
+            sequence_number=0,
+        )
+        job2 = Job.create(
+            job_type="story",
+            params={"seq": 2},
+            group_id=group.group_id,
+            sequence_number=1,
+        )
+        job3 = Job.create(
+            job_type="story",
+            params={"seq": 3},
+            group_id=group.group_id,
+            sequence_number=2,
+        )
+        job1 = persistence.create_job(job1)
+        job2 = persistence.create_job(job2)
+        job3 = persistence.create_job(job3)
+
+        now = "2024-01-01T00:00:00Z"
+
+        # Job1: completed successfully
+        job1, job_run1 = persistence.atomic_claim_job(job1.job_id)
+        persistence.update_job_run(
+            job_run1.run_id,
+            status=JobRunStatus.COMPLETED,
+            finished_at=now,
+        )
+        persistence.update_job(job1.job_id, finished_at=now)
+
+        # Job2: FAILED
+        job2, job_run2 = persistence.atomic_claim_job(job2.job_id)
+        persistence.update_job_run(
+            job_run2.run_id,
+            status=JobRunStatus.FAILED,
+            finished_at=now,
+            error="Test failure",
+        )
+        persistence.update_job(job2.job_id, finished_at=now)
+
+        # Job3: cancelled (due to job2 failure in stop-on-failure)
+        persistence.update_job(
+            job3.job_id,
+            status=JobStatus.CANCELLED,
+            finished_at=now,
+        )
+
+        # Action: compute group status
+        status = persistence.compute_group_status(group.group_id)
+
+        # Assertion: should be PARTIAL (some jobs failed)
+        assert status == JobGroupStatus.PARTIAL

@@ -18,7 +18,11 @@ from typing import Optional
 
 from .entities import (
     Job,
+    JobRun,
+    JobGroup,
     JobStatus,
+    JobRunStatus,
+    JobGroupStatus,
     DirectReservation,
     ReservationStatus,
 )
@@ -66,6 +70,7 @@ class QueueManager:
         template_id: Optional[str] = None,
         schedule_id: Optional[str] = None,
         group_id: Optional[str] = None,
+        sequence_number: Optional[int] = None,
         retry_of: Optional[str] = None,
     ) -> Job:
         """
@@ -81,6 +86,7 @@ class QueueManager:
             template_id: Source template reference
             schedule_id: Triggering schedule reference
             group_id: JobGroup membership
+            sequence_number: Order within JobGroup (0-indexed)
             retry_of: Previous job in retry chain
 
         Returns:
@@ -93,6 +99,7 @@ class QueueManager:
             template_id=template_id,
             schedule_id=schedule_id,
             group_id=group_id,
+            sequence_number=sequence_number,
             retry_of=retry_of,
         )
 
@@ -144,17 +151,22 @@ class QueueManager:
 
     def get_next(self) -> Optional[Job]:
         """
-        Get the next job to dispatch.
+        Get the next job to dispatch, respecting JobGroup constraints.
 
         From INV-004: priority DESC, position ASC, created_at ASC
+        From DEC-012: JobGroup sequential execution
 
         Note: This does NOT dispatch the job. The caller must use
         atomic_claim_job() to actually dispatch.
 
+        For jobs in a JobGroup, only returns the job if:
+        - No other job in the group is RUNNING
+        - No prior job in the group (by sequence_number) is QUEUED
+
         Returns:
-            The next QUEUED job, or None if queue is empty
+            The next dispatchable QUEUED job, or None if queue is empty
         """
-        return self.persistence.get_next_queued_job()
+        return self.persistence.get_next_dispatchable_job()
 
     def get_job(self, job_id: str) -> Optional[Job]:
         """Get a job by ID."""
@@ -388,3 +400,204 @@ class QueueManager:
                 return i + 1
 
         return None
+
+    # =========================================================================
+    # JobGroup Operations (DEC-012)
+    # =========================================================================
+
+    def create_job_group(
+        self,
+        jobs: list[dict],
+        name: Optional[str] = None,
+        priority: int = 0,
+    ) -> tuple[JobGroup, list[Job]]:
+        """
+        Create a JobGroup and enqueue its jobs.
+
+        From DEC-012: Jobs in a group execute sequentially.
+
+        Args:
+            jobs: List of job specs, each with 'job_type' and 'params'.
+                  Jobs are assigned sequence_numbers 0, 1, 2, ... in order.
+            name: Optional group name
+            priority: Dispatch priority for all jobs in the group
+
+        Returns:
+            Tuple of (JobGroup, list of created Jobs)
+
+        Example:
+            group, jobs = queue_manager.create_job_group([
+                {"job_type": "story", "params": {"topic": "A"}},
+                {"job_type": "story", "params": {"topic": "B"}},
+            ], name="My Group")
+        """
+        # Create the group
+        group = JobGroup.create(name=name)
+        group = self.persistence.create_job_group(group)
+
+        # Update group status to QUEUED
+        group = self.persistence.update_job_group(
+            group.group_id,
+            status=JobGroupStatus.QUEUED,
+        )
+
+        # Create jobs with sequence numbers
+        created_jobs = []
+        for seq_num, job_spec in enumerate(jobs):
+            job = self.enqueue(
+                job_type=job_spec["job_type"],
+                params=job_spec.get("params", {}),
+                priority=priority,
+                template_id=job_spec.get("template_id"),
+                group_id=group.group_id,
+                sequence_number=seq_num,
+            )
+            created_jobs.append(job)
+
+        return group, created_jobs
+
+    def get_job_group(self, group_id: str) -> Optional[JobGroup]:
+        """Get a JobGroup by ID."""
+        return self.persistence.get_job_group(group_id)
+
+    def get_jobs_in_group(self, group_id: str) -> list[Job]:
+        """Get all jobs in a group, ordered by sequence_number."""
+        return self.persistence.get_jobs_by_group(group_id)
+
+    def cancel_job_group(self, group_id: str) -> JobGroup:
+        """
+        Cancel all QUEUED jobs in a group.
+
+        From DEC-012: Cancellation cancels remaining jobs.
+
+        Args:
+            group_id: Group to cancel
+
+        Returns:
+            The updated JobGroup
+
+        Note: RUNNING jobs are not cancelled (no preemption per DEC-004).
+              They will complete normally, then the group status is updated.
+        """
+        jobs = self.persistence.get_jobs_by_group(group_id)
+
+        for job in jobs:
+            if job.status == JobStatus.QUEUED:
+                self.cancel(job.job_id)
+
+        # Recompute and update group status
+        new_status = self.persistence.compute_group_status(group_id)
+        now = datetime.utcnow().isoformat() + "Z"
+
+        group = self.persistence.update_job_group(
+            group_id,
+            status=new_status,
+            finished_at=now if new_status.value in ("COMPLETED", "PARTIAL", "CANCELLED") else None,
+        )
+
+        return group
+
+    def compute_group_status(self, group_id: str) -> JobGroupStatus:
+        """
+        Compute a group's status from its member jobs.
+
+        From INV-006: Group terminal status determined only when ALL jobs terminal.
+        """
+        return self.persistence.compute_group_status(group_id)
+
+    def handle_group_job_completion(self, job: Job, job_run: JobRun) -> None:
+        """
+        Handle job completion for group-related logic.
+
+        From DEC-012: Stop-on-failure behavior
+        - When a job in a group FAILS (after retry exhaustion)
+        - Cancel remaining QUEUED jobs
+        - Update group status
+
+        This should be called after retry controller has processed the job.
+        If a retry was created, this does nothing (job not truly failed yet).
+
+        Args:
+            job: The completed job
+            job_run: The completed JobRun
+        """
+
+        if job.group_id is None:
+            return
+
+        # Only process if job completed (has finished_at)
+        if job.finished_at is None:
+            return
+
+        # Update group status based on all jobs
+        group = self.persistence.get_job_group(job.group_id)
+        if group is None:
+            return
+
+        # Compute current group status
+        new_status = self.persistence.compute_group_status(job.group_id)
+        now = datetime.utcnow().isoformat() + "Z"
+
+        # If group is starting (first job running), mark started_at
+        if group.started_at is None and new_status == JobGroupStatus.RUNNING:
+            self.persistence.update_job_group(
+                job.group_id,
+                status=new_status,
+                started_at=now,
+            )
+            return
+
+        # If job FAILED, check if we need stop-on-failure
+        if job_run.status == JobRunStatus.FAILED:
+            # Check if a retry job was created for this job
+            # If retry exists, the job isn't truly "failed" yet
+            retry_job = self.persistence.get_retry_job_for(job.job_id)
+            if retry_job is not None:
+                # Retry pending, don't stop the group yet
+                self.persistence.update_job_group(
+                    job.group_id,
+                    status=new_status,
+                )
+                return
+
+            # No retry created - this is final failure
+            # Cancel remaining QUEUED jobs (DEC-012 stop-on-failure)
+            jobs_in_group = self.persistence.get_jobs_by_group(job.group_id)
+
+            for group_job in jobs_in_group:
+                if group_job.status == JobStatus.QUEUED:
+                    # Cancel the job
+                    self.cancel(group_job.job_id)
+
+                    # Create SKIPPED JobRun for audit trail
+                    skipped_run = JobRun.create(
+                        job_id=group_job.job_id,
+                        params_snapshot=group_job.params,
+                        template_id=group_job.template_id,
+                    )
+                    skipped_run.status = JobRunStatus.SKIPPED
+                    skipped_run.finished_at = now
+                    skipped_run.error = "Skipped: predecessor job failed"
+                    self.persistence.create_job_run(skipped_run)
+
+            # Update group to PARTIAL
+            self.persistence.update_job_group(
+                job.group_id,
+                status=JobGroupStatus.PARTIAL,
+                finished_at=now,
+            )
+            return
+
+        # For COMPLETED jobs, check if group is now complete
+        if new_status in (JobGroupStatus.COMPLETED, JobGroupStatus.PARTIAL, JobGroupStatus.CANCELLED):
+            self.persistence.update_job_group(
+                job.group_id,
+                status=new_status,
+                finished_at=now,
+            )
+        else:
+            # Still running or queued jobs
+            self.persistence.update_job_group(
+                job.group_id,
+                status=new_status,
+            )

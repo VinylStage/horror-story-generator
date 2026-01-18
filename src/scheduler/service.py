@@ -127,10 +127,15 @@ class SchedulerService:
         # Wire components
         dispatcher.set_executor(executor)
 
-        # Set up completion callback for retry handling
+        # Set up completion callback for retry handling and JobGroup logic
         def on_job_completed(job: Job, job_run: JobRun):
+            # Handle retry logic first
             if job_run.status == JobRunStatus.FAILED:
                 retry_controller.on_job_failed(job, job_run)
+
+            # Handle JobGroup completion (DEC-012)
+            # This checks for stop-on-failure and updates group status
+            queue_manager.handle_group_job_completion(job, job_run)
 
         dispatcher.set_on_job_completed(on_job_completed)
 
@@ -389,3 +394,55 @@ class SchedulerService:
             reserved_by=reserved_by,
             timeout=timeout,
         )
+
+    # =========================================================================
+    # JobGroup Operations (DEC-012)
+    # =========================================================================
+
+    def create_job_group(
+        self,
+        jobs: list[dict],
+        name: Optional[str] = None,
+        priority: int = 0,
+    ) -> tuple:
+        """
+        Create a JobGroup and enqueue its jobs.
+
+        From DEC-012: Jobs in a group execute sequentially.
+
+        Args:
+            jobs: List of job specs, each with 'job_type' and 'params'.
+                  Jobs are assigned sequence_numbers 0, 1, 2, ... in order.
+            name: Optional group name
+            priority: Dispatch priority for all jobs in the group
+
+        Returns:
+            Tuple of (JobGroup, list of created Jobs)
+        """
+        return self.queue_manager.create_job_group(
+            jobs=jobs,
+            name=name,
+            priority=priority,
+        )
+
+    def get_job_group(self, group_id: str):
+        """Get a JobGroup by ID."""
+        return self.queue_manager.get_job_group(group_id)
+
+    def get_jobs_in_group(self, group_id: str) -> list[Job]:
+        """Get all jobs in a group, ordered by sequence_number."""
+        return self.queue_manager.get_jobs_in_group(group_id)
+
+    def cancel_job_group(self, group_id: str):
+        """
+        Cancel all QUEUED jobs in a group.
+
+        Note: RUNNING jobs complete normally (no preemption per DEC-004).
+
+        Args:
+            group_id: Group to cancel
+
+        Returns:
+            The updated JobGroup
+        """
+        return self.queue_manager.cancel_job_group(group_id)
