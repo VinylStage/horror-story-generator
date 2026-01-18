@@ -658,80 +658,9 @@ async def get_batch_job_status(batch_id: str):
     )
 
 
-@router.get("/{job_id}", response_model=JobStatusResponse)
-async def get_job_status(job_id: str):
-    """
-    Get job status by ID.
-
-    Returns full job details including pid, artifacts, error info, and webhook status.
-    """
-    job = load_job(job_id)
-
-    if job is None:
-        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
-
-    return JobStatusResponse(
-        job_id=job.job_id,
-        type=job.type,
-        status=job.status,
-        params=job.params,
-        pid=job.pid,
-        log_path=job.log_path,
-        artifacts=job.artifacts,
-        created_at=job.created_at,
-        started_at=job.started_at,
-        finished_at=job.finished_at,
-        exit_code=job.exit_code,
-        error=job.error,
-        # v1.3.0: Webhook fields
-        webhook_url=job.webhook_url,
-        webhook_events=job.webhook_events,
-        webhook_sent=job.webhook_sent,
-        webhook_error=job.webhook_error,
-    )
-
-
-@router.get("", response_model=JobListResponse)
-async def list_jobs(
-    status: Optional[str] = Query(default=None, description="Filter by status"),
-    type: Optional[str] = Query(default=None, description="Filter by job type"),
-    limit: int = Query(default=50, ge=1, le=200, description="Maximum jobs to return"),
-):
-    """
-    List jobs with optional filtering.
-
-    Supports filtering by status and job type.
-    """
-    jobs = list_jobs_func(status=status, job_type=type, limit=limit)
-
-    job_responses = [
-        JobStatusResponse(
-            job_id=j.job_id,
-            type=j.type,
-            status=j.status,
-            params=j.params,
-            pid=j.pid,
-            log_path=j.log_path,
-            artifacts=j.artifacts,
-            created_at=j.created_at,
-            started_at=j.started_at,
-            finished_at=j.finished_at,
-            exit_code=j.exit_code,
-            error=j.error,
-            # v1.3.0: Webhook fields
-            webhook_url=j.webhook_url,
-            webhook_events=j.webhook_events,
-            webhook_sent=j.webhook_sent,
-            webhook_error=j.webhook_error,
-        )
-        for j in jobs
-    ]
-
-    return JobListResponse(
-        jobs=job_responses,
-        total=len(job_responses),
-        message=f"Found {len(job_responses)} jobs",
-    )
+# NOTE: Legacy GET /jobs/{job_id} and GET /jobs endpoints removed in Phase 3.
+# Use scheduler-based endpoints instead (defined above).
+# See: get_scheduler_job() and list_scheduler_jobs()
 
 
 @router.post("/{job_id}/cancel", response_model=JobCancelResponse)
