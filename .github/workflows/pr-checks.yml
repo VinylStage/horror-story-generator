@@ -47,6 +47,15 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const baseBranch = context.payload.pull_request.base.ref;
+            const headBranch = context.payload.pull_request.head.ref;
+
+            // develop → main PR은 릴리즈/동기화 목적이므로 Issue 연결 검증 건너뛰기
+            if (baseBranch === 'main' && headBranch === 'develop') {
+              console.log('✅ develop → main PR은 Issue 연결 검증을 건너뜁니다.');
+              return;
+            }
+
             const prBody = context.payload.pull_request.body || '';
 
             // Issue 연결 패턴: Fixes #123, Closes #123, Resolves #123, Refs #123 등
