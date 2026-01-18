@@ -29,6 +29,7 @@ from .persistence import PersistenceAdapter
 from .queue_manager import QueueManager
 from .dispatcher import Dispatcher, DispatcherState
 from .executor import Executor, JobHandler, SubprocessJobHandler, SkipExecutor
+from .retry_controller import RetryController
 
 __all__ = [
     # Entities
@@ -58,4 +59,6 @@ __all__ = [
     "JobHandler",
     "SubprocessJobHandler",
     "SkipExecutor",
+    # Retry
+    "RetryController",
 ]
