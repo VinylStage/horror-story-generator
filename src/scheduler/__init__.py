@@ -27,6 +27,7 @@ from .errors import (
 )
 from .persistence import PersistenceAdapter
 from .queue_manager import QueueManager
+from .dispatcher import Dispatcher, DispatcherState
 
 __all__ = [
     # Entities
@@ -48,4 +49,7 @@ __all__ = [
     "PersistenceAdapter",
     # Queue
     "QueueManager",
+    # Dispatcher
+    "Dispatcher",
+    "DispatcherState",
 ]
