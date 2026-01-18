@@ -299,6 +299,124 @@ Test Results
 
 ---
 
+## 데이터 구조 상세
+
+### Story Registry (`story_registry.db`)
+
+SQLite 데이터베이스로, 스토리 메타데이터와 중복 검사 이력을 저장합니다.
+
+**테이블:**
+
+| 테이블 | 설명 |
+|--------|------|
+| `stories` | 스토리 메타데이터 (id, title, semantic_summary, accepted 등) |
+| `story_similarity_edges` | 스토리 간 유사도 관계 |
+| `meta` | 스키마 버전 등 메타 정보 |
+
+**스키마 검증:**
+```bash
+sqlite3 data/story_registry.db "PRAGMA integrity_check;"
+# 출력: ok
+
+sqlite3 data/story_registry.db "SELECT value FROM meta WHERE key='schema_version';"
+# 출력: 1.1.0
+```
+
+### Research Data (`data/research/`)
+
+연구 카드 데이터와 FAISS 벡터 인덱스를 포함합니다.
+
+**디렉토리 구조:**
+```
+data/research/
+├── registry.sqlite          # 연구 카드 레지스트리 (SQLite)
+├── vectors/
+│   ├── research.faiss       # FAISS 벡터 인덱스 (768 dim)
+│   └── metadata.json        # 벡터 ID ↔ card_id 매핑
+└── 2026/
+    └── 01/
+        └── RC-*.json        # 연구 카드 JSON 파일
+```
+
+**Research Card JSON 구조:**
+```json
+{
+  "card_id": "RC-20260112-143052",
+  "version": "1.0",
+  "metadata": { "created_at": "...", "model": "qwen3:30b", "status": "complete" },
+  "input": { "topic": "..." },
+  "output": { "title": "...", "summary": "...", "horror_applications": [...] },
+  "canonical_core": {
+    "setting_archetype": "apartment",
+    "primary_fear": "isolation",
+    "antagonist_archetype": "system",
+    "threat_mechanism": "surveillance",
+    "twist_family": "inevitability"
+  },
+  "dedup": { "level": "LOW", "similarity_score": 0.45 }
+}
+```
+
+**FAISS Metadata 구조 (`vectors/metadata.json`):**
+```json
+{
+  "dimension": 768,
+  "id_to_card": { "0": "RC-20260112-143052", ... },
+  "card_to_id": { "RC-20260112-143052": 0, ... }
+}
+```
+
+### Stories (`data/novel/`)
+
+생성된 스토리 파일과 메타데이터를 저장합니다.
+
+**파일 구조:**
+```
+data/novel/
+├── horror_story_20260118_025921.md              # 스토리 본문
+└── horror_story_20260118_025921_metadata.json   # 메타데이터
+```
+
+**Story Metadata JSON 구조:**
+```json
+{
+  "story_id": "20260118_025912",
+  "generated_at": "2026-01-18T02:59:16.636236",
+  "model": "claude-sonnet-4-5-20250929",
+  "provider": "anthropic",
+  "topic": "벽시계 초침이...",
+  "word_count": 5122,
+  "research_used": ["RC-20260118-025725"],
+  "story_signature": "05a26b54e181...",
+  "story_canonical_extraction": { ... },
+  "title": "역행",
+  "tags": ["호러", "horror"]
+}
+```
+
+### Story Vectors (`data/story_vectors/`)
+
+스토리 시맨틱 중복 검사용 FAISS 인덱스입니다.
+
+**구조:**
+```
+data/story_vectors/
+├── story.faiss       # FAISS 인덱스 (768 dim)
+└── metadata.json     # story_id ↔ vector ID 매핑
+```
+
+### Seeds (`data/seeds/`)
+
+시드 레지스트리를 저장합니다.
+
+**구조:**
+```
+data/seeds/
+└── seed_registry.sqlite   # SQLite DB (story_seeds 테이블)
+```
+
+---
+
 ## 백업 파일 구조
 
 ### 디렉토리 백업
