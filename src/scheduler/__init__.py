@@ -28,6 +28,7 @@ from .errors import (
 from .persistence import PersistenceAdapter
 from .queue_manager import QueueManager
 from .dispatcher import Dispatcher, DispatcherState
+from .executor import Executor, JobHandler, SubprocessJobHandler, SkipExecutor
 
 __all__ = [
     # Entities
@@ -52,4 +53,9 @@ __all__ = [
     # Dispatcher
     "Dispatcher",
     "DispatcherState",
+    # Executor
+    "Executor",
+    "JobHandler",
+    "SubprocessJobHandler",
+    "SkipExecutor",
 ]
