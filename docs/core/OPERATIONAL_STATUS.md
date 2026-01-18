@@ -1,6 +1,6 @@
 # 운영 상태 선언
 
-**버전:** v1.4.3 <!-- x-release-please-version -->
+**버전:** v1.5.0 <!-- x-release-please-version -->
 **상태:** OPERATIONAL
 **선언일:** 2026-01-13
 

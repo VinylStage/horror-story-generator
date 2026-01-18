@@ -1,7 +1,7 @@
 # Development Roadmap
 
 **Status:** Active
-**Version:** v1.4.3 <!-- x-release-please-version -->
+**Version:** v1.5.0 <!-- x-release-please-version -->
 
 ---
 
