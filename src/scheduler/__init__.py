@@ -26,6 +26,7 @@ from .errors import (
     ReservationConflictError,
 )
 from .persistence import PersistenceAdapter
+from .queue_manager import QueueManager
 
 __all__ = [
     # Entities
@@ -45,4 +46,6 @@ __all__ = [
     "ReservationConflictError",
     # Persistence
     "PersistenceAdapter",
+    # Queue
+    "QueueManager",
 ]
