@@ -30,6 +30,8 @@ from .queue_manager import QueueManager
 from .dispatcher import Dispatcher, DispatcherState
 from .executor import Executor, JobHandler, SubprocessJobHandler, SkipExecutor
 from .retry_controller import RetryController
+from .recovery import RecoveryManager
+from .service import SchedulerService
 
 __all__ = [
     # Entities
@@ -61,4 +63,8 @@ __all__ = [
     "SkipExecutor",
     # Retry
     "RetryController",
+    # Recovery
+    "RecoveryManager",
+    # Service
+    "SchedulerService",
 ]
