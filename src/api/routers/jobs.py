@@ -1,21 +1,28 @@
 """
-Jobs router for trigger-based API.
+Jobs router for job management API.
 
-Phase B+: Non-blocking job execution via CLI subprocess.
-v1.3.0: Webhook notifications on job completion.
-v1.4.0: Batch job support.
+Phase 3: Scheduler-based job execution model.
 
-Endpoints:
-- POST /jobs/story/trigger - Trigger story generation
-- POST /jobs/research/trigger - Trigger research generation
+=== NEW Scheduler-based Endpoints (Phase 3) ===
+- POST /jobs - Create job (enqueue to scheduler)
+- GET /jobs - List jobs (from scheduler)
+- GET /jobs/{job_id} - Get job details (from scheduler)
+- PATCH /jobs/{job_id} - Update job priority (QUEUED only)
+- DELETE /jobs/{job_id} - Cancel/delete job (QUEUED only)
+- GET /jobs/{job_id}/runs - Get job execution history
+
+=== LEGACY Endpoints (Deprecated) ===
+- POST /jobs/story/trigger - [DEPRECATED] Trigger story generation
+- POST /jobs/research/trigger - [DEPRECATED] Trigger research generation
 - POST /jobs/batch/trigger - Trigger multiple jobs as a batch
 - GET /jobs/batch/{batch_id} - Get batch status
-- GET /jobs/{job_id} - Get job status
-- GET /jobs - List all jobs
-- POST /jobs/{job_id}/cancel - Cancel a running job
+- POST /jobs/{job_id}/cancel - [DEPRECATED] Cancel a running job
 - POST /jobs/monitor - Monitor all running jobs
 - POST /jobs/{job_id}/monitor - Monitor single job
 - POST /jobs/{job_id}/dedup_check - Check dedup for research job
+
+Note: Legacy trigger endpoints are maintained for backward compatibility
+but internally map to the scheduler-based execution model.
 """
 
 import subprocess
@@ -26,6 +33,18 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 
+# Scheduler-based schemas (Phase 3)
+from ..schemas.scheduler import (
+    JobCreateRequest,
+    JobUpdateRequest,
+    JobResponse,
+    JobListResponse as SchedulerJobListResponse,
+    JobDeleteResponse,
+    JobRunResponse,
+    JobRunListResponse,
+)
+
+# Legacy schemas
 from ..schemas.jobs import (
     StoryTriggerRequest,
     ResearchTriggerRequest,
@@ -43,7 +62,10 @@ from ..schemas.jobs import (
     BatchJobStatus,
 )
 
-# Import job manager from src.infra
+# Scheduler service access
+from .._scheduler_state import get_scheduler_service
+
+# Import job manager from src.infra (for legacy endpoints)
 from src.infra.job_manager import (
     create_job,
     load_job,
@@ -126,10 +148,245 @@ def build_research_command(params: dict) -> list[str]:
     return cmd
 
 
-@router.post("/story/trigger", response_model=JobTriggerResponse, status_code=202)
+def _job_to_response(job) -> JobResponse:
+    """Convert scheduler Job entity to API response."""
+    return JobResponse(
+        job_id=job.job_id,
+        job_type=job.job_type,
+        status=job.status.value if hasattr(job.status, 'value') else job.status,
+        params=job.params,
+        priority=job.priority,
+        position=job.position,
+        template_id=job.template_id,
+        group_id=job.group_id,
+        retry_of=job.retry_of,
+        created_at=job.created_at,
+        queued_at=job.queued_at,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+    )
+
+
+def _job_run_to_response(job_run) -> JobRunResponse:
+    """Convert scheduler JobRun entity to API response."""
+    return JobRunResponse(
+        run_id=job_run.run_id,
+        job_id=job_run.job_id,
+        status=job_run.status.value if job_run.status and hasattr(job_run.status, 'value') else job_run.status,
+        params_snapshot=job_run.params_snapshot,
+        template_id=job_run.template_id,
+        started_at=job_run.started_at,
+        finished_at=job_run.finished_at,
+        exit_code=job_run.exit_code,
+        error=job_run.error,
+        artifacts=job_run.artifacts,
+        log_path=job_run.log_path,
+    )
+
+
+# =============================================================================
+# NEW: Scheduler-based Job CRUD Endpoints (Phase 3)
+# =============================================================================
+
+
+@router.post("", response_model=JobResponse, status_code=201)
+async def create_scheduler_job(request: JobCreateRequest):
+    """
+    Create a new job and enqueue it to the scheduler.
+
+    The job will be executed when:
+    1. The scheduler is running (POST /scheduler/start)
+    2. The job reaches the front of the queue (based on priority/position)
+
+    Job type determines execution:
+    - "story": Story generation pipeline
+    - "research": Research card generation pipeline
+    """
+    service = get_scheduler_service()
+
+    try:
+        job = service.enqueue_job(
+            job_type=request.type,
+            params=request.params,
+            priority=request.priority,
+        )
+
+        return _job_to_response(job)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create job: {str(e)}"
+        )
+
+
+@router.get("", response_model=SchedulerJobListResponse)
+async def list_scheduler_jobs(
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum jobs to return"),
+):
+    """
+    List all jobs from the scheduler.
+
+    Returns jobs ordered by created_at (newest first).
+    Includes QUEUED, RUNNING, and CANCELLED jobs.
+    """
+    service = get_scheduler_service()
+
+    try:
+        jobs = service.list_all_jobs(limit=limit)
+        stats = service.get_queue_stats()
+
+        return SchedulerJobListResponse(
+            jobs=[_job_to_response(job) for job in jobs],
+            total=len(jobs),
+            queued_count=stats["queued_count"],
+            running_count=stats["running_count"],
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list jobs: {str(e)}"
+        )
+
+
+@router.get("/{job_id}", response_model=JobResponse)
+async def get_scheduler_job(job_id: str):
+    """
+    Get a specific job by ID from the scheduler.
+
+    Returns full job details including status, params, and timestamps.
+    """
+    service = get_scheduler_service()
+
+    try:
+        job = service.get_job(job_id)
+
+        if job is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Job not found: {job_id}"
+            )
+
+        return _job_to_response(job)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get job: {str(e)}"
+        )
+
+
+@router.patch("/{job_id}", response_model=JobResponse)
+async def update_scheduler_job(job_id: str, request: JobUpdateRequest):
+    """
+    Update a job's priority (QUEUED jobs only).
+
+    Only the priority field can be updated in Phase 3.
+    Job must be in QUEUED status to be updated.
+    """
+    service = get_scheduler_service()
+
+    if request.priority is None:
+        raise HTTPException(
+            status_code=400,
+            detail="No update fields provided. Currently only 'priority' is supported."
+        )
+
+    try:
+        job = service.update_job_priority(job_id, request.priority)
+        return _job_to_response(job)
+
+    except Exception as e:
+        error_msg = str(e)
+        if "not found" in error_msg.lower():
+            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+        elif "cannot update" in error_msg.lower() or "invalid" in error_msg.lower():
+            raise HTTPException(status_code=400, detail=error_msg)
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to update job: {error_msg}")
+
+
+@router.delete("/{job_id}", response_model=JobDeleteResponse)
+async def delete_scheduler_job(job_id: str):
+    """
+    Delete/cancel a job (QUEUED jobs only).
+
+    Only QUEUED jobs can be deleted. RUNNING jobs must complete.
+    This effectively cancels the job before execution.
+    """
+    service = get_scheduler_service()
+
+    try:
+        job = service.cancel_job(job_id)
+
+        return JobDeleteResponse(
+            job_id=job_id,
+            success=True,
+            message=f"Job cancelled successfully (status: {job.status.value})",
+        )
+
+    except Exception as e:
+        error_msg = str(e)
+        if "not found" in error_msg.lower():
+            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+        elif "cannot cancel" in error_msg.lower() or "invalid" in error_msg.lower():
+            raise HTTPException(status_code=400, detail=error_msg)
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to delete job: {error_msg}")
+
+
+@router.get("/{job_id}/runs", response_model=JobRunListResponse)
+async def get_job_runs(job_id: str):
+    """
+    Get execution history (JobRuns) for a specific job.
+
+    Each job has at most one JobRun (1:1 relationship).
+    Retries create new jobs with retry_of reference.
+    """
+    service = get_scheduler_service()
+
+    try:
+        # First verify job exists
+        job = service.get_job(job_id)
+        if job is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Job not found: {job_id}"
+            )
+
+        # Get the job run (if any)
+        job_run = service.get_job_run_for_job(job_id)
+
+        runs = [_job_run_to_response(job_run)] if job_run else []
+
+        return JobRunListResponse(
+            runs=runs,
+            total=len(runs),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get job runs: {str(e)}"
+        )
+
+
+# =============================================================================
+# LEGACY: Trigger-based Endpoints (Deprecated - for backward compatibility)
+# =============================================================================
+
+
+@router.post("/story/trigger", response_model=JobTriggerResponse, status_code=202, deprecated=True)
 async def trigger_story_generation(request: StoryTriggerRequest):
     """
-    Trigger story generation job.
+    [DEPRECATED] Trigger story generation job.
+
+    Use POST /jobs with type="story" instead.
 
     Launches `python main.py` as background subprocess.
     Returns immediately with job_id for status tracking.
@@ -194,10 +451,12 @@ async def trigger_story_generation(request: StoryTriggerRequest):
         raise HTTPException(status_code=500, detail=f"Failed to start job: {e}")
 
 
-@router.post("/research/trigger", response_model=JobTriggerResponse, status_code=202)
+@router.post("/research/trigger", response_model=JobTriggerResponse, status_code=202, deprecated=True)
 async def trigger_research_generation(request: ResearchTriggerRequest):
     """
-    Trigger research generation job.
+    [DEPRECATED] Trigger research generation job.
+
+    Use POST /jobs with type="research" instead.
 
     Launches `python -m src.research.executor` as background subprocess.
     Returns immediately with job_id for status tracking.

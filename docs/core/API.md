@@ -11,16 +11,22 @@
 ## Overview
 
 The Horror Story Generator API provides:
+- **Scheduler Control** - Scheduler-based job queue management (Phase 3)
+- **Jobs CRUD** - Scheduler-based job creation, listing, and management
 - **Story Generation** - Direct (blocking) and job-based (non-blocking) story creation
 - **Research Generation** - Ollama/Gemini-based research card creation
 - **Deduplication** - Semantic and canonical similarity checking
-- **Job Management** - Background job execution and monitoring
+- **Job Management** - Background job execution and monitoring (Legacy)
 
 ### Design Principle
 
-> **CLI = Source of Truth**
+> **Scheduler = Job Execution Engine** (Phase 3)
 
-The API triggers CLI commands via subprocess. All business logic resides in the CLI tools (`main.py`, `src.research.executor`).
+The Scheduler controls job execution timing and order. Jobs are enqueued via API and processed by the dispatch loop when running.
+
+> **CLI = Source of Truth** (Legacy)
+
+Legacy trigger endpoints launch CLI commands via subprocess. All business logic resides in the CLI tools (`main.py`, `src.research.executor`).
 
 ---
 
@@ -100,6 +106,372 @@ curl -X POST http://localhost:8000/story/generate \
 ```json
 {"detail": "Invalid API key"}
 ```
+
+---
+
+## Scheduler API (Phase 3)
+
+스케줄러 기반 실행 모델 API입니다. Job은 큐에 등록되고, Scheduler가 실행 시점을 제어합니다.
+
+### Architecture Overview
+
+```
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│   POST /jobs    │──────▶│    Job Queue    │──────▶│   Dispatcher    │
+│  (Create Job)   │       │   (SQLite DB)   │       │  (Background)   │
+└─────────────────┘       └─────────────────┘       └────────┬────────┘
+                                                              │
+                          ┌─────────────────┐                 │
+                          │  CLI Executor   │◀────────────────┘
+                          │  (Subprocess)   │
+                          └─────────────────┘
+```
+
+### 핵심 개념
+
+| 개념 | 설명 |
+|------|------|
+| **Job** | 수행할 작업의 정의 (QUEUED → RUNNING → CANCELLED) |
+| **JobRun** | Job의 단일 실행 시도 (COMPLETED/FAILED/SKIPPED) |
+| **Scheduler** | Job을 JobRun으로 변환하는 백그라운드 실행 엔진 |
+
+### Scheduler Control Endpoints
+
+#### POST /scheduler/start
+
+스케줄러 디스패치 루프를 시작합니다.
+
+**특징:**
+- Idempotent: 이미 실행 중이면 성공 메시지 반환
+- 서버 부팅 시 자동 시작되지 않음 (명시적 호출 필요)
+- crash recovery 실행 옵션 지원
+
+**Request Body:**
+
+```json
+{
+  "run_recovery": true
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `run_recovery` | boolean | true | 시작 시 crash recovery 실행 여부 |
+
+**Response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Scheduler started successfully",
+  "recovery_stats": {
+    "recovered_jobs": 2,
+    "failed_jobs": 0
+  }
+}
+```
+
+---
+
+#### POST /scheduler/stop
+
+스케줄러 디스패치 루프를 gracefully 중지합니다.
+
+**특징:**
+- 현재 실행 중인 Job 완료 대기 (preemption 없음)
+- Idempotent: 이미 중지되어 있으면 성공 메시지 반환
+
+**Request Body:**
+
+```json
+{
+  "timeout": 30.0
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `timeout` | float | 30.0 | 현재 Job 완료 대기 최대 시간 (초, 1-300) |
+
+**Response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Scheduler stopped successfully"
+}
+```
+
+---
+
+#### GET /scheduler/status
+
+스케줄러 상태 및 누적 통계를 조회합니다.
+
+**Response:** `200 OK`
+
+```json
+{
+  "scheduler_running": true,
+  "current_job_id": "job-550e8400-e29b-41d4-a716-446655440000",
+  "queue_length": 5,
+  "cumulative_stats": {
+    "total_executed": 42,
+    "succeeded": 38,
+    "failed": 3,
+    "cancelled": 1,
+    "skipped": 0
+  },
+  "has_active_reservation": false
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `scheduler_running` | boolean | 디스패치 루프 실행 여부 |
+| `current_job_id` | string | 현재 실행 중인 Job ID (없으면 null) |
+| `queue_length` | integer | QUEUED 상태 Job 수 |
+| `cumulative_stats` | object | 누적 실행 통계 |
+| `has_active_reservation` | boolean | Direct API 예약 활성화 여부 |
+
+### Jobs CRUD Endpoints (Scheduler-based)
+
+#### POST /jobs
+
+새로운 Job을 생성하고 스케줄러 큐에 등록합니다.
+
+**Request Body:**
+
+```json
+{
+  "type": "story",
+  "params": {
+    "max_stories": 1,
+    "enable_dedup": true,
+    "model": "ollama:qwen3:30b"
+  },
+  "priority": 10
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `type` | string | **Yes** | - | Job 타입: `"story"` 또는 `"research"` |
+| `params` | object | No | {} | Job 파라미터 (타입별 상이) |
+| `priority` | integer | No | 0 | 우선순위 (0-100, 높을수록 먼저 실행) |
+
+**Story Job params:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `max_stories` | integer | 생성할 최대 스토리 수 |
+| `duration_seconds` | integer | 실행 제한 시간 |
+| `enable_dedup` | boolean | 중복 검사 활성화 |
+| `model` | string | 모델 선택 |
+
+**Research Job params:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `topic` | string | **필수** - 연구 주제 |
+| `tags` | array | 분류 태그 |
+| `model` | string | 모델 선택 |
+| `timeout` | integer | 타임아웃 (초) |
+
+**Response:** `201 Created`
+
+```json
+{
+  "job_id": "job-550e8400-e29b-41d4-a716-446655440000",
+  "job_type": "story",
+  "status": "QUEUED",
+  "params": {
+    "max_stories": 1,
+    "enable_dedup": true
+  },
+  "priority": 10,
+  "position": 3,
+  "template_id": null,
+  "group_id": null,
+  "retry_of": null,
+  "created_at": "2026-01-18T10:00:00",
+  "queued_at": "2026-01-18T10:00:00",
+  "started_at": null,
+  "finished_at": null
+}
+```
+
+---
+
+#### GET /jobs
+
+스케줄러의 모든 Job 목록을 조회합니다.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 50 | 최대 결과 수 (1-200) |
+
+**Response:** `200 OK`
+
+```json
+{
+  "jobs": [
+    {
+      "job_id": "job-1",
+      "job_type": "story",
+      "status": "RUNNING",
+      "params": {...},
+      "priority": 10,
+      "position": 0,
+      "created_at": "2026-01-18T10:00:00",
+      "queued_at": "2026-01-18T10:00:00",
+      "started_at": "2026-01-18T10:01:00",
+      "finished_at": null
+    }
+  ],
+  "total": 5,
+  "queued_count": 3,
+  "running_count": 1
+}
+```
+
+---
+
+#### GET /jobs/{job_id}
+
+특정 Job의 상세 정보를 조회합니다.
+
+**Response:** `200 OK`
+
+```json
+{
+  "job_id": "job-550e8400-e29b-41d4-a716-446655440000",
+  "job_type": "research",
+  "status": "QUEUED",
+  "params": {
+    "topic": "Korean apartment horror",
+    "tags": ["urban", "isolation"]
+  },
+  "priority": 5,
+  "position": 2,
+  "template_id": null,
+  "group_id": null,
+  "retry_of": null,
+  "created_at": "2026-01-18T10:00:00",
+  "queued_at": "2026-01-18T10:00:00",
+  "started_at": null,
+  "finished_at": null
+}
+```
+
+**Error Response:** `404 Not Found`
+
+```json
+{"detail": "Job not found: nonexistent-id"}
+```
+
+---
+
+#### PATCH /jobs/{job_id}
+
+Job의 우선순위를 업데이트합니다 (QUEUED 상태만 가능).
+
+**Request Body:**
+
+```json
+{
+  "priority": 50
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `priority` | integer | 새로운 우선순위 (0-100) |
+
+**Response:** `200 OK`
+
+```json
+{
+  "job_id": "job-550e8400...",
+  "status": "QUEUED",
+  "priority": 50,
+  ...
+}
+```
+
+**Error Response:** `400 Bad Request`
+
+```json
+{"detail": "Cannot update job: only QUEUED jobs can be updated"}
+```
+
+---
+
+#### DELETE /jobs/{job_id}
+
+Job을 취소/삭제합니다 (QUEUED 상태만 가능).
+
+**Response:** `200 OK`
+
+```json
+{
+  "job_id": "job-550e8400...",
+  "success": true,
+  "message": "Job cancelled successfully (status: CANCELLED)"
+}
+```
+
+**Error Response:** `400 Bad Request`
+
+```json
+{"detail": "Cannot cancel job: only QUEUED jobs can be cancelled"}
+```
+
+---
+
+#### GET /jobs/{job_id}/runs
+
+Job의 실행 이력 (JobRun)을 조회합니다.
+
+**특징:**
+- 각 Job당 최대 1개의 JobRun (1:1 관계)
+- 재시도 시 새로운 Job이 생성됨 (retry_of 필드 참조)
+
+**Response:** `200 OK`
+
+```json
+{
+  "runs": [
+    {
+      "run_id": "run-123",
+      "job_id": "job-550e8400...",
+      "status": "COMPLETED",
+      "params_snapshot": {...},
+      "template_id": null,
+      "started_at": "2026-01-18T10:01:00",
+      "finished_at": "2026-01-18T10:05:30",
+      "exit_code": 0,
+      "error": null,
+      "artifacts": ["data/novel/horror_story_20260118.md"],
+      "log_path": "logs/job-550e8400.log"
+    }
+  ],
+  "total": 1
+}
+```
+
+### Job Status Values (Scheduler)
+
+| Status | Entity | Description |
+|--------|--------|-------------|
+| `QUEUED` | Job | 큐에서 대기 중 |
+| `RUNNING` | Job | 현재 실행 중 |
+| `CANCELLED` | Job | 사용자에 의해 취소됨 |
+| `COMPLETED` | JobRun | 실행 성공 |
+| `FAILED` | JobRun | 실행 실패 |
+| `SKIPPED` | JobRun | 의도적으로 건너뜀 |
 
 ---
 
@@ -304,9 +676,12 @@ Get detailed information about a specific story.
 
 ---
 
-### Job Trigger Endpoints
+### Job Trigger Endpoints (Legacy - Deprecated)
 
-#### POST /jobs/story/trigger
+> **⚠️ Deprecated:** Phase 3부터 `POST /jobs` 사용을 권장합니다.
+> Legacy trigger 엔드포인트는 하위 호환성을 위해 유지되지만, 신규 클라이언트는 Scheduler 기반 API를 사용해야 합니다.
+
+#### POST /jobs/story/trigger [DEPRECATED]
 
 Trigger a story generation job.
 
@@ -351,7 +726,7 @@ Trigger a story generation job.
 
 ---
 
-#### POST /jobs/research/trigger
+#### POST /jobs/research/trigger [DEPRECATED]
 
 Trigger a research generation job.
 
