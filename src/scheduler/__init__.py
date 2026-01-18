@@ -23,7 +23,10 @@ from .errors import (
     InvalidOperationError,
     JobNotFoundError,
     JobRunNotFoundError,
+    TemplateNotFoundError,
     ReservationConflictError,
+    ReservationNotFoundError,
+    ConcurrencyViolationError,
 )
 from .persistence import PersistenceAdapter
 from .queue_manager import QueueManager
@@ -48,7 +51,10 @@ __all__ = [
     "InvalidOperationError",
     "JobNotFoundError",
     "JobRunNotFoundError",
+    "TemplateNotFoundError",
     "ReservationConflictError",
+    "ReservationNotFoundError",
+    "ConcurrencyViolationError",
     # Persistence
     "PersistenceAdapter",
     # Queue
