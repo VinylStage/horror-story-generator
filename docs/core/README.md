@@ -142,6 +142,7 @@ Options:
   --db-path PATH           SQLite database path
   --load-history           Load existing stories into memory
   --model MODEL            Model selection (see below)
+  --target-length N        Target story length in characters (300-10000, soft limit)
 ```
 
 **Model Options:**
@@ -160,6 +161,9 @@ python main.py --max-stories 3 --enable-dedup
 
 # Ollama 로컬 모델
 python main.py --model ollama:qwen3:30b
+
+# 목표 길이 지정 (1500자)
+python main.py --target-length 1500
 ```
 
 ### Research Generation
@@ -220,6 +224,31 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 - Health: `http://localhost:8000/health`
+
+### Backup & Restore (v1.4.3+)
+
+```bash
+# 전체 백업 (압축)
+./scripts/backup.sh --compress
+
+# 복구
+./scripts/restore.sh backups/backup_20260118_120000.tar.gz
+
+# 복구 미리보기
+./scripts/restore.sh backups/backup_20260118_120000.tar.gz --dry-run
+
+# 백업 무결성 검증 (13개 테스트)
+./scripts/verify_backup.sh
+```
+
+**백업 대상:**
+- Story Registry (`data/story_registry.db`)
+- Research 데이터 (`data/research/` - DB, FAISS, JSON)
+- 생성된 스토리 (`data/novel/`)
+- Story 벡터 인덱스 (`data/story_vectors/`)
+- Seed 데이터 (`data/seeds/`)
+
+자세한 내용은 `docs/technical/BACKUP_RESTORE_GUIDE.md` 참조.
 
 ---
 

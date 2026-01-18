@@ -40,17 +40,23 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = [
-    "data_paths",
-    "research_dedup",
-    "research_registry",
-    "story_seed",
-    "seed_registry",
-    "seed_integration",
-    "prompt_builder",
-    "research_api"
+source = ["src"]
+omit = [
+    "tests/*",
+    "*/__pycache__/*",
+    # CLI entry points (not unit-testable)
+    "src/research/executor/cli.py",
+    "src/research/executor/__main__.py",
+    "src/research/executor/config.py",
+    "src/research/executor/executor.py",
+    "src/research/executor/model_provider.py",
+    "src/research/executor/output_writer.py",
+    "src/research/executor/prompt_template.py",
+    "src/research/executor/validator.py",
+    "src/story/cli.py",
+    # Large file - separate issue
+    "src/story/generator.py",
 ]
-omit = ["tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]
 exclude_lines = [

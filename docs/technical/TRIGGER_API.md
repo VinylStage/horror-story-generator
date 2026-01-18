@@ -115,6 +115,21 @@ sequenceDiagram
 
 ### 스토리 생성 트리거
 
+**Request Body Parameters:**
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+|---------|------|--------|------|
+| `max_stories` | int | 1 | 최대 스토리 생성 개수 (1-100) |
+| `duration_seconds` | int | null | 실행 시간 제한 (초) |
+| `interval_seconds` | int | 0 | 스토리 생성 간 대기 시간 (초) |
+| `enable_dedup` | bool | false | 중복 검사 활성화 |
+| `db_path` | string | null | 커스텀 DB 경로 |
+| `load_history` | bool | false | 히스토리 로드 여부 |
+| `model` | string | null | 모델 선택 (Claude/Ollama) |
+| `target_length` | int | null | 목표 스토리 길이 (300-10000자, soft limit) |
+| `webhook_url` | string | null | 완료 시 웹훅 URL |
+| `webhook_events` | string[] | ["succeeded", "failed", "skipped"] | 웹훅 트리거 이벤트 |
+
 ```bash
 # 작업 트리거
 curl -X POST http://localhost:8000/jobs/story/trigger \
@@ -122,7 +137,8 @@ curl -X POST http://localhost:8000/jobs/story/trigger \
   -d '{
     "max_stories": 5,
     "enable_dedup": true,
-    "interval_seconds": 30
+    "interval_seconds": 30,
+    "target_length": 2500
   }'
 
 # 응답

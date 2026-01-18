@@ -185,13 +185,88 @@ This document defines the **official application scope** of Canonical Key within
 
 ---
 
-### 6. Intentionally NOT Applied (Deferred)
+### 6. Cross-Pipeline Canonical Key Matching (IMPLEMENTED)
 
-The following are **explicitly deferred** to future phases:
+**Location:** Research Context Module (Issue #21)
 
-| Feature | Status | Rationale |
-|---------|--------|-----------|
-| Cross-pipeline Canonical Key matching | DEFERRED | No automatic matching between research affinity and template core (Issue #21) |
+| Component | File | Description |
+|-----------|------|-------------|
+| Forward Selector | `src/infra/research_context/selector.py` | Template → Research card matching |
+| **Reverse Selector** | `src/infra/research_context/selector.py` | Research card → Template matching |
+| API Endpoint | `src/api/routers/research.py` | `/research/matching-templates` endpoint |
+
+**Bi-directional Matching:**
+
+| Direction | Function | Use Case |
+|-----------|----------|----------|
+| Forward | `select_research_for_template()` | Given template, find relevant research cards |
+| Reverse | `select_templates_for_research()` | Given research card, recommend matching templates |
+
+**How It Works:**
+1. Forward (existing): Template's `canonical_core` (single values) matched against research cards' `canonical_affinity` (arrays)
+2. Reverse (new): Research card's `canonical_affinity` matched against templates' `canonical_core`
+3. Same weighted scoring algorithm used for both directions
+
+**Scoring Weights:**
+```python
+DIMENSION_WEIGHTS = {
+    "setting": 1.0,
+    "primary_fear": 1.5,      # Highest priority
+    "antagonist": 1.2,
+    "mechanism": 1.3,
+}
+```
+
+**Threshold Configuration:**
+- Forward matching: `MIN_MATCH_SCORE = 0.25` (inclusive, more research options)
+- Reverse matching: `MIN_REVERSE_MATCH_SCORE = 0.5` (stricter filtering)
+
+**API Endpoint:**
+```http
+POST /api/research/matching-templates
+Content-Type: application/json
+
+{
+  "card_id": "RC-20260115-143052",
+  "max_templates": 5,
+  "min_score": 0.5
+}
+```
+
+**Response Format:**
+```json
+{
+  "card_id": "RC-20260115-143052",
+  "matching_templates": [
+    {
+      "template_id": "T-APT-001",
+      "template_name": "Apartment Social Surveillance",
+      "match_score": 0.85,
+      "canonical_core": {
+        "setting": "apartment",
+        "primary_fear": "social_displacement",
+        "antagonist": "system",
+        "mechanism": "surveillance",
+        "twist": "inevitability"
+      },
+      "match_details": { ... }
+    }
+  ],
+  "total_templates": 15,
+  "card_affinity": {
+    "setting": ["apartment", "domestic_space"],
+    "primary_fear": ["social_displacement", "isolation"],
+    "antagonist": ["system"],
+    "mechanism": ["surveillance", "confinement"]
+  }
+}
+```
+
+---
+
+### 7. Intentionally NOT Applied (Deferred)
+
+No features are currently deferred. All planned Canonical Key features have been implemented.
 
 ---
 
@@ -205,6 +280,7 @@ The following are **explicitly deferred** to future phases:
 | Story dedup comparison | OPTIONAL | Used if available, not required |
 | Story output extraction | IMPLEMENTED | Stories extract own CK for alignment scoring |
 | Story output enforcement | IMPLEMENTED | Configurable policy (none/warn/retry/strict) |
+| Cross-pipeline matching | IMPLEMENTED | Bi-directional template ↔ research matching (Issue #21) |
 
 ---
 
@@ -213,7 +289,9 @@ The following are **explicitly deferred** to future phases:
 - Canonical Enum v1.0: `docs/technical/canonical_enum.md`
 - Template Skeletons: `assets/templates/template_skeletons_v1.json`
 - Research Executor: `src/research/executor/`
-- **Story Canonical Extractor: `src/story/canonical_extractor.py`**
+- Story Canonical Extractor: `src/story/canonical_extractor.py`
+- **Research Context Selector: `src/infra/research_context/selector.py`** (bi-directional matching)
+- **Research API Router: `src/api/routers/research.py`** (matching-templates endpoint)
 - Dedup System: `docs/core/ARCHITECTURE.md`
 
 ---
