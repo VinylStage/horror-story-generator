@@ -165,11 +165,14 @@ class RetryController:
         - Is enqueued to QueueManager
         """
         # Create retry job with same parameters
+        # Note: group_id and sequence_number are preserved for JobGroup retries
         retry_job = self.queue_manager.enqueue(
             job_type=original_job.job_type,
             params=original_job.params,
             priority=original_job.priority,
             template_id=original_job.template_id,
+            group_id=original_job.group_id,
+            sequence_number=original_job.sequence_number,
             retry_of=original_job.job_id,
         )
 

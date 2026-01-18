@@ -1248,12 +1248,15 @@ class PersistenceAdapter:
         Get the currently RUNNING job in a group, if any.
 
         From DEC-012: Only one job in a group runs at a time.
+
+        Note: A job is "actively running" if status=RUNNING AND finished_at IS NULL.
+        Jobs with finished_at set have completed (regardless of status).
         """
         with self._connection() as conn:
             row = conn.execute(
                 """
                 SELECT * FROM jobs
-                WHERE group_id = ? AND status = ?
+                WHERE group_id = ? AND status = ? AND finished_at IS NULL
                 LIMIT 1
                 """,
                 (group_id, JobStatus.RUNNING.value),
