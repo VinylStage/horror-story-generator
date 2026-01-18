@@ -1,7 +1,7 @@
 # Job Scheduler Design Guards
 
 > **Status:** DRAFT
-> **Version:** 0.1.0
+> **Version:** 0.2.0
 > **Last Updated:** 2026-01-18
 
 ---
@@ -161,20 +161,26 @@ def compute_group_status(group: JobGroup) -> GroupStatus:
 
 ---
 
-### DEC-004: Direct API Priority Interrupt
+### DEC-004: Direct API Next-Slot Reservation
 
-**Decision**: Direct APIs (`/story/generate`, `/research/run`) do not create Jobs. They execute immediately with highest priority.
+**Decision**: Direct APIs (`/story/generate`, `/research/run`) do not create Jobs. They reserve the next execution slot without preempting running jobs.
+
+**Behavior**:
+1. If no job is running → execute immediately
+2. If a job is running → wait for it to finish, then execute
+3. Queue resumes after direct execution completes
 
 **Alternatives Considered**:
 1. Direct APIs create high-priority Jobs (rejected: user expects synchronous response)
-2. Separate execution path with no scheduler awareness (rejected: resource conflicts)
+2. Preempt running job (rejected: wastes work, complex state recovery)
+3. Fail fast if busy (rejected: poor user experience)
 
-**Rationale**: User expectation of immediate response. Scheduler awareness enables graceful resource sharing.
+**Rationale**: Guarantees responsiveness without interrupting running work.
 
 **Implications**:
-- Scheduler must expose "pause queue" signal
-- Direct execution must notify scheduler when complete
-- Resource manager must handle both paths
+- Scheduler exposes "reserve next slot" API
+- No preemption logic needed
+- Deterministic execution order: [current] → [direct] → [queue]
 
 ---
 
@@ -196,6 +202,108 @@ def compute_group_status(group: JobGroup) -> GroupStatus:
 
 ---
 
+### DEC-006: Unified Status Model
+
+**Decision**: Use consistent status names across API responses, webhooks, and internal state.
+
+**Job Status** (queue-level, external):
+| Status | Meaning |
+|--------|---------|
+| QUEUED | Waiting in queue |
+| RUNNING | Currently executing |
+| CANCELLED | Cancelled before completion |
+
+**JobRun Status** (execution result, external):
+| Status | Meaning |
+|--------|---------|
+| COMPLETED | Execution finished successfully |
+| FAILED | Execution encountered error |
+| SKIPPED | Execution intentionally skipped |
+
+**Rationale**: Single source of truth for status semantics. Webhooks use identical schema to API responses.
+
+**Deprecated**:
+- `succeeded` → use `COMPLETED`
+- `error` → use `FAILED`
+- `dispatched` → internal only, not exposed
+
+---
+
+### DEC-007: Automatic Retry Policy
+
+**Decision**: Failed jobs are automatically retried up to 3 attempts. Further retries require manual invocation.
+
+**Behavior**:
+1. On failure, scheduler creates new Job with `retry_of` reference
+2. Automatic retries: max 3 attempts per original job
+3. After 3 failures: job marked as permanently failed
+4. Manual retry always allowed via `POST /api/job-runs/{run_id}/retry`
+
+**Rationale**: Balances automation with control. Prevents infinite retry loops while handling transient failures.
+
+**Implications**:
+- JobTemplate includes `retry_policy.max_attempts` (default: 3)
+- Retry chain tracked via `retry_of` field
+- Exponential backoff between attempts
+
+---
+
+### DEC-008: Queue Persistence Across Restarts
+
+**Decision**: QUEUED jobs are persisted and resumed from storage on scheduler restart.
+
+**Behavior**:
+1. All job state stored in SQLite
+2. On startup, scheduler loads all QUEUED jobs
+3. RUNNING jobs from previous session marked as FAILED (crash recovery)
+4. Queue order preserved
+
+**Rationale**: Durability is expected. Users should not lose queued work due to restarts.
+
+**Implications**:
+- SQLite is the source of truth
+- Startup recovery logic required
+- Orphaned RUNNING jobs need cleanup
+
+---
+
+### DEC-009: Webhook Delivery Guarantees
+
+**Decision**: Webhooks use at-least-once delivery with maximum 3 retries.
+
+**Behavior**:
+1. Webhook fired on job completion
+2. On failure, retry up to 3 times with exponential backoff
+3. After 3 failures, webhook marked as failed (no further retries)
+4. Webhook payload matches API response schema
+
+**Rationale**: Balances reliability with simplicity. Matches current implementation.
+
+**Implications**:
+- Clients must handle duplicate deliveries (idempotency)
+- Webhook status tracked per job
+- No exactly-once guarantees
+
+---
+
+### DEC-010: Schedule Timezone Handling
+
+**Decision**: Each schedule has a timezone field with UTC as default.
+
+**Behavior**:
+1. Schedule.timezone defaults to "UTC"
+2. Cron expression interpreted in specified timezone
+3. Timezone changes apply to next trigger, not current
+
+**Rationale**: Flexibility for global deployments. UTC default is safe and predictable.
+
+**Implications**:
+- APScheduler configured with timezone per trigger
+- Timezone validation required (pytz/zoneinfo)
+- DST transitions handled by APScheduler
+
+---
+
 ## Open Questions (Do Not Implement Until Resolved)
 
 ### OQ-001: Concurrency Limit Strategy
@@ -214,53 +322,7 @@ def compute_group_status(group: JobGroup) -> GroupStatus:
 
 ---
 
-### OQ-002: Failed Job Retry Policy
-
-**Question**: How should retries be handled?
-
-**Options**:
-1. **Automatic retry**: Up to N retries with exponential backoff
-2. **Manual retry**: User explicitly requests retry
-3. **Configurable per-template**: Template defines retry policy
-
-**Current Thinking**: Configurable per-template with default of manual.
-
-**Blocking**: JobTemplate schema, Job creation logic
-
----
-
-### OQ-003: Queue Persistence Across Restarts
-
-**Question**: What happens to QUEUED jobs when the scheduler restarts?
-
-**Options**:
-1. **Resume all**: Continue where we left off
-2. **Stale detection**: Jobs older than X hours are marked STALE
-3. **Selective resume**: Only resume jobs from last N hours
-
-**Current Thinking**: Resume all with STALE marking for jobs older than configurable threshold.
-
-**Blocking**: Scheduler initialization logic
-
----
-
-### OQ-004: Direct API Resource Conflict
-
-**Question**: What if a direct API request comes when the shared resource (Ollama) is in use?
-
-**Options**:
-1. **Wait with timeout**: Direct API waits for resource
-2. **Fail fast**: Return 503 if resource busy
-3. **Preempt**: Kill running job, execute direct, restart job
-4. **Graceful pause**: Wait for current job to finish, then execute
-
-**Current Thinking**: Graceful pause (Option 4) aligns with stated requirements.
-
-**Blocking**: Resource manager design, direct API implementation
-
----
-
-### OQ-005: JobGroup Sequential Failure Behavior
+### OQ-002: JobGroup Sequential Failure Behavior
 
 **Question**: In a sequential JobGroup, what happens when one job fails?
 
@@ -275,33 +337,17 @@ def compute_group_status(group: JobGroup) -> GroupStatus:
 
 ---
 
-### OQ-006: Schedule Timezone Handling
+## Resolved Questions (Promoted to Decisions)
 
-**Question**: How do we handle timezone for cron expressions?
+The following questions have been resolved and documented as decisions:
 
-**Options**:
-1. **UTC only**: All crons interpreted as UTC
-2. **Per-schedule timezone**: Each schedule has timezone field
-3. **Server timezone**: Use server's local timezone
-
-**Current Thinking**: Per-schedule timezone with default of UTC.
-
-**Blocking**: Schedule schema, APScheduler configuration
-
----
-
-### OQ-007: Webhook Delivery Guarantees
-
-**Question**: What delivery guarantees do we provide for webhooks?
-
-**Options**:
-1. **Fire and forget**: Best effort, no retry
-2. **At-least-once**: Retry with exponential backoff
-3. **Exactly-once**: Idempotency keys and dedup
-
-**Current Thinking**: At-least-once with 3 retries (aligns with current implementation).
-
-**Blocking**: Webhook service refactoring
+| Former ID | Resolution | Decision |
+|-----------|------------|----------|
+| OQ-002 | Retry Policy | DEC-007: Automatic up to 3, then manual |
+| OQ-003 | Queue Persistence | DEC-008: Resume from SQLite |
+| OQ-004 | Direct API Conflict | DEC-004: Next-slot reservation |
+| OQ-006 | Timezone Handling | DEC-010: Per-schedule with UTC default |
+| OQ-007 | Webhook Guarantees | DEC-009: At-least-once, max 3 retries |
 
 ---
 
@@ -401,4 +447,5 @@ Before implementation of any component:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1.0 | 2026-01-18 | - | Initial draft |
+| 0.2.0 | 2026-01-18 | - | Aligned with API_CONTRACT.md: unified status model, promoted 5 OQs to decisions, updated DEC-004 to next-slot reservation |
 
