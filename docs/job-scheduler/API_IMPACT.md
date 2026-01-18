@@ -50,12 +50,12 @@ POST /story/generate      → Blocking story generation
 POST /research/run        → Blocking research generation
 ```
 
-**Impact**: These remain unchanged. In scheduler terms, they are "priority interrupts" that bypass the queue.
+**Impact**: These remain unchanged. They use the "next-slot reservation" pattern.
 
 **Scheduler Interpretation**:
 - Direct APIs do NOT create Jobs in the scheduler
-- They execute with highest priority
-- They can interrupt queued job execution (finish current, then resume queue)
+- They reserve the next execution slot (no preemption of running jobs)
+- Execution order: [current job finishes] → [direct request] → [queue resumes]
 
 ---
 
@@ -138,29 +138,20 @@ create_job(template_id=template.id, params={...})
 Current: Single Job entity with mixed responsibilities.
 
 ```python
-# Current Job dataclass
+# Current Job dataclass (legacy)
 class Job:
     job_id: str
     type: str            # "story_generation" | "research"
     status: str          # "created" | "queued" | "running" | "succeeded" | "failed"
-    params: dict
-    pid: Optional[int]
-    log_path: Optional[str]
-    artifacts: List[str]
-    created_at: str
-    started_at: Optional[str]
-    finished_at: Optional[str]
-    exit_code: Optional[int]
-    error: Optional[str]
-    webhook_url: Optional[str]
-    webhook_events: List[str]
-    webhook_sent: bool
+    # ... other fields
 ```
+
+> Note: Legacy statuses `succeeded` and `failed` are replaced by JobRun statuses in the new model.
 
 Proposed: Split into Job (queue) and JobRun (history).
 
 ```python
-# Proposed Job
+# Proposed Job (queue-level, external statuses only)
 class Job:
     job_id: str
     template_id: Optional[str]
@@ -169,13 +160,13 @@ class Job:
     params: dict
     priority: int
     position: int
-    status: str  # PENDING | QUEUED | DISPATCHED | RUNNING | COMPLETED | CANCELLED
+    status: str  # QUEUED | RUNNING | CANCELLED
 
-# Proposed JobRun
+# Proposed JobRun (execution result)
 class JobRun:
     run_id: str
     job_id: str
-    status: str  # STARTED | SUCCEEDED | FAILED | SKIPPED
+    status: str  # COMPLETED | FAILED | SKIPPED
     started_at: datetime
     finished_at: Optional[datetime]
     pid: Optional[int]
@@ -458,47 +449,54 @@ X-API-Version: 2    → New scheduler
 
 ### How Direct APIs Interact with Scheduler
 
-Direct APIs (`/story/generate`, `/research/run`) should:
+Direct APIs (`/story/generate`, `/research/run`) follow these rules:
 
-1. **NOT** create scheduler Jobs
-2. **Execute immediately** with highest priority
-3. **Optionally** notify scheduler (for resource coordination)
+1. **DO NOT** create scheduler Jobs
+2. **DO NOT** preempt a currently running Job
+3. **Reserve the next execution slot** (executed immediately after current Job)
+4. **Queue resumes normally** after direct execution completes
 
 ```
 ┌──────────────────┐                    ┌───────────────┐
-│ POST /story/gen  │───────────────────►│   Execute     │
-│   (Direct API)   │    Bypass Queue    │  Immediately  │
-└──────────────────┘                    └───────┬───────┘
+│ POST /story/gen  │───────────────────►│   Reserve     │
+│   (Direct API)   │   Next-Slot        │  Next Slot    │
+└──────────────────┘   Reservation      └───────┬───────┘
                                                 │
                                     ┌───────────▼───────────┐
-                                    │  Notify Scheduler     │
-                                    │  (Optional: Pause Q)  │
+                                    │  Wait for current job │
+                                    │  then execute         │
                                     └───────────────────────┘
 ```
 
-### Interrupt Pattern
+### Next-Slot Reservation Pattern
 
-When a direct API is called while jobs are running:
+When a direct API is called while a job is running:
 
 ```
 Before Direct API:
 ┌─────────────────────────────────────┐
-│ Queue: [Job1(running), Job2, Job3]  │
+│ Queue: [Job1(RUNNING), Job2, Job3]  │
 └─────────────────────────────────────┘
 
 Direct API Called:
 ┌─────────────────────────────────────┐
-│ 1. Wait for Job1 to finish          │
-│ 2. Pause queue (don't start Job2)   │
-│ 3. Execute direct request           │
-│ 4. Resume queue                     │
+│ 1. Job1 continues (NO preemption)   │
+│ 2. Direct request reserves next slot│
+│ 3. Job1 finishes                    │
+│ 4. Direct request executes          │
+│ 5. Queue resumes with Job2          │
 └─────────────────────────────────────┘
 
 After Direct API:
 ┌─────────────────────────────────────┐
-│ Queue: [Job2(running), Job3]        │
+│ Queue: [Job2(RUNNING), Job3]        │
 └─────────────────────────────────────┘
 ```
+
+This guarantees:
+- **Immediate responsiveness** (reserves slot instantly)
+- **No forced interruption** (running job completes normally)
+- **Deterministic ordering** (direct → remaining queue)
 
 ---
 
@@ -530,5 +528,5 @@ After Direct API:
 | **Job API** | Asynchronous endpoint that creates schedulable work |
 | **Legacy System** | Current immediate-execution job system |
 | **Coexistence** | Period where both systems operate in parallel |
-| **Interrupt Pattern** | Direct API pausing queue for priority execution |
+| **Next-Slot Reservation** | Direct API reserving next execution slot without preempting current job |
 
