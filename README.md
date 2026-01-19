@@ -6,7 +6,7 @@ Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시�
 >
 > 모든 문서는 현재 `src/` 패키지 구조와 Canonical Enum v1.0을 기준으로 작성되었습니다.
 >
-> 운영 상태: [docs/OPERATIONAL_STATUS.md](docs/OPERATIONAL_STATUS.md)
+> 운영 상태: [docs/core/OPERATIONAL_STATUS.md](docs/core/OPERATIONAL_STATUS.md)
 
 ---
 
@@ -25,12 +25,6 @@ Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시�
 ## 설치 방법
 
 ### 1. 의존성 설치
-
-```bash
-pip install -r requirements.txt
-```
-
-또는 Poetry 사용 시:
 
 ```bash
 poetry install
@@ -57,7 +51,8 @@ RESEARCH_INJECT_EXCLUDE_DUP_LEVEL=HIGH  # 제외할 중복 레벨 (HIGH/MEDIUM)
 ENABLE_STORY_DEDUP=true          # 스토리 시그니처 기반 중복 검사 활성화
 STORY_DEDUP_STRICT=false         # true 시 중복 감지되면 생성 중단
 ENABLE_STORY_SEMANTIC_DEDUP=true # 시맨틱 임베딩 기반 중복 검사 (v1.4.0)
-STORY_SEMANTIC_THRESHOLD=0.85    # 시맨틱 HIGH 신호 기준점
+STORY_SEMANTIC_THRESHOLD_HIGH=0.85   # 시맨틱 HIGH 신호 기준점
+STORY_SEMANTIC_THRESHOLD_MEDIUM=0.70 # 시맨틱 MEDIUM 신호 기준점
 STORY_HYBRID_THRESHOLD=0.85      # 하이브리드 중복 판정 기준점
 
 # Gemini API 설정 (선택 - 연구 생성 전용)

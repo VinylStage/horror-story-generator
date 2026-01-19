@@ -364,7 +364,8 @@ LOG_LEVEL=INFO
 ENABLE_STORY_DEDUP=true              # Enable signature-based dedup
 STORY_DEDUP_STRICT=false             # Abort on duplicate detection
 ENABLE_STORY_SEMANTIC_DEDUP=true     # Enable semantic embedding dedup
-STORY_SEMANTIC_THRESHOLD=0.85        # Semantic HIGH threshold
+STORY_SEMANTIC_THRESHOLD_HIGH=0.85   # Semantic HIGH threshold
+STORY_SEMANTIC_THRESHOLD_MEDIUM=0.70 # Semantic MEDIUM threshold
 STORY_HYBRID_THRESHOLD=0.85          # Hybrid duplicate threshold
 
 # Vector Backend (v1.4.0)
