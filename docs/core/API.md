@@ -162,7 +162,7 @@ curl -X POST http://localhost:8000/story/generate \
 ```json
 {
   "status": "ok",
-  "version": "1.3.2"
+  "version": "1.5.0"
 }
 ```
 
