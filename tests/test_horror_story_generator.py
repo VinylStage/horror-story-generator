@@ -4,6 +4,7 @@ Tests for horror_story_generator module.
 
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -151,6 +152,10 @@ class TestSaveStory:
         assert file_path.endswith(".md")
         assert os.path.exists(file_path)
 
+        # Validate filename pattern
+        filename = os.path.basename(file_path)
+        assert re.match(r'story-\d{8}-\d{6}\.md', filename)
+
     def test_save_with_frontmatter(self, tmp_path):
         """Test that saved file includes YAML frontmatter."""
         file_path = save_story(
@@ -167,6 +172,16 @@ class TestSaveStory:
         assert 'title: "Test Story"' in content
         assert "draft: false" in content
 
+        # Validate vinylog fields
+        assert 'slug: "story-' in content
+        assert 'category: "Horror"' in content
+        assert 'excerpt:' in content
+        assert re.search(r'readTime: "\d+ min read"', content)
+        assert 'featured: false' in content
+        assert 'thumbnail: ""' in content
+        assert re.search(r'date: "\d{4}-\d{2}-\d{2}"', content)
+        assert 'tags:\n  - ' in content  # YAML array format
+
     def test_save_creates_metadata_json(self, tmp_path):
         """Test that save_story creates metadata JSON file."""
         save_story(
@@ -178,6 +193,10 @@ class TestSaveStory:
 
         json_files = list(tmp_path.glob("*_metadata.json"))
         assert len(json_files) == 1
+
+        # Validate filename pattern
+        filename = json_files[0].name
+        assert re.match(r'story-\d{8}-\d{6}_metadata\.json', filename)
 
         with open(json_files[0], "r", encoding="utf-8") as f:
             metadata = json.load(f)
@@ -209,3 +228,102 @@ class TestLoadPromptTemplate:
         """Test loading a non-existent template file raises error."""
         with pytest.raises(FileNotFoundError):
             load_prompt_template("/nonexistent/path/template.json")
+
+
+class TestVinylogHelperFunctions:
+    """Tests for vinylog integration helper functions."""
+
+    def test_generate_slug(self):
+        """Test slug generation from story ID."""
+        from src.story.generator import generate_slug
+
+        assert generate_slug("20260118_183713") == "story-20260118-183713"
+        assert generate_slug("20251231_235959") == "story-20251231-235959"
+
+    def test_calculate_read_time(self):
+        """Test read time calculation."""
+        from src.story.generator import calculate_read_time
+
+        assert calculate_read_time(4376) == "22 min read"
+        assert calculate_read_time(200) == "1 min read"
+        assert calculate_read_time(100) == "1 min read"  # minimum
+        assert calculate_read_time(50) == "1 min read"  # rounds to minimum
+
+    def test_generate_story_filename(self):
+        """Test story filename generation."""
+        from src.story.generator import generate_story_filename
+
+        assert generate_story_filename("20260118_183713") == "story-20260118-183713.md"
+
+
+class TestSaveStoryVinylogFormat:
+    """Tests for vinylog-specific save_story behavior."""
+
+    def test_frontmatter_field_order(self, tmp_path):
+        """Test that frontmatter fields appear in expected order."""
+        file_path = save_story(
+            story_text="# Test Story\n\nContent...",
+            output_dir=str(tmp_path),
+            metadata=None,
+            template=None
+        )
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        frontmatter = content.split("---")[1]
+
+        assert frontmatter.index("title:") < frontmatter.index("slug:")
+        assert frontmatter.index("slug:") < frontmatter.index("category:")
+        assert frontmatter.index("category:") < frontmatter.index("date:")
+
+    def test_tags_yaml_array_format(self, tmp_path):
+        """Test that tags are formatted as YAML array, not JSON."""
+        file_path = save_story(
+            story_text="# Test Story\n\nContent...",
+            output_dir=str(tmp_path),
+            metadata=None,
+            template=None
+        )
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert '["호러", "horror"]' not in content
+        assert 'tags:\n  - 호러\n  - horror' in content
+
+    def test_description_escaping(self, tmp_path):
+        """Test that quotes in description are properly escaped."""
+        story_with_quotes = '# Test Story\n\nShe said "hello" to me.'
+
+        file_path = save_story(
+            story_text=story_with_quotes,
+            output_dir=str(tmp_path),
+            metadata=None,
+            template=None
+        )
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert 'excerpt: "She said \\"hello\\"' in content
+
+    def test_metadata_json_filename_consistency(self, tmp_path):
+        """Test that metadata JSON filename matches markdown filename."""
+        save_story(
+            story_text="# Test Story\n\nContent...",
+            output_dir=str(tmp_path),
+            metadata={"model": "claude-test"},
+            template=None
+        )
+
+        md_files = list(tmp_path.glob("story-*.md"))
+        json_files = list(tmp_path.glob("story-*_metadata.json"))
+
+        assert len(md_files) == 1
+        assert len(json_files) == 1
+
+        md_id = md_files[0].stem
+        json_id = json_files[0].stem.replace("_metadata", "")
+
+        assert md_id == json_id

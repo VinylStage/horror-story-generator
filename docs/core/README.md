@@ -125,6 +125,31 @@ horror-story-generator/
 └── docs/                        # Documentation
 ```
 
+### Story Output Format
+
+Generated stories follow vinylog blog-compatible format:
+
+**Filename Pattern**: `story-YYYYMMDD-HHMMSS.md`
+
+**Frontmatter Fields**:
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `title` | string | Extracted from story | "할머니의 집" |
+| `slug` | string | URL-friendly ID | "story-20260118-183713" |
+| `category` | string | Fixed value | "Horror" |
+| `date` | string | Generation date | "2026-01-18" |
+| `excerpt` | string | Story preview | "나는 할머니 집에..." |
+| `tags` | array | YAML format tags | `- 호러`<br>`- horror` |
+| `readTime` | string | 200 chars/min | "22 min read" |
+| `featured` | boolean | Featured flag | false |
+| `thumbnail` | string | Thumbnail URL | "" |
+| `genre` | string | Genre | "호러" |
+| `wordCount` | integer | Character count | 4376 |
+| `model` | string | Generation model | "claude-sonnet-4-5..." |
+| `temperature` | number | Model temp | 0.8 |
+| `draft` | boolean | Draft status | false |
+
 ---
 
 ## CLI Reference
@@ -244,7 +269,7 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 **백업 대상:**
 - Story Registry (`data/story_registry.db`)
 - Research 데이터 (`data/research/` - DB, FAISS, JSON)
-- 생성된 스토리 (`data/novel/`)
+- 생성된 스토리 (`data/novel/` - format: `story-YYYYMMDD-HHMMSS.md`)
 - Story 벡터 인덱스 (`data/story_vectors/`)
 - Seed 데이터 (`data/seeds/`)
 

@@ -107,6 +107,26 @@ flowchart LR
     G --> H["Story Generation"]
 ```
 
+### Output Format (v1.6.1+)
+
+**Filename Convention**:
+- Markdown: `story-{timestamp}.md` (hyphens, not underscores)
+- Metadata: `story-{timestamp}_metadata.json`
+- Example: `story-20260118-183713.md`
+
+**Frontmatter Structure**:
+1. Core: title, slug, category
+2. Temporal: date (quoted ISO format)
+3. Content: excerpt, tags (YAML array)
+4. Reading: readTime, featured, thumbnail
+5. System: genre, wordCount, model, temperature, draft
+
+**Field Calculation**:
+- `slug`: `story-{timestamp}` (hyphens)
+- `excerpt`: First 200 chars (escaped)
+- `readTime`: `round(wordCount / 200)` min (min 1)
+- `tags`: YAML array format
+
 **Topic Matching:**
 1. Search cards by topic keyword (exact match > partial match > title match)
 2. If no match and `auto_research=True`, generate new research via `run_research_pipeline()`
