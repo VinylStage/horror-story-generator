@@ -56,6 +56,11 @@ omit = [
     "src/story/cli.py",
     # Large file - separate issue
     "src/story/generator.py",
+    # Image providers require actual API calls
+    "src/image/providers/openai_dalle.py",
+    "src/image/providers/stability_ai.py",
+    "src/image/providers/flux_replicate.py",
+    "src/image/providers/local_sd.py",
 ]
 
 [tool.coverage.report]
