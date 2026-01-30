@@ -1,7 +1,7 @@
 # Documentation Map
 
-**Version:** 1.0
-**Last Updated:** 2026-01-15
+**Version:** 1.1
+**Last Updated:** 2026-01-18
 
 ---
 
@@ -17,6 +17,7 @@
 docs/
 ├── core/                    # 핵심 문서 (필독)
 ├── technical/               # 기술 참조 문서
+├── job-scheduler/           # Job Scheduler 설계 문서 (NEW)
 ├── data-model/              # 데이터 모델 스펙
 ├── verification/            # 검증 및 테스트 보고서
 ├── audit/                   # 감사 보고서
@@ -58,6 +59,27 @@ docs/
 | [FUTURE_VECTOR_BACKEND_NOTE.md](technical/FUTURE_VECTOR_BACKEND_NOTE.md) | 향후 벡터 백엔드 노트 |
 | [BACKUP_RESTORE_GUIDE.md](technical/BACKUP_RESTORE_GUIDE.md) | **통합 백업/복구 CLI 가이드** |
 | [SYNC_WEBHOOK_DESIGN.md](technical/SYNC_WEBHOOK_DESIGN.md) | 동기 웹훅 설계 문서 |
+| [JOB_SCHEDULER_DESIGN.md](technical/JOB_SCHEDULER_DESIGN.md) | Job Scheduler 시스템 설계 |
+| [job-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md](technical/job-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md) | As-Is/To-Be API 설계 |
+
+---
+
+## Job Scheduler Documents (`docs/job-scheduler/`)
+
+Job Scheduler 시스템 설계 및 구현 문서입니다.
+
+| 문서 | 설명 |
+|------|------|
+| [API_CONTRACT.md](job-scheduler/API_CONTRACT.md) | API 계약 및 구현 상태 |
+| [API_IMPACT.md](job-scheduler/API_IMPACT.md) | API 영향 분석 |
+| [DOMAIN_MODEL.md](job-scheduler/DOMAIN_MODEL.md) | 도메인 모델 정의 |
+| [ENTITY_RELATIONSHIPS.md](job-scheduler/ENTITY_RELATIONSHIPS.md) | 엔티티 관계 정의 |
+| [DESIGN_GUARDS.md](job-scheduler/DESIGN_GUARDS.md) | 설계 가드레일 |
+| [EXECUTION_FLOW.md](job-scheduler/EXECUTION_FLOW.md) | 실행 흐름 다이어그램 |
+| [PERSISTENCE_SCHEMA.md](job-scheduler/PERSISTENCE_SCHEMA.md) | SQLite 스키마 |
+| [RECOVERY_SCENARIOS.md](job-scheduler/RECOVERY_SCENARIOS.md) | 복구 시나리오 |
+| [E2E_TEST_PLAN.md](job-scheduler/E2E_TEST_PLAN.md) | E2E 테스트 계획 |
+| [E2E_TEST_REPORT.md](job-scheduler/E2E_TEST_REPORT.md) | E2E 테스트 결과 |
 
 ---
 
@@ -145,6 +167,12 @@ docs/archive/
 1. [ROADMAP.md](core/ROADMAP.md) - 개발 계획
 2. [decision_log.md](technical/decision_log.md) - 결정 로그
 3. [canonical-data.md](data-model/canonical-data.md) - 데이터 스펙
+
+### For Job Scheduler
+
+1. [API_CONTRACT.md](job-scheduler/API_CONTRACT.md) - API 계약
+2. [JOB_SCHEDULER_DESIGN.md](technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계
+3. [job-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md](technical/job-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md) - As-Is/To-Be API 설계
 
 ---
 

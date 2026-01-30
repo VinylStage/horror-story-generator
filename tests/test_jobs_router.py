@@ -131,40 +131,67 @@ class TestResearchTriggerEndpoint:
 
 
 class TestJobStatusEndpoint:
-    """Tests for GET /jobs/{job_id} endpoint."""
+    """Tests for GET /jobs/{job_id} endpoint (Scheduler-based, Phase 3)."""
 
-    def test_get_job_status(self, client, temp_jobs_dir):
-        """Should return job status."""
-        from src.infra.job_manager import create_job, update_job_status
+    def test_get_job_status(self, client):
+        """Should return job status from scheduler."""
+        from unittest.mock import MagicMock
+        from src.scheduler.entities import Job, JobStatus
 
-        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
-            # Create a job directly
-            job = create_job("story_generation", {"max_stories": 1})
-            update_job_status(job.job_id, "running", pid=11111)
+        mock_job = MagicMock(spec=Job)
+        mock_job.job_id = "test-job-123"
+        mock_job.job_type = "story"
+        mock_job.status = JobStatus.QUEUED
+        mock_job.params = {"max_stories": 1}
+        mock_job.priority = 0
+        mock_job.position = 1
+        mock_job.template_id = None
+        mock_job.group_id = None
+        mock_job.retry_of = None
+        mock_job.created_at = "2026-01-18T10:00:00"
+        mock_job.queued_at = "2026-01-18T10:00:00"
+        mock_job.started_at = None
+        mock_job.finished_at = None
 
-            response = client.get(f"/jobs/{job.job_id}")
+        with patch("src.api.routers.jobs.get_scheduler_service") as mock_get_service:
+            mock_service = MagicMock()
+            mock_service.get_job.return_value = mock_job
+            mock_get_service.return_value = mock_service
+
+            response = client.get("/jobs/test-job-123")
 
             assert response.status_code == 200
             data = response.json()
-            assert data["job_id"] == job.job_id
-            assert data["type"] == "story_generation"
-            assert data["status"] == "running"
-            assert data["pid"] == 11111
+            assert data["job_id"] == "test-job-123"
+            assert data["job_type"] == "story"
+            assert data["status"] == "QUEUED"
 
-    def test_get_nonexistent_job(self, client, temp_jobs_dir):
+    def test_get_nonexistent_job(self, client):
         """Should return 404 for nonexistent job."""
-        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.api.routers.jobs.get_scheduler_service") as mock_get_service:
+            mock_service = MagicMock()
+            mock_service.get_job.return_value = None
+            mock_get_service.return_value = mock_service
+
             response = client.get("/jobs/nonexistent-job-id")
 
             assert response.status_code == 404
 
 
 class TestJobListEndpoint:
-    """Tests for GET /jobs endpoint."""
+    """Tests for GET /jobs endpoint (Scheduler-based, Phase 3)."""
 
-    def test_list_jobs_empty(self, client, temp_jobs_dir):
+    def test_list_jobs_empty(self, client):
         """Should return empty list when no jobs."""
-        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
+        with patch("src.api.routers.jobs.get_scheduler_service") as mock_get_service:
+            mock_service = MagicMock()
+            mock_service.list_all_jobs.return_value = []
+            mock_service.get_queue_stats.return_value = {
+                "queued_count": 0,
+                "running_count": 0,
+            }
+            mock_get_service.return_value = mock_service
+
             response = client.get("/jobs")
 
             assert response.status_code == 200
@@ -172,25 +199,57 @@ class TestJobListEndpoint:
             assert data["jobs"] == []
             assert data["total"] == 0
 
-    def test_list_jobs_with_filter(self, client, temp_jobs_dir):
-        """Should filter jobs by status and type."""
-        from src.infra.job_manager import create_job, update_job_status
+    def test_list_jobs_with_jobs(self, client):
+        """Should return jobs from scheduler."""
+        from unittest.mock import MagicMock
+        from src.scheduler.entities import Job, JobStatus
 
-        with patch("src.infra.job_manager.JOBS_DIR", temp_jobs_dir):
-            # Create jobs
-            job1 = create_job("story_generation", {})
-            job2 = create_job("research", {})
-            update_job_status(job1.job_id, "running")
+        mock_job1 = MagicMock(spec=Job)
+        mock_job1.job_id = "job-1"
+        mock_job1.job_type = "story"
+        mock_job1.status = JobStatus.RUNNING
+        mock_job1.params = {}
+        mock_job1.priority = 0
+        mock_job1.position = 0
+        mock_job1.template_id = None
+        mock_job1.group_id = None
+        mock_job1.retry_of = None
+        mock_job1.created_at = "2026-01-18T10:00:00"
+        mock_job1.queued_at = "2026-01-18T10:00:00"
+        mock_job1.started_at = "2026-01-18T10:01:00"
+        mock_job1.finished_at = None
 
-            # Filter by status
-            response = client.get("/jobs?status=running")
+        mock_job2 = MagicMock(spec=Job)
+        mock_job2.job_id = "job-2"
+        mock_job2.job_type = "research"
+        mock_job2.status = JobStatus.QUEUED
+        mock_job2.params = {"topic": "test"}
+        mock_job2.priority = 5
+        mock_job2.position = 1
+        mock_job2.template_id = None
+        mock_job2.group_id = None
+        mock_job2.retry_of = None
+        mock_job2.created_at = "2026-01-18T10:00:00"
+        mock_job2.queued_at = "2026-01-18T10:00:00"
+        mock_job2.started_at = None
+        mock_job2.finished_at = None
+
+        with patch("src.api.routers.jobs.get_scheduler_service") as mock_get_service:
+            mock_service = MagicMock()
+            mock_service.list_all_jobs.return_value = [mock_job1, mock_job2]
+            mock_service.get_queue_stats.return_value = {
+                "queued_count": 1,
+                "running_count": 1,
+            }
+            mock_get_service.return_value = mock_service
+
+            response = client.get("/jobs")
+
+            assert response.status_code == 200
             data = response.json()
-            assert data["total"] == 1
-
-            # Filter by type
-            response = client.get("/jobs?type=research")
-            data = response.json()
-            assert data["total"] == 1
+            assert data["total"] == 2
+            assert data["queued_count"] == 1
+            assert data["running_count"] == 1
 
 
 class TestBuildCommands:

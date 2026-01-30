@@ -86,7 +86,8 @@ ollama pull nomic-embed-text
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ENABLE_STORY_SEMANTIC_DEDUP` | `true` | Enable semantic embedding dedup |
-| `STORY_SEMANTIC_THRESHOLD` | `0.85` | Semantic HIGH signal threshold |
+| `STORY_SEMANTIC_THRESHOLD_HIGH` | `0.85` | Semantic HIGH signal threshold |
+| `STORY_SEMANTIC_THRESHOLD_MEDIUM` | `0.70` | Semantic MEDIUM signal threshold |
 | `STORY_HYBRID_THRESHOLD` | `0.85` | Hybrid duplicate detection threshold |
 | `STORY_HYBRID_CANONICAL_WEIGHT` | `0.3` | Canonical component weight |
 | `STORY_HYBRID_SEMANTIC_WEIGHT` | `0.7` | Semantic component weight |
@@ -225,9 +226,9 @@ from src.infra.data_paths import (
 
 **Symptom:** Unique stories flagged as duplicates.
 
-**Solution:** Lower the thresholds:
+**Solution:** Raise the thresholds:
 ```bash
-STORY_SEMANTIC_THRESHOLD=0.90
+STORY_SEMANTIC_THRESHOLD_HIGH=0.90
 STORY_HYBRID_THRESHOLD=0.90
 ```
 

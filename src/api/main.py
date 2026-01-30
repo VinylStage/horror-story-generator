@@ -5,19 +5,31 @@ Local-only server for research operations.
 
 Phase B+: Includes Ollama resource management with auto-cleanup.
 Phase C: Optional API key authentication.
+Phase 3: Scheduler-based job execution model.
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import Depends, FastAPI
 
 from src import __version__
-from .routers import research, dedup, jobs, story
+from .routers import research, dedup, jobs, story, scheduler
 from .services.ollama_resource import (
     startup_resource_manager,
     shutdown_resource_manager,
     get_resource_manager,
 )
 from .dependencies.auth import verify_api_key, API_AUTH_ENABLED
+from ._scheduler_state import (
+    init_scheduler_service,
+    shutdown_scheduler_service,
+)
+
+# Project paths for scheduler
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+SCHEDULER_DB_PATH = PROJECT_ROOT / "data" / "scheduler.db"
+SCHEDULER_LOGS_DIR = PROJECT_ROOT / "logs"
 
 
 @asynccontextmanager
@@ -27,24 +39,40 @@ async def lifespan(app: FastAPI):
 
     Handles startup and shutdown of resources:
     - Ollama resource manager for model lifecycle
+    - Scheduler service (initialized but NOT auto-started)
     """
     # Startup
     await startup_resource_manager()
 
+    # Initialize scheduler service (does NOT start dispatch loop)
+    # Explicit /scheduler/start call required to begin job processing
+    SCHEDULER_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SCHEDULER_LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    init_scheduler_service(
+        db_path=SCHEDULER_DB_PATH,
+        project_root=PROJECT_ROOT,
+        logs_dir=SCHEDULER_LOGS_DIR,
+    )
+
     yield
 
-    # Shutdown - cleanup Ollama models
+    # Shutdown
+    shutdown_scheduler_service()
     await shutdown_resource_manager()
 
 # Tag metadata for Swagger UI
 tags_metadata = [
     {
-        "name": "story",
-        "description": "Story generation and listing - direct (blocking) story generation and registry queries",
+        "name": "scheduler",
+        "description": "Scheduler control - start, stop, and monitor the job execution engine",
     },
     {
         "name": "jobs",
-        "description": "Trigger-based job execution - non-blocking story and research generation via CLI subprocess",
+        "description": "Job management - CRUD operations for scheduler-based job execution. Legacy trigger endpoints are deprecated.",
+    },
+    {
+        "name": "story",
+        "description": "Story generation and listing - direct (blocking) story generation and registry queries",
     },
     {
         "name": "research",
@@ -124,11 +152,15 @@ async def resource_status():
 # Include routers WITH authentication dependency (when enabled)
 auth_dependency = [Depends(verify_api_key)] if API_AUTH_ENABLED else []
 
+# Scheduler control - independent system resource (Phase 3)
 app.include_router(
-    story.router, prefix="/story", tags=["story"], dependencies=auth_dependency
+    scheduler.router, prefix="/scheduler", tags=["scheduler"], dependencies=auth_dependency
 )
 app.include_router(
     jobs.router, prefix="/jobs", tags=["jobs"], dependencies=auth_dependency
+)
+app.include_router(
+    story.router, prefix="/story", tags=["story"], dependencies=auth_dependency
 )
 app.include_router(
     research.router, prefix="/research", tags=["research"], dependencies=auth_dependency

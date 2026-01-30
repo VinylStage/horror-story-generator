@@ -70,7 +70,8 @@
 | 환경 변수 | 기본값 | 설명 |
 |-----------|--------|------|
 | `ENABLE_STORY_SEMANTIC_DEDUP` | `true` | 시맨틱 임베딩 기반 중복 검사 |
-| `STORY_SEMANTIC_THRESHOLD` | `0.85` | 시맨틱 HIGH 신호 기준점 |
+| `STORY_SEMANTIC_THRESHOLD_HIGH` | `0.85` | 시맨틱 HIGH 신호 기준점 |
+| `STORY_SEMANTIC_THRESHOLD_MEDIUM` | `0.70` | 시맨틱 MEDIUM 신호 기준점 |
 | `STORY_HYBRID_THRESHOLD` | `0.85` | 하이브리드 중복 판정 기준점 |
 | `STORY_HYBRID_CANONICAL_WEIGHT` | `0.3` | 하이브리드 canonical 가중치 |
 | `STORY_HYBRID_SEMANTIC_WEIGHT` | `0.7` | 하이브리드 semantic 가중치 |
@@ -124,7 +125,7 @@
 
 ## 명시적 범위 외 (향후 작업)
 
-다음 기능은 v1.3.2에 **포함되지 않습니다**:
+다음 기능은 v1.5.0에 **포함되지 않습니다**:
 
 | 기능 | 상태 |
 |------|------|
@@ -140,9 +141,9 @@
 
 | 보고서 | 위치 |
 |--------|------|
-| 통합 파이프라인 검증 | `docs/analysis/UNIFIED_PIPELINE_FINAL_VERIFICATION.md` |
-| 스토리 중복 검사 검증 | `docs/analysis/STORY_DEDUP_FINAL_VERIFICATION.md` |
-| 전체 파이프라인 스모크 테스트 | `docs/analysis/FINAL_PIPELINE_SMOKE_TEST.md` |
+| 통합 파이프라인 검증 | `docs/archive/analysis/UNIFIED_PIPELINE_FINAL_VERIFICATION.md` |
+| 스토리 중복 검사 검증 | `docs/archive/analysis/STORY_DEDUP_FINAL_VERIFICATION.md` |
+| 전체 파이프라인 스모크 테스트 | `docs/archive/analysis/FINAL_PIPELINE_SMOKE_TEST.md` |
 | 모델 선택 검증 | `docs/verification/MODEL_SELECTION_VERIFICATION.md` |
 | Gemini Deep Research 검증 | `docs/verification/GEMINI_DEEP_RESEARCH_VERIFICATION.md` |
 | 전체 파이프라인 테스트 (v1.2.0) | `docs/verification/FULL_PIPELINE_TEST_20260113.md` |
@@ -195,14 +196,14 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
 ## 선언
 
-이 문서는 v1.3.2의 운영 계약입니다.
+이 문서는 v1.5.0의 운영 계약입니다.
 
 문서에 명시되지 않은 동작은 보장되지 않습니다.
 
 ---
 
 **검증자:** Claude Opus 4.5
-**태그:** v1.3.2
+**태그:** v1.5.0
 
 ---
 

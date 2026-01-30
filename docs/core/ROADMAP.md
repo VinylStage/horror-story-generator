@@ -28,6 +28,33 @@ The system currently supports:
 | Trigger API | Implemented | src/api/ |
 | Job Monitoring | Implemented | src/infra/job_monitor.py |
 | Graceful Shutdown | Implemented | SIGINT/SIGTERM handling |
+| **Job Scheduler Engine** | **Implemented** | src/scheduler/ (Phase 0-2) |
+| **Scheduler API** | **Implemented** | /scheduler/*, /jobs CRUD (Phase 3) |
+
+---
+
+## Recently Implemented Features
+
+### Job Scheduler System (v1.5.0)
+
+스케줄러 기반 Job 실행 모델 구현.
+
+**구현 범위:**
+- Scheduler Engine (Phase 0-2)
+  - SQLite 기반 Job persistence
+  - Priority queue 및 position 기반 정렬
+  - JobGroup sequential/parallel 실행
+  - Crash recovery
+- Scheduler API Integration (Phase 3)
+  - `/scheduler/start`, `/stop`, `/status`
+  - `/jobs` CRUD (POST, GET, PATCH, DELETE)
+  - `/jobs/{id}/runs` 실행 이력
+  - Legacy trigger endpoints deprecated
+
+**Documentation:**
+- [Job Scheduler Design](../technical/JOB_SCHEDULER_DESIGN.md)
+- [API Contract](../job-scheduler/API_CONTRACT.md)
+- [As-Is/To-Be API Design](../technical/job-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md)
 
 ---
 
@@ -35,35 +62,30 @@ The system currently supports:
 
 ### Near-Term (Next Release)
 
-#### Webhook Notifications
+#### ~~Webhook Notifications~~ (IMPLEMENTED v1.3.0)
 
-Enable callback notifications on job completion.
+~~Enable callback notifications on job completion.~~
 
-**Scope:**
-- POST to user-specified URL on job status change
-- Configurable events (succeeded, failed, cancelled)
-- Retry logic for failed callbacks
-
-**Proposed API:**
-```json
-{
-  "topic": "...",
-  "webhook_url": "https://example.com/callback",
-  "events": ["succeeded", "failed"]
-}
-```
+**Status:** ✅ Implemented in v1.3.0
 
 ---
 
-#### Batch Job Trigger
+#### ~~Batch Job Trigger~~ (IMPLEMENTED v1.4.0)
 
-Trigger multiple jobs in a single request.
+~~Trigger multiple jobs in a single request.~~
+
+**Status:** ✅ Implemented in v1.4.0
+
+---
+
+#### Job Scheduler Templates & Cron (Phase 4)
+
+JobTemplate 및 Cron 스케줄링 기능.
 
 **Scope:**
-- POST /jobs/batch/trigger
-- Accept array of job specifications
-- Return batch_id for status tracking
-- GET /jobs/batch/{batch_id} for aggregate status
+- JobTemplate CRUD APIs
+- Cron Schedule APIs
+- APScheduler 통합
 
 ---
 
