@@ -105,6 +105,39 @@ feat: add router abstraction (#123)
 
 - PRs targeting `main` are **FORBIDDEN** unless explicitly instructed by the user for release-related operations.
 
+### 4.4 Release PR Title Format
+
+When creating a PR from `develop` to `main` (release PR):
+
+- PR title MUST follow [Conventional Commits](https://www.conventionalcommits.org/) format.
+- This is CRITICAL for `release-please` to correctly parse commits and generate releases.
+
+**Format:**
+
+```
+<type>: <description> (#<pr-number>)
+```
+
+**Valid examples:**
+
+```
+feat: implement scheduler API integration (#98)
+fix: resolve authentication timeout issue (#102)
+docs: update API documentation for v1.6.0 (#105)
+```
+
+**Invalid examples:**
+
+```
+❌ Develop (#98)
+❌ Merge develop into main
+❌ Release v1.6.0
+```
+
+**Allowed types:** `feat` | `fix` | `docs` | `refactor` | `tech` | `chore` | `ci` | `test` | `perf`
+
+> **Failure to follow this format will cause `release-please` to skip automatic version bumping and release creation.**
+
 ---
 
 ## 5. Validation Awareness
