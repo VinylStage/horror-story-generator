@@ -2,7 +2,7 @@
 
 > **Status:** RESOLVED → DEC-011
 > **Document Version:** 1.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 >
 > **Decision**: Option A selected — Global single concurrency.
@@ -126,4 +126,13 @@ Phase 5+: When remote API parallelization needed:
 - [ ] Defer Option B/C to future phase
 - [ ] Update DESIGN_GUARDS.md to promote OQ-001 → DEC-011
 - [ ] No persistence schema changes needed for Phase 4
+
+---
+
+## Related Documents
+
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일 (DEC-011 참조)
+- [EXECUTION_FLOW.md](./EXECUTION_FLOW.md) - 실행 흐름 다이어그램
+- [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
+- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 
