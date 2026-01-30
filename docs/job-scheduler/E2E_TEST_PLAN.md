@@ -1,7 +1,7 @@
 # Job Scheduler End-to-End Test Plan
 
 **Document Version:** 1.1.0
-**Application Version:** 1.5.0 (managed by release-please - DO NOT CHANGE)
+**Application Version:** 1.6.0 <!-- x-release-please-version -->
 **Phase:** 6-B Real Pipeline Validation
 **Last Updated:** 2026-01-18
 
@@ -266,3 +266,13 @@ python -m pytest tests/scheduler/test_pipeline_e2e.py -v --run-pipeline
 | DEC-007 | DESIGN_GUARDS.md | Retry flow tests |
 | DEC-012 | DESIGN_GUARDS.md | JobGroup tests |
 | INV-006 | DESIGN_GUARDS.md | Group completion atomicity |
+
+---
+
+## Related Documents
+
+- [E2E_TEST_REPORT.md](./E2E_TEST_REPORT.md) - E2E 테스트 결과
+- [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
+- [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
+- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요

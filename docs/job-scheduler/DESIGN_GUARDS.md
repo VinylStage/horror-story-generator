@@ -2,7 +2,7 @@
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 
 ---
@@ -486,4 +486,14 @@ Before implementation of any component:
 | 0.1.0 | 2026-01-18 | - | Initial draft |
 | 0.2.0 | 2026-01-18 | - | Aligned with API_CONTRACT.md: unified status model, promoted 5 OQs to decisions, updated DEC-004 to next-slot reservation |
 | 0.3.0 | 2026-01-18 | - | Locked DEC-011 (concurrency) and DEC-012 (JobGroup failure); all open questions resolved |
+
+---
+
+## Related Documents
+
+- [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
+- [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
+- [API_CONTRACT.md](./API_CONTRACT.md) - API 계약
+- [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
+- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

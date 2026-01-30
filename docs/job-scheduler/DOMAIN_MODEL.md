@@ -2,7 +2,7 @@
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 
 ---
@@ -334,3 +334,13 @@ Terminal states:
 | **Worker** | Component that performs actual execution |
 | **Artifact** | File produced by execution (e.g., story JSON) |
 | **Priority** | Relative importance affecting execution order |
+
+---
+
+## Related Documents
+
+- [ENTITY_RELATIONSHIPS.md](./ENTITY_RELATIONSHIPS.md) - 엔티티 관계 정의
+- [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
+- [API_CONTRACT.md](./API_CONTRACT.md) - API 계약
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
+- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요

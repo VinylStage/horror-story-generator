@@ -2,7 +2,7 @@
 
 > **Status:** IMPLEMENTED (Phase 3 API Integration Complete)
 > **Document Version:** 2.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 > **Implementation Branch:** feat/88-scheduler-api-integration
 
@@ -331,3 +331,10 @@ Rules:
 - This contract applies to **new scheduler-based execution only**
 
 ---
+
+## Related Documents
+
+- [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
+- [API_IMPACT.md](./API_IMPACT.md) - API 영향 분석
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일 및 결정사항
+- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
