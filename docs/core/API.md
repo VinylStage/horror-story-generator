@@ -565,6 +565,7 @@ Direct story generation and registry access. These endpoints execute synchronous
 Generate a story directly (blocking).
 
 **v1.4.3:** Supports `webhook_url` for fire-and-forget completion notification.
+**v1.6.1:** Supports `thumbnail_provider` for automatic thumbnail generation.
 
 **Request Body:**
 
@@ -575,7 +576,8 @@ Generate a story directly (blocking).
   "model": "ollama:qwen3:30b",
   "research_model": null,
   "save_output": true,
-  "webhook_url": "https://your-server.com/callback"
+  "webhook_url": "https://your-server.com/callback",
+  "thumbnail_provider": "openai_dalle3"
 }
 ```
 
@@ -587,6 +589,7 @@ Generate a story directly (blocking).
 | `research_model` | string | No | null | Research model for auto-research |
 | `save_output` | boolean | No | true | Save story to file |
 | `webhook_url` | string | No | null | Webhook URL for completion notification (v1.4.3) |
+| `thumbnail_provider` | string | No | null | Image provider for thumbnail. Options: `openai_dalle3`, `stability_ai`, `flux`, `local_sd`. Requires `ENABLE_THUMBNAIL_GENERATION=true` (v1.6.1) |
 
 **Response:** `200 OK`
 
@@ -605,9 +608,13 @@ Generate a story directly (blocking).
     "research_used": ["RC-20260113-084040"],
     "research_injection_mode": "topic_based"
   },
-  "webhook_triggered": true
+  "webhook_triggered": true,
+  "thumbnail_url": "https://oaidalleapiprodscus.blob.core.windows.net/...",
+  "thumbnail_provider": "openai_dalle3"
 }
 ```
+
+> **Note:** `thumbnail_url` and `thumbnail_provider` are only included when `ENABLE_THUMBNAIL_GENERATION=true` and a provider API key is configured. See [Thumbnail Generation Guide](../technical/THUMBNAIL_GENERATION.md).
 
 ---
 
