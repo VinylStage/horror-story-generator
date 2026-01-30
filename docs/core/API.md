@@ -534,7 +534,7 @@ Job의 실행 이력 (JobRun)을 조회합니다.
 ```json
 {
   "status": "ok",
-  "version": "1.3.2"
+  "version": "1.5.0"
 }
 ```
 

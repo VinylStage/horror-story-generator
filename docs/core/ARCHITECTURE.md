@@ -1055,4 +1055,4 @@ Key architectural decisions are documented in `docs/technical/decision_log.md`:
 
 ---
 
-**Note:** All documentation reflects v1.2.0 with model selection, Gemini Deep Research integration, and complete deduplication pipeline.
+**Note:** All documentation reflects v1.5.0 with model selection, Gemini Deep Research integration, unified backup/restore system, and complete deduplication pipeline.
