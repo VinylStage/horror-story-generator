@@ -62,6 +62,7 @@ docs/
 | [SYNC_WEBHOOK_DESIGN.md](technical/SYNC_WEBHOOK_DESIGN.md) | 동기 웹훅 설계 문서 |
 | [JOB_SCHEDULER_DESIGN.md](technical/JOB_SCHEDULER_DESIGN.md) | Job Scheduler 시스템 설계 |
 | [job-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md](technical/job-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md) | As-Is/To-Be API 설계 |
+| [THUMBNAIL_GENERATION.md](technical/THUMBNAIL_GENERATION.md) | **썸네일 이미지 자동 생성 가이드** (NEW) |
 
 ---
 
