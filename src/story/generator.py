@@ -300,6 +300,49 @@ def generate_description(story_text: str) -> str:
     return description
 
 
+def generate_slug(story_id: str) -> str:
+    """
+    생성된 스토리의 slug를 생성합니다.
+
+    Args:
+        story_id: 타임스탬프 기반 스토리 ID (예: "20260118_183713")
+
+    Returns:
+        str: URL-friendly slug (예: "story-20260118-183713")
+    """
+    return f"story-{story_id.replace('_', '-')}"
+
+
+def calculate_read_time(word_count: int) -> str:
+    """
+    단어 수를 기반으로 예상 읽기 시간을 계산합니다.
+
+    평균 읽기 속도를 분당 200자로 가정합니다.
+    최소 1분으로 반올림합니다.
+
+    Args:
+        word_count: 스토리 총 글자 수
+
+    Returns:
+        str: 읽기 시간 문자열 (예: "22 min read")
+    """
+    minutes = max(1, round(word_count / 200))
+    return f"{minutes} min read"
+
+
+def generate_story_filename(story_id: str) -> str:
+    """
+    스토리 파일명을 생성합니다.
+
+    Args:
+        story_id: 타임스탬프 기반 스토리 ID (예: "20260118_183713")
+
+    Returns:
+        str: 파일명 (예: "story-20260118-183713.md")
+    """
+    return f"story-{story_id.replace('_', '-')}.md"
+
+
 def save_story(
     story_text: str,
     output_dir: str,
@@ -333,7 +376,7 @@ def save_story(
 
     # 타임스탬프 기반 파일명 생성
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    story_filename = f"horror_story_{timestamp}.md"
+    story_filename = generate_story_filename(timestamp)
     story_path = os.path.join(output_dir, story_filename)
 
     # 제목, 태그, 설명 추출
@@ -341,13 +384,30 @@ def save_story(
     tags = extract_tags_from_story(story_text, template) if template else ["호러", "horror"]
     description = generate_description(story_text)
 
+    # Escape quotes in description for YAML compatibility
+    description_escaped = description.replace('"', '\\"')
+
     # YAML frontmatter 생성
     date_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Generate vinylog-specific fields
+    slug = generate_slug(timestamp)
+    read_time = calculate_read_time(len(story_text))
+
+    # Format tags as YAML array
+    tags_yaml = "\n".join([f"  - {tag}" for tag in tags])
+
     frontmatter = f"""---
 title: "{title}"
-date: {date_str}
-description: "{description}"
-tags: {json.dumps(tags, ensure_ascii=False)}
+slug: "{slug}"
+category: "Horror"
+date: "{date_str}"
+excerpt: "{description_escaped}"
+tags:
+{tags_yaml}
+readTime: "{read_time}"
+featured: false
+thumbnail: ""
 genre: "호러"
 wordCount: {len(story_text)}
 """
@@ -371,7 +431,7 @@ temperature: {metadata.get('config', {}).get('temperature', 0.8)}
 
     # 메타데이터 JSON 파일 저장
     if metadata:
-        metadata_filename = f"horror_story_{timestamp}_metadata.json"
+        metadata_filename = f"story-{timestamp.replace('_', '-')}_metadata.json"
         metadata_path = os.path.join(output_dir, metadata_filename)
 
         # 메타데이터에 추출된 정보 추가
