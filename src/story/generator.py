@@ -397,6 +397,35 @@ def save_story(
     # Format tags as YAML array
     tags_yaml = "\n".join([f"  - {tag}" for tag in tags])
 
+    # Generate thumbnail image (Issue #95)
+    thumbnail_url = ""
+    thumbnail_provider = None
+    thumbnail_generated_at = None
+
+    try:
+        from src.image import generate_thumbnail, is_image_generation_available
+
+        if is_image_generation_available():
+            logger.info("Generating thumbnail image...")
+            api_config = metadata.get("config", {}) if metadata else {}
+            thumbnail_result = generate_thumbnail(
+                story_text=story_text,
+                title=title,
+                config=api_config
+            )
+
+            if thumbnail_result.success:
+                thumbnail_url = thumbnail_result.thumbnail_url
+                thumbnail_provider = thumbnail_result.provider
+                thumbnail_generated_at = thumbnail_result.generated_at
+                logger.info(f"Thumbnail generated successfully via {thumbnail_provider}")
+            else:
+                logger.warning(f"Thumbnail generation failed: {thumbnail_result.error}")
+    except ImportError:
+        logger.debug("Image module not available, skipping thumbnail generation")
+    except Exception as e:
+        logger.warning(f"Thumbnail generation failed (non-fatal): {e}")
+
     frontmatter = f"""---
 title: "{title}"
 slug: "{slug}"
@@ -407,7 +436,7 @@ tags:
 {tags_yaml}
 readTime: "{read_time}"
 featured: false
-thumbnail: ""
+thumbnail: "{thumbnail_url}"
 genre: "호러"
 wordCount: {len(story_text)}
 """
@@ -415,6 +444,14 @@ wordCount: {len(story_text)}
     if metadata:
         frontmatter += f"""model: "{metadata.get('model', 'unknown')}"
 temperature: {metadata.get('config', {}).get('temperature', 0.8)}
+"""
+
+    # Add thumbnail metadata if generated
+    if thumbnail_provider:
+        frontmatter += f"""thumbnailProvider: "{thumbnail_provider}"
+"""
+    if thumbnail_generated_at:
+        frontmatter += f"""thumbnailGeneratedAt: "{thumbnail_generated_at}"
 """
 
     frontmatter += """draft: false
@@ -438,6 +475,12 @@ temperature: {metadata.get('config', {}).get('temperature', 0.8)}
         metadata["title"] = title
         metadata["tags"] = tags
         metadata["description"] = description
+
+        # Add thumbnail metadata
+        if thumbnail_url:
+            metadata["thumbnail_url"] = thumbnail_url
+            metadata["thumbnail_provider"] = thumbnail_provider
+            metadata["thumbnail_generated_at"] = thumbnail_generated_at
 
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(metadata, f, ensure_ascii=False, indent=2)
