@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0](https://github.com/VinylStage/horror-story-generator/compare/v1.5.0...v1.6.0) (2026-01-30)
+
+
+### Features
+
+* implement scheduler API integration and documentation updates ([#98](https://github.com/VinylStage/horror-story-generator/issues/98)) ([4d364f7](https://github.com/VinylStage/horror-story-generator/commit/4d364f774c4f6771dfa83ea94476b0a341eb48e4))
+
 ## [1.5.0](https://github.com/VinylStage/horror-story-generator/compare/v1.4.3...v1.5.0) (2026-01-18)
 
 
