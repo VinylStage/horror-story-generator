@@ -397,6 +397,7 @@ alignment_score = matched_dimensions / 5 × 100%
 | Research Context | `src/infra/research_context/` | Unified research selection & injection |
 | Story Dedup | `src/story/dedup/` | Story-level signature-based deduplication |
 | Research Executor | `src/research/executor/executor.py` | `run_research_pipeline()` for auto-research |
+| **Image Generator** | `src/image/` | Thumbnail generation with multi-provider support (v1.6.1) |
 
 ### Deduplication Control
 
