@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.1](https://github.com/VinylStage/horror-story-generator/compare/v1.6.0...v1.6.1) (2026-02-02)
+
+
+### Technical Improvements
+
+* remove Phase-prefixed debug logging ([#111](https://github.com/VinylStage/horror-story-generator/issues/111)) ([#116](https://github.com/VinylStage/horror-story-generator/issues/116)) ([864ab92](https://github.com/VinylStage/horror-story-generator/commit/864ab92e9a30d2e57ba1048ca42acb059dcd801f))
+
 ## [1.6.0](https://github.com/VinylStage/horror-story-generator/compare/v1.5.0...v1.6.0) (2026-01-30)
 
 

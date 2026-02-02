@@ -1,7 +1,7 @@
 # Job Scheduler End-to-End Test Plan
 
 **Document Version:** 1.1.0
-**Application Version:** 1.6.0 <!-- x-release-please-version -->
+**Application Version:** 1.6.1 <!-- x-release-please-version -->
 **Phase:** 6-B Real Pipeline Validation
 **Last Updated:** 2026-01-18
 
