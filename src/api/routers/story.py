@@ -75,7 +75,8 @@ async def generate_story(request: StoryGenerateRequest):
             research_model_spec=request.research_model,
             save_output=request.save_output,
             registry=registry,
-            target_length=request.target_length
+            target_length=request.target_length,
+            custom_tags=request.tags,  # v1.6.0: Custom tags support (Issue #109)
         )
 
         if not result.get("success", True):

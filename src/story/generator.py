@@ -210,7 +210,11 @@ def extract_title_from_story(story_text: str) -> str:
     return "무제"
 
 
-def extract_tags_from_story(story_text: str, template: Dict[str, Any]) -> List[str]:
+def extract_tags_from_story(
+    story_text: str,
+    template: Dict[str, Any],
+    custom_tags: Optional[List[str]] = None
+) -> List[str]:
     """
     소설과 템플릿에서 태그를 추출합니다.
 
@@ -220,6 +224,7 @@ def extract_tags_from_story(story_text: str, template: Dict[str, Any]) -> List[s
     Args:
         story_text (str): 생성된 소설 전체 텍스트
         template (Dict[str, Any]): 프롬프트 템플릿
+        custom_tags (Optional[List[str]]): 사용자 지정 커스텀 태그 (v1.6.0, Issue #109)
 
     Returns:
         List[str]: 추출된 태그 리스트
@@ -230,6 +235,10 @@ def extract_tags_from_story(story_text: str, template: Dict[str, Any]) -> List[s
         ['호러', 'horror', '심리스릴러', 'psychological']
     """
     tags = ["호러", "horror"]
+
+    # v1.6.0: 커스텀 태그 먼저 추가 (우선순위 높음)
+    if custom_tags:
+        tags.extend(custom_tags)
 
     # 템플릿에서 장르 태그 추가
     config = template.get("story_config", {})
@@ -347,7 +356,8 @@ def save_story(
     story_text: str,
     output_dir: str,
     metadata: Optional[Dict[str, Any]] = None,
-    template: Optional[Dict[str, Any]] = None
+    template: Optional[Dict[str, Any]] = None,
+    custom_tags: Optional[List[str]] = None
 ) -> str:
     """
     생성된 소설을 Astro + GraphQL 블로그용 마크다운 파일로 저장합니다.
@@ -360,6 +370,7 @@ def save_story(
         output_dir (str): 출력 디렉토리 경로
         metadata (Optional[Dict[str, Any]]): 저장할 메타데이터
         template (Optional[Dict[str, Any]]): 프롬프트 템플릿 (태그 추출용)
+        custom_tags (Optional[List[str]]): 사용자 지정 커스텀 태그 (v1.6.0, Issue #109)
 
     Returns:
         str: 저장된 마크다운 파일 경로
@@ -381,7 +392,13 @@ def save_story(
 
     # 제목, 태그, 설명 추출
     title = extract_title_from_story(story_text)
-    tags = extract_tags_from_story(story_text, template) if template else ["호러", "horror"]
+    # v1.6.0: custom_tags 지원 (Issue #109)
+    if template:
+        tags = extract_tags_from_story(story_text, template, custom_tags=custom_tags)
+    elif custom_tags:
+        tags = ["호러", "horror"] + custom_tags
+    else:
+        tags = ["호러", "horror"]
     description = generate_description(story_text)
 
     # Escape quotes in description for YAML compatibility
@@ -1109,7 +1126,8 @@ def generate_with_topic(
     research_model_spec: Optional[str] = None,
     save_output: bool = True,
     registry: Any = None,
-    target_length: Optional[int] = None
+    target_length: Optional[int] = None,
+    custom_tags: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Topic 기반 스토리 생성 (v1.2.0+)
@@ -1129,6 +1147,7 @@ def generate_with_topic(
         save_output: 파일 저장 여부
         registry: StoryRegistry 인스턴스 (중복 체크용)
         target_length: 목표 스토리 길이 (자). None이면 기본값 사용.
+        custom_tags: 사용자 지정 커스텀 태그 (v1.6.0, Issue #109)
 
     Returns:
         Dict with story, metadata, file_path (if saved)
@@ -1310,7 +1329,9 @@ def generate_with_topic(
             "generation": generation_length_meta,
             **research_metadata,
             "story_signature": story_signature,
-            "generation_mode": "topic_based" if topic else "random"
+            "generation_mode": "topic_based" if topic else "random",
+            # v1.6.0: Custom tags support (Issue #109)
+            "custom_tags": custom_tags
         }
     }
 
@@ -1351,7 +1372,8 @@ def generate_with_topic(
             story_text,
             config["output_dir"],
             result["metadata"],
-            None
+            None,
+            custom_tags=custom_tags  # v1.6.0: Custom tags support (Issue #109)
         )
         result["file_path"] = file_path
         logger.info(f"[TopicGen] Saved: {file_path}")

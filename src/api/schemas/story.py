@@ -16,6 +16,12 @@ class StoryGenerateRequest(BaseModel):
         description="Story topic. If provided, searches for matching research card or auto-generates one.",
         json_schema_extra={"examples": ["Korean apartment horror", "Subway late night encounter"]}
     )
+    # v1.6.0: Custom tags support (Issue #109)
+    tags: Optional[List[str]] = Field(
+        default=None,
+        description="Custom tags to include. Merged with auto-generated tags (default: ['호러', 'horror']).",
+        json_schema_extra={"examples": [["수면공포", "청각공포", "일상공포"]]}
+    )
     auto_research: bool = Field(
         default=True,
         description="Auto-generate research if no matching card found for topic"
