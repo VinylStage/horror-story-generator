@@ -847,6 +847,130 @@ List all jobs with optional filtering.
 
 ---
 
+### Batch Job Endpoints (v1.4.0)
+
+#### POST /jobs/batch/trigger
+
+여러 Job을 한 번에 트리거합니다.
+
+**Request Body:**
+
+```json
+{
+  "jobs": [
+    {
+      "type": "research",
+      "topic": "Korean apartment horror",
+      "tags": ["urban", "isolation"],
+      "model": "deep-research",
+      "timeout": 300
+    },
+    {
+      "type": "story",
+      "max_stories": 1,
+      "enable_dedup": true,
+      "model": "ollama:qwen3:30b"
+    }
+  ],
+  "webhook_url": "https://your-server.com/callback",
+  "webhook_events": ["succeeded", "failed", "skipped"]
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `jobs` | array | **Yes** | - | Job 스펙 배열 (1-50개) |
+| `webhook_url` | string | No | null | 모든 Job 완료 시 호출할 URL |
+| `webhook_events` | array | No | ["succeeded", "failed", "skipped"] | Webhook 트리거 이벤트 |
+
+**Job Spec Fields:**
+
+| Field | Type | Job Type | Description |
+|-------|------|----------|-------------|
+| `type` | string | All | **필수** - "research" 또는 "story" |
+| `topic` | string | Research | **필수** - 연구 주제 |
+| `tags` | array | Research | 분류 태그 |
+| `max_stories` | integer | Story | 최대 스토리 수 (기본 1) |
+| `enable_dedup` | boolean | Story | 중복 검사 활성화 |
+| `target_length` | integer | Story | 목표 스토리 길이 (300-10000자) |
+| `model` | string | All | 모델 선택 |
+| `timeout` | integer | All | 타임아웃 (초) |
+
+**Response:** `202 Accepted`
+
+```json
+{
+  "batch_id": "batch-abc123",
+  "job_ids": ["job-1", "job-2"],
+  "job_count": 2,
+  "status": "running",
+  "message": "Batch triggered with 2 jobs"
+}
+```
+
+**Error Response:** `400 Bad Request`
+
+```json
+{"detail": "No jobs were created. Errors: Job 0: Research job requires 'topic'"}
+```
+
+---
+
+#### GET /jobs/batch/{batch_id}
+
+Batch 상태를 조회합니다.
+
+**Response:** `200 OK`
+
+```json
+{
+  "batch_id": "batch-abc123",
+  "status": "running",
+  "total_jobs": 2,
+  "completed_jobs": 1,
+  "succeeded_jobs": 1,
+  "failed_jobs": 0,
+  "running_jobs": 1,
+  "queued_jobs": 0,
+  "jobs": [
+    {
+      "job_id": "job-1",
+      "type": "research",
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "job_id": "job-2",
+      "type": "story_generation",
+      "status": "running",
+      "error": null
+    }
+  ],
+  "created_at": "2026-01-18T10:00:00",
+  "finished_at": null,
+  "webhook_url": "https://your-server.com/callback",
+  "webhook_sent": false
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | 전체 상태: queued, running, completed, partial_failure, failed |
+| `total_jobs` | integer | 총 Job 수 |
+| `completed_jobs` | integer | 완료된 Job 수 |
+| `succeeded_jobs` | integer | 성공한 Job 수 |
+| `failed_jobs` | integer | 실패한 Job 수 |
+| `running_jobs` | integer | 실행 중인 Job 수 |
+| `queued_jobs` | integer | 대기 중인 Job 수 |
+
+**Error Response:** `404 Not Found`
+
+```json
+{"detail": "Batch not found: batch-nonexistent"}
+```
+
+---
+
 #### POST /jobs/{job_id}/cancel
 
 Cancel a running job by sending SIGTERM.
@@ -1103,6 +1227,77 @@ Only available for research jobs with completed artifacts.
   "index_size": 52,
   "message": "Card is sufficiently unique"
 }
+```
+
+---
+
+#### POST /research/matching-templates
+
+연구 카드의 canonical affinity를 기반으로 매칭되는 템플릿을 조회합니다. (Issue #21)
+
+**Request Body:**
+
+```json
+{
+  "card_id": "RC-20260115-143052",
+  "max_templates": 5,
+  "min_score": 0.5
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `card_id` | string | **Yes** | - | 매칭할 연구 카드 ID |
+| `max_templates` | integer | No | 5 | 반환할 최대 템플릿 수 (1-15) |
+| `min_score` | float | No | 0.5 | 최소 매칭 점수 (0.0-1.0) |
+
+**Response:** `200 OK`
+
+```json
+{
+  "card_id": "RC-20260115-143052",
+  "matching_templates": [
+    {
+      "template_id": "T-DOM-001",
+      "template_name": "Domestic Intrusion",
+      "match_score": 0.85,
+      "canonical_core": {
+        "setting": "domestic_space",
+        "primary_fear": "loss_of_autonomy",
+        "antagonist": "collective",
+        "mechanism": "erosion"
+      },
+      "match_details": {
+        "primary_fear": 1.5,
+        "mechanism": 1.3,
+        "setting": 1.0
+      }
+    }
+  ],
+  "total_templates": 15,
+  "card_affinity": {
+    "setting": ["domestic_space", "urban_apartment"],
+    "primary_fear": ["loss_of_autonomy"],
+    "antagonist": ["collective", "neighbor"],
+    "mechanism": ["erosion", "isolation"]
+  },
+  "message": "Found 1 matching templates"
+}
+```
+
+**Match Scoring Weights:**
+
+| Dimension | Weight | Description |
+|-----------|--------|-------------|
+| `primary_fear` | 1.5 | 핵심 공포 요소 |
+| `mechanism` | 1.3 | 위협 메커니즘 |
+| `antagonist` | 1.2 | 적대자 유형 |
+| `setting` | 1.0 | 배경 설정 |
+
+**Error Response:** `404 Not Found`
+
+```json
+{"detail": "Research card not found: RC-nonexistent"}
 ```
 
 ---
