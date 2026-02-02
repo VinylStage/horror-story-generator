@@ -107,6 +107,26 @@ flowchart LR
     G --> H["Story Generation"]
 ```
 
+### Output Format (v1.6.1+)
+
+**Filename Convention**:
+- Markdown: `story-{timestamp}.md` (hyphens, not underscores)
+- Metadata: `story-{timestamp}_metadata.json`
+- Example: `story-20260118-183713.md`
+
+**Frontmatter Structure**:
+1. Core: title, slug, category
+2. Temporal: date (quoted ISO format)
+3. Content: excerpt, tags (YAML array)
+4. Reading: readTime, featured, thumbnail
+5. System: genre, wordCount, model, temperature, draft
+
+**Field Calculation**:
+- `slug`: `story-{timestamp}` (hyphens)
+- `excerpt`: First 200 chars (escaped)
+- `readTime`: `round(wordCount / 200)` min (min 1)
+- `tags`: YAML array format
+
 **Topic Matching:**
 1. Search cards by topic keyword (exact match > partial match > title match)
 2. If no match and `auto_research=True`, generate new research via `run_research_pipeline()`
@@ -377,6 +397,7 @@ alignment_score = matched_dimensions / 5 × 100%
 | Research Context | `src/infra/research_context/` | Unified research selection & injection |
 | Story Dedup | `src/story/dedup/` | Story-level signature-based deduplication |
 | Research Executor | `src/research/executor/executor.py` | `run_research_pipeline()` for auto-research |
+| **Image Generator** | `src/image/` | Thumbnail generation with multi-provider support (v1.6.1) |
 
 ### Deduplication Control
 

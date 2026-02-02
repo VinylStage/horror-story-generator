@@ -2,7 +2,7 @@
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 
 ---
@@ -675,4 +675,14 @@ Before any implementation, verify:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1.0 | 2026-01-18 | - | Initial persistence schema design |
+
+---
+
+## Related Documents
+
+- [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
+- [ENTITY_RELATIONSHIPS.md](./ENTITY_RELATIONSHIPS.md) - 엔티티 관계 정의
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
+- [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
+- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

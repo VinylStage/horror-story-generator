@@ -106,6 +106,10 @@ async def generate_story(request: StoryGenerateRequest):
             if lines and lines[0].startswith("#"):
                 title = lines[0].lstrip("#").strip()
 
+        # Extract thumbnail info from metadata
+        thumbnail_url = metadata.get("thumbnail_url")
+        thumbnail_provider = metadata.get("thumbnail_provider")
+
         # v1.4.3: Fire webhook for success case
         webhook_triggered = False
         if request.webhook_url:
@@ -118,6 +122,8 @@ async def generate_story(request: StoryGenerateRequest):
                     "title": title or extract_title_from_metadata(metadata),
                     "file_path": result.get("file_path"),
                     "word_count": metadata.get("word_count"),
+                    "thumbnail_url": thumbnail_url,
+                    "thumbnail_provider": thumbnail_provider,
                 },
             )
 
@@ -130,6 +136,8 @@ async def generate_story(request: StoryGenerateRequest):
             word_count=metadata.get("word_count"),
             metadata=metadata,
             webhook_triggered=webhook_triggered,
+            thumbnail_url=thumbnail_url,
+            thumbnail_provider=thumbnail_provider,
         )
 
     except Exception as e:

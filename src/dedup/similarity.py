@@ -87,10 +87,10 @@ def observe_similarity(
     global _generation_memory
 
     if not _generation_memory:
-        logger.info("[Phase2B][OBSERVE] 첫 번째 생성 - 비교 대상 없음")
+        logger.info("첫 번째 생성 - 비교 대상 없음")
         return None
 
-    logger.info(f"[Phase2B][OBSERVE] 유사도 관측 시작 (기존 {len(_generation_memory)}개 스토리와 비교)")
+    logger.info(f"유사도 관측 시작 (기존 {len(_generation_memory)}개 스토리와 비교)")
 
     highest_similarity = 0.0
     most_similar_record: Optional[GenerationRecord] = None
@@ -121,15 +121,15 @@ def observe_similarity(
 
     # Log observation (THIS IS THE KEY OUTPUT - observation only)
     if most_similar_record:
-        logger.info(f"[Phase2B][OBSERVE] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info(f"[Phase2B][OBSERVE] 유사도 관측 결과:")
-        logger.info(f"[Phase2B][OBSERVE]   현재: \"{current_title}\"")
-        logger.info(f"[Phase2B][OBSERVE]   가장 유사: \"{most_similar_record.title}\" (ID: {most_similar_record.story_id})")
-        logger.info(f"[Phase2B][OBSERVE]   텍스트 유사도: {highest_similarity:.2%}")
-        logger.info(f"[Phase2B][OBSERVE]   정규화 키 일치: {canonical_match_count}/5")
-        logger.info(f"[Phase2B][OBSERVE]   신호 수준: {signal}")
-        logger.info(f"[Phase2B][OBSERVE] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info(f"[Phase2B][OBSERVE] ⚠️ 이 관측은 생성에 영향을 주지 않습니다")
+        logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        logger.info(f"유사도 관측 결과:")
+        logger.info(f"  현재: \"{current_title}\"")
+        logger.info(f"  가장 유사: \"{most_similar_record.title}\" (ID: {most_similar_record.story_id})")
+        logger.info(f"  텍스트 유사도: {highest_similarity:.2%}")
+        logger.info(f"  정규화 키 일치: {canonical_match_count}/5")
+        logger.info(f"  신호 수준: {signal}")
+        logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        logger.info(f"⚠️ 이 관측은 생성에 영향을 주지 않습니다")
 
         return {
             "closest_story_id": most_similar_record.story_id,
@@ -174,7 +174,7 @@ def add_to_generation_memory(
     )
 
     _generation_memory.append(record)
-    logger.info(f"[Phase2B][OBSERVE] 생성 메모리에 추가: {story_id} (총 {len(_generation_memory)}개)")
+    logger.info(f"생성 메모리에 추가: {story_id} (총 {len(_generation_memory)}개)")
 
 
 # =============================================================================
@@ -210,7 +210,7 @@ def load_past_stories_into_memory(records: List[Any]) -> int:
         _generation_memory.append(gen_record)
         loaded += 1
 
-    logger.info(f"[Phase2C][CONTROL] 과거 스토리 {loaded}개를 in-memory에 로드")
+    logger.info(f"과거 스토리 {loaded}개를 in-memory에 로드")
     return loaded
 
 
@@ -255,4 +255,4 @@ def clear_generation_memory() -> None:
     """Clear the generation memory. Useful for testing."""
     global _generation_memory
     _generation_memory = []
-    logger.info("[Phase2B][OBSERVE] 생성 메모리 초기화 완료")
+    logger.info("생성 메모리 초기화 완료")

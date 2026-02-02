@@ -88,7 +88,7 @@ def count_cluster_occurrences_in_registry(
     try:
         recent = registry.load_recent_accepted(limit=lookback)
     except Exception as e:
-        logger.warning(f"[Phase3B][PRE] Registry 조회 실패: {e}")
+        logger.warning(f"Registry 조회 실패: {e}")
         return 0
 
     count = sum(
@@ -175,12 +175,12 @@ def select_random_template(
         filtered = [s for s in candidates if s.get('template_id') not in exclude_template_ids]
         if filtered:  # Only apply if we still have candidates
             candidates = filtered
-            logger.info(f"[Phase2C][CONTROL] 템플릿 강제 제외: {exclude_template_ids}")
+            logger.info(f"템플릿 강제 제외: {exclude_template_ids}")
 
     # Phase 3B-B1: Weighted selection based on registry history
     if registry is not None:
         cluster_count = count_cluster_occurrences_in_registry(registry)
-        logger.info(f"[Phase3B][PRE] Systemic cluster count (last {PHASE3B_LOOKBACK_WINDOW}): {cluster_count}")
+        logger.info(f"Systemic cluster count (last {PHASE3B_LOOKBACK_WINDOW}): {cluster_count}")
 
         if cluster_count >= 4:
             # Compute weights for candidates
@@ -189,7 +189,7 @@ def select_random_template(
             # Log penalty application
             penalty_pct = int((1 - min(weights)) * 100)
             if penalty_pct > 0:
-                logger.info(f"[Phase3B][PRE] Applying weight penalty: -{penalty_pct}%")
+                logger.info(f"Applying weight penalty: -{penalty_pct}%")
 
             # Use weighted random selection
             selected = random.choices(candidates, weights=weights, k=1)[0]
@@ -202,7 +202,7 @@ def select_random_template(
 
     _last_template_id = selected.get('template_id')
 
-    logger.info(f"[Phase3B][PRE] Selected template: {selected.get('template_id')} - {selected.get('template_name')}")
+    logger.info(f"Selected template: {selected.get('template_id')} - {selected.get('template_name')}")
     return selected
 
 

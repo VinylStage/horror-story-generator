@@ -2,7 +2,7 @@
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 
 ---
@@ -530,4 +530,13 @@ This guarantees:
 | **Legacy System** | Current immediate-execution job system |
 | **Coexistence** | Period where both systems operate in parallel |
 | **Next-Slot Reservation** | Direct API reserving next execution slot without preempting current job |
+
+---
+
+## Related Documents
+
+- [API_CONTRACT.md](./API_CONTRACT.md) - API 계약 및 구현 상태
+- [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
+- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

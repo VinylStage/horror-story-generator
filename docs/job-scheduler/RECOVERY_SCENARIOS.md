@@ -2,7 +2,7 @@
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 
 ---
@@ -422,4 +422,14 @@ test_crash_during_running_job:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1.0 | 2026-01-18 | - | Initial recovery scenarios |
+
+---
+
+## Related Documents
+
+- [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
+- [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
+- [E2E_TEST_PLAN.md](./E2E_TEST_PLAN.md) - E2E 테스트 계획
+- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

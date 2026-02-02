@@ -47,6 +47,12 @@ class StoryGenerateRequest(BaseModel):
         description="Webhook URL for completion notification (fire-and-forget)",
         json_schema_extra={"examples": ["https://example.com/webhook"]}
     )
+    # v1.5.0: Thumbnail generation (Issue #95)
+    thumbnail_provider: Optional[str] = Field(
+        default=None,
+        description="Image provider for thumbnail. Options: 'openai_dalle3' (default), 'stability_ai', 'flux', 'local_sd'. Requires ENABLE_THUMBNAIL_GENERATION=true.",
+        json_schema_extra={"examples": ["openai_dalle3", "stability_ai", "flux", "local_sd"]}
+    )
 
 
 class StoryGenerateResponse(BaseModel):
@@ -64,6 +70,15 @@ class StoryGenerateResponse(BaseModel):
     webhook_triggered: bool = Field(
         default=False,
         description="Whether a webhook notification was triggered"
+    )
+    # v1.5.0: Thumbnail generation (Issue #95)
+    thumbnail_url: Optional[str] = Field(
+        default=None,
+        description="URL of generated thumbnail image (empty if disabled or failed)"
+    )
+    thumbnail_provider: Optional[str] = Field(
+        default=None,
+        description="Image provider used for thumbnail generation"
     )
 
 
