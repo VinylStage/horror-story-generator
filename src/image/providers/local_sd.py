@@ -175,8 +175,18 @@ class LocalSDProvider(ImageProvider):
             History data for completed prompt.
         """
         start_time = time.time()
+        last_log_time = 0
+
+        logger.info(f"[LocalSD] Waiting for completion (timeout: {max_wait}s)...")
 
         while time.time() - start_time < max_wait:
+            elapsed = int(time.time() - start_time)
+
+            # Log progress every 10 seconds
+            if elapsed > 0 and elapsed % 10 == 0 and elapsed != last_log_time:
+                logger.info(f"[LocalSD] Processing... {elapsed}s elapsed")
+                last_log_time = elapsed
+
             conn = HTTPConnection(self.host, self.port, timeout=10)
             conn.request("GET", f"/history/{prompt_id}")
             response = conn.getresponse()
@@ -186,6 +196,8 @@ class LocalSDProvider(ImageProvider):
                 conn.close()
 
                 if prompt_id in history:
+                    elapsed = int(time.time() - start_time)
+                    logger.info(f"[LocalSD] Completed in {elapsed}s")
                     return history[prompt_id]
             else:
                 conn.close()
@@ -229,12 +241,13 @@ class LocalSDProvider(ImageProvider):
             )
 
         try:
-            logger.info(f"Calling local SD via ComfyUI ({self.host}:{self.port})")
-            logger.debug(f"Prompt: {prompt[:100]}...")
+            logger.info(f"[LocalSD] Server: {self.host}:{self.port}")
+            logger.info(f"[LocalSD] Resolution: {width}x{height}")
 
             # Generate and queue workflow
             workflow = self._get_workflow(prompt, width, height)
             prompt_id = self._queue_prompt(workflow)
+            logger.info(f"[LocalSD] Queued prompt: {prompt_id}")
 
             # Wait for completion
             history = self._wait_for_completion(prompt_id, IMAGE_GENERATION_TIMEOUT)
@@ -256,7 +269,7 @@ class LocalSDProvider(ImageProvider):
                         else:
                             image_url = f"http://{self.host}:{self.port}/view?filename={filename}"
 
-                        logger.info("Local SD image generated successfully")
+                        logger.info(f"[LocalSD] Generated: {filename}")
 
                         return ImageResult(
                             success=True,

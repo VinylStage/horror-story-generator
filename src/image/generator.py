@@ -6,6 +6,7 @@ across multiple providers with fallback support.
 """
 
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Dict, Any, List
@@ -143,10 +144,14 @@ def generate_thumbnail(
         and returned in ThumbnailResult.error with graceful degradation.
     """
     timestamp = datetime.now().isoformat()
+    start_time = time.time()
+
+    logger.info("[Thumbnail] Starting thumbnail generation")
+    logger.info(f"[Thumbnail] Title: {title[:50]}..." if len(title) > 50 else f"[Thumbnail] Title: {title}")
 
     # Check if generation is enabled and available
     if not is_image_generation_available():
-        logger.debug("Thumbnail generation skipped (disabled or no API keys)")
+        logger.info("[Thumbnail] Skipped (disabled or no API keys)")
         return ThumbnailResult(
             success=False,
             thumbnail_url="",
@@ -158,10 +163,10 @@ def generate_thumbnail(
     try:
         # Step 1: Extract visual keywords (or use custom prompt)
         if custom_prompt:
-            logger.info("Using custom prompt for image generation")
+            logger.info("[Thumbnail] Using custom prompt")
             keywords = {}
         elif skip_keyword_extraction:
-            logger.info("Skipping keyword extraction, using defaults")
+            logger.info("[Thumbnail] Using default keywords (extraction skipped)")
             keywords = {
                 "setting": "dark atmospheric space",
                 "mood": "unsettling, dark tones, low light",
@@ -169,14 +174,15 @@ def generate_thumbnail(
                 "horror_type": "psychological horror"
             }
         else:
-            logger.info("Extracting visual keywords from story...")
+            logger.info("[Thumbnail] Extracting visual keywords...")
             keywords = extract_visual_keywords(story_text, title, config)
+            logger.info(f"[Thumbnail] Keywords: {keywords}")
 
         # Step 2: Get providers to try
         providers_to_try = _get_providers_to_try(provider)
 
         if not providers_to_try:
-            logger.warning("No image providers available")
+            logger.warning("[Thumbnail] No providers available")
             return ThumbnailResult(
                 success=False,
                 thumbnail_url="",
@@ -185,12 +191,15 @@ def generate_thumbnail(
                 error="No image providers configured"
             )
 
+        available_names = [p.name for p in providers_to_try]
+        logger.info(f"[Thumbnail] Available providers: {available_names}")
+
         # Step 3: Try each provider in order
         last_error = None
 
         for image_provider in providers_to_try:
             if not image_provider.is_available():
-                logger.debug(f"Provider {image_provider.name} not available (no API key)")
+                logger.debug(f"[Thumbnail] {image_provider.name} not available (no API key)")
                 continue
 
             # Build provider-specific prompt
@@ -199,7 +208,10 @@ def generate_thumbnail(
             else:
                 prompt = build_image_prompt(keywords, image_provider.name, title)
 
-            logger.info(f"Attempting image generation with {image_provider.name}...")
+            logger.info(f"[Thumbnail] Using provider: {image_provider.name}")
+            logger.info(f"[Thumbnail] Prompt: {prompt[:100]}..." if len(prompt) > 100 else f"[Thumbnail] Prompt: {prompt}")
+
+            provider_start = time.time()
 
             # Generate image
             result = image_provider.generate_image(
@@ -208,8 +220,13 @@ def generate_thumbnail(
                 height=height
             )
 
+            elapsed = time.time() - provider_start
+
             if result.success:
-                logger.info(f"Thumbnail generated successfully via {result.provider}")
+                total_elapsed = time.time() - start_time
+                logger.info(f"[Thumbnail] Generated successfully ({elapsed:.1f}s)")
+                logger.info(f"[Thumbnail] URL: {result.url}")
+                logger.info(f"[Thumbnail] Total time: {total_elapsed:.1f}s")
                 return ThumbnailResult(
                     success=True,
                     thumbnail_url=result.url,
@@ -218,15 +235,17 @@ def generate_thumbnail(
                     metadata={
                         "keywords": keywords,
                         "prompt": prompt[:500],  # Truncate for storage
+                        "generation_time_seconds": round(elapsed, 1),
                         **result.metadata
                     }
                 )
             else:
                 last_error = result.error
-                logger.warning(f"Provider {image_provider.name} failed: {result.error}")
+                logger.warning(f"[Thumbnail] {image_provider.name} failed ({elapsed:.1f}s): {result.error}")
 
         # All providers failed
-        logger.warning("All image providers failed or unavailable")
+        total_elapsed = time.time() - start_time
+        logger.warning(f"[Thumbnail] All providers failed (total: {total_elapsed:.1f}s)")
         return ThumbnailResult(
             success=False,
             thumbnail_url="",
