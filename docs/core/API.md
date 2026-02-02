@@ -572,6 +572,7 @@ Generate a story directly (blocking).
 ```json
 {
   "topic": "Korean apartment horror",
+  "tags": ["수면공포", "청각공포", "일상공포"],
   "auto_research": true,
   "model": "ollama:qwen3:30b",
   "research_model": null,
@@ -584,6 +585,7 @@ Generate a story directly (blocking).
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `topic` | string | No | null | Story topic. If provided, searches for matching research card |
+| `tags` | string[] | No | null | Custom tags to include. Merged with auto-generated tags (default: `['호러', 'horror']`) (v1.6.0) |
 | `auto_research` | boolean | No | true | Auto-generate research if no matching card found |
 | `model` | string | No | null | Story model. Format: `ollama:qwen3:30b` or Claude model name |
 | `research_model` | string | No | null | Research model for auto-research |
