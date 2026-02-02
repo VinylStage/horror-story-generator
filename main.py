@@ -329,8 +329,8 @@ def run_research_stub() -> None:
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(stub_card, f, ensure_ascii=False, indent=2)
 
-    logger.info(f"[Phase2C] 연구 카드 스텁 생성 완료: {card_id}")
-    logger.info(f"[Phase2C] 저장 위치: {output_path}")
+    logger.info(f"연구 카드 스텁 생성 완료: {card_id}")
+    logger.info(f"저장 위치: {output_path}")
     logger.warning("[DEPRECATED] research_cards.jsonl is deprecated. Use src.research.executor instead.")
 
 
@@ -365,7 +365,7 @@ def main() -> None:
     # Phase 2C: Story Registry 초기화
     registry = None
     if args.enable_dedup:
-        logger.info("[Phase2C][CONTROL] 중복 제어 모드 활성화")
+        logger.info("중복 제어 모드 활성화")
         registry = init_registry(db_path=args.db_path)
 
         # 과거 스토리 로드
@@ -374,7 +374,7 @@ def main() -> None:
             load_past_stories_into_memory(past_stories)
 
         counts = registry.get_total_count()
-        logger.info(f"[Phase2C][CONTROL] Registry 상태: 수락={counts['accepted']}, 스킵={counts['skipped']}")
+        logger.info(f"Registry 상태: 수락={counts['accepted']}, 스킵={counts['skipped']}")
 
     # 실행 시작
     logger.info("=" * 80)
@@ -509,7 +509,7 @@ def main() -> None:
         # Phase 2C: Registry 정리
         if registry:
             close_registry()
-            logger.info("[Phase2C][CONTROL] Registry 연결 종료")
+            logger.info("Registry 연결 종료")
 
 
 if __name__ == "__main__":

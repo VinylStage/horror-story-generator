@@ -787,16 +787,16 @@ def generate_with_dedup_control(
     Returns:
         Optional[Dict]: 수락된 스토리 결과, SKIP 시 None
     """
-    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info("[Phase2C][CONTROL] 중복 제어 생성 시작")
-    logger.info("[Phase2C][CONTROL] 정책: HIGH만 거부, LOW/MEDIUM 수락")
-    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("중복 제어 생성 시작")
+    logger.info("정책: HIGH만 거부, LOW/MEDIUM 수락")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     config = load_environment()
     used_template_ids: set = set()
 
     for attempt in range(max_attempts):
-        logger.info(f"[Phase2C][CONTROL] Attempt {attempt}/{max_attempts - 1}")
+        logger.info(f"Attempt {attempt}/{max_attempts - 1}")
 
         # Template selection (Phase 3B: pass registry for weighted selection)
         if attempt == 0:
@@ -814,7 +814,7 @@ def generate_with_dedup_control(
         if template_id:
             used_template_ids.add(template_id)
 
-        logger.info(f"[Phase2C][CONTROL]   템플릿: {template_id} - {template_name}")
+        logger.info(f"  템플릿: {template_id} - {template_name}")
 
         # Research context selection (unified pipeline)
         research_context = None
@@ -909,12 +909,12 @@ def generate_with_dedup_control(
 
         # Phase 2C: Determine signal and decision
         signal = get_similarity_signal(similarity_observation)
-        logger.info(f"[Phase2C][CONTROL]   신호: {signal}")
+        logger.info(f"  신호: {signal}")
         logger.info(f"[DedupSignal] Signal={signal}, Template={template_id}")
 
         if should_accept_story(signal):
             # ACCEPT
-            logger.info(f"[Phase2C][CONTROL]   결정: ACCEPT")
+            logger.info(f"  결정: ACCEPT")
             logger.info(f"[DedupSignal] Decision=ACCEPT")
 
             # Add to in-memory
@@ -1045,7 +1045,7 @@ def generate_with_dedup_control(
                     None  # template
                 )
                 result["file_path"] = file_path
-                logger.info(f"[Phase2C][CONTROL] 저장 완료: {file_path}")
+                logger.info(f"저장 완료: {file_path}")
 
             # Persist to registry (with story-level dedup fields)
             registry.add_story(
@@ -1070,23 +1070,23 @@ def generate_with_dedup_control(
                     signal=signal
                 )
 
-            logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             return result
 
         else:
             # HIGH - need to retry
-            logger.info(f"[Phase2C][CONTROL]   결정: RETRY (HIGH 감지)")
+            logger.info(f"  결정: RETRY (HIGH 감지)")
             logger.info(f"[DedupSignal] Decision=RETRY, Attempt={attempt}")
             if attempt < max_attempts - 1:
-                logger.info(f"[Phase2C][CONTROL]   다음 시도로 진행...")
+                logger.info(f"  다음 시도로 진행...")
             continue
 
     # All attempts exhausted - SKIP
-    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info("[Phase2C][CONTROL] 모든 시도 실패 - SKIP")
-    logger.info("[Phase2C][CONTROL] 파일 저장 안함, 루프 계속")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("모든 시도 실패 - SKIP")
+    logger.info("파일 저장 안함, 루프 계속")
     logger.info("[DedupSignal] Decision=SKIP, Reason=AllAttemptsExhausted")
-    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     # Record skip in registry
     registry.add_story(
