@@ -5,8 +5,7 @@ Phase 3+: Scheduler-based task execution model.
 Renamed from jobs.py; /jobs endpoints kept as deprecated aliases.
 
 Endpoints:
-- POST /tasks - Create a single task
-- POST /tasks/batch - Create multiple tasks at once
+- POST /tasks - Create task(s). Always accepts an array of TaskCreateRequest.
 - GET /tasks - List tasks
 - GET /tasks/{task_id} - Get task details
 - PATCH /tasks/{task_id} - Update task priority
@@ -71,37 +70,30 @@ def _task_run_to_response(task_run) -> TaskRunResponse:
     )
 
 
-# POST /tasks - Create a single task
-@router.post("", response_model=TaskResponse, status_code=201)
-async def create_task(request: TaskCreateRequest):
+# POST /tasks - Create task(s). Always accepts an array.
+@router.post("", response_model=TaskBatchResponse, status_code=201)
+async def create_tasks(requests: List[TaskCreateRequest]):
     """
-    Create a single task.
+    Create task(s).
 
-    Enqueues a new task for scheduler execution.
+    Accepts an array of task specifications (story, research, or mixed).
+    Always returns a TaskBatchResponse with the list of created tasks.
+
+    **Single task:**
+    ```json
+    [{"type": "story", "params": {"topic": "Korean horror"}, "priority": 0}]
+    ```
+
+    **Multiple tasks (mixed types):**
+    ```json
+    [
+        {"type": "story", "params": {"topic": "Apartment horror"}, "priority": 0},
+        {"type": "research", "params": {"topic": "Urban legends"}, "priority": 10}
+    ]
+    ```
     """
-    service = get_scheduler_service()
-    try:
-        task = service.enqueue_task(
-            task_type=request.type,
-            params=request.params,
-            priority=request.priority,
-        )
-        return _task_to_response(task)
-    except Exception as e:
-        if "validation" in str(type(e).__name__).lower():
-            raise HTTPException(status_code=422, detail=str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to create task: {str(e)}")
-
-
-# POST /tasks/batch - Create multiple tasks at once
-@router.post("/batch", response_model=TaskBatchResponse, status_code=201)
-async def create_batch_tasks(requests: List[TaskCreateRequest]):
-    """
-    Create multiple tasks at once.
-
-    Accepts an array of task specifications and enqueues them all.
-    Returns the list of created tasks.
-    """
+    if not requests:
+        raise HTTPException(status_code=422, detail="At least one task is required.")
     service = get_scheduler_service()
     try:
         created = []

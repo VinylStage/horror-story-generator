@@ -16,11 +16,11 @@ def client():
     return TestClient(app)
 
 
-class TestCreateTask:
-    """Tests for POST /tasks endpoint."""
+class TestCreateTasks:
+    """Tests for POST /tasks endpoint (always array input)."""
 
     def test_create_single_task(self, client):
-        """Should create a single task."""
+        """Should create a single task from array with one item."""
         from src.scheduler.entities import Task, TaskStatus
 
         mock_task = MagicMock(spec=Task)
@@ -45,17 +45,19 @@ class TestCreateTask:
 
             response = client.post(
                 "/tasks",
-                json={"type": "story", "params": {"max_stories": 1}, "priority": 0}
+                json=[{"type": "story", "params": {"max_stories": 1}, "priority": 0}]
             )
 
             assert response.status_code == 201
             data = response.json()
-            assert data["task_id"] == "task-123"
-            assert data["task_type"] == "story"
-            assert data["status"] == "QUEUED"
+            assert data["total"] == 1
+            assert len(data["tasks"]) == 1
+            assert data["tasks"][0]["task_id"] == "task-123"
+            assert data["tasks"][0]["task_type"] == "story"
+            assert data["tasks"][0]["status"] == "QUEUED"
 
-    def test_create_batch_tasks(self, client):
-        """Should create multiple tasks from array via /tasks/batch."""
+    def test_create_multiple_tasks(self, client):
+        """Should create multiple tasks from array."""
         from src.scheduler.entities import Task, TaskStatus
 
         mock_task1 = MagicMock(spec=Task)
@@ -94,7 +96,7 @@ class TestCreateTask:
             mock_get_service.return_value = mock_service
 
             response = client.post(
-                "/tasks/batch",
+                "/tasks",
                 json=[
                     {"type": "story", "params": {"max_stories": 1}, "priority": 0},
                     {"type": "research", "params": {"topic": "test"}, "priority": 10},
@@ -107,6 +109,12 @@ class TestCreateTask:
             assert len(data["tasks"]) == 2
             assert data["tasks"][0]["task_id"] == "task-1"
             assert data["tasks"][1]["task_id"] == "task-2"
+
+    def test_create_tasks_empty_array_rejected(self, client):
+        """Should reject empty array."""
+        response = client.post("/tasks", json=[])
+        # FastAPI validates List min_length or returns 422
+        assert response.status_code == 422
 
 
 class TestGetTask:

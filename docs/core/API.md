@@ -44,10 +44,18 @@ curl -X POST http://localhost:8000/story/generate \
   -H "Content-Type: application/json" \
   -d '{"topic": "Korean apartment horror"}'
 
-# Generate research via scheduler task (recommended)
+# Create task(s) via scheduler (recommended, always array input)
 curl -X POST http://localhost:8000/tasks \
   -H "Content-Type: application/json" \
-  -d '{"type": "research", "params": {"topic": "Korean apartment horror", "model": "deep-research", "timeout": 300}}'
+  -d '[{"type": "research", "params": {"topic": "Korean apartment horror", "model": "deep-research", "timeout": 300}}]'
+
+# Create multiple tasks at once (mixed types)
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"type": "story", "params": {"topic": "Apartment horror"}, "priority": 0},
+    {"type": "research", "params": {"topic": "Urban legends"}, "priority": 10}
+  ]'
 
 # (Deprecated) Generate research via legacy trigger
 # curl -X POST http://localhost:8000/jobs/research/trigger \
@@ -243,36 +251,50 @@ curl -X POST http://localhost:8000/story/generate \
 
 #### POST /tasks
 
-새로운 Task를 생성하고 스케줄러 큐에 등록합니다.
+Task를 생성하고 스케줄러 큐에 등록합니다. **항상 배열 `[]` 형식**으로 입력합니다.
+1개든 여러 개든 story/research 혼합이든 모두 배열로 전송합니다.
 
-**Request Body:**
+**Request Body (배열):**
 
 ```json
-{
-  "type": "story",
-  "params": {
-    "max_stories": 1,
-    "enable_dedup": true,
-    "model": "ollama:qwen3:30b"
+[
+  {
+    "type": "story",
+    "params": {
+      "topic": "한국 아파트 호러",
+      "tags": ["수면공포", "청각공포"],
+      "auto_research": true,
+      "research_model": "deep-research",
+      "thumbnail_provider": "local_sd"
+    },
+    "priority": 10
   },
-  "priority": 10
-}
+  {
+    "type": "research",
+    "params": {
+      "topic": "도시전설 연구",
+      "model": "deep-research",
+      "timeout": 300
+    },
+    "priority": 5
+  }
+]
 ```
 
-**Topic-based story example (v1.6.1):**
+**단일 Task 등록 예시:**
 
 ```json
-{
-  "type": "story",
-  "params": {
-    "topic": "한국 아파트 호러",
-    "tags": ["수면공포", "청각공포"],
-    "auto_research": true,
-    "research_model": "deep-research",
-    "thumbnail_provider": "local_sd"
-  },
-  "priority": 10
-}
+[
+  {
+    "type": "story",
+    "params": {
+      "max_stories": 1,
+      "enable_dedup": true,
+      "model": "ollama:qwen3:30b"
+    },
+    "priority": 10
+  }
+]
 ```
 
 | Field | Type | Required | Default | Description |
@@ -307,41 +329,47 @@ curl -X POST http://localhost:8000/story/generate \
 
 **Response:** `201 Created`
 
-```json
-{
-  "task_id": "task-550e8400-e29b-41d4-a716-446655440000",
-  "task_type": "story",
-  "status": "QUEUED",
-  "params": {
-    "max_stories": 1,
-    "enable_dedup": true
-  },
-  "priority": 10,
-  "position": 3,
-  "template_id": null,
-  "group_id": null,
-  "retry_of": null,
-  "created_at": "2026-01-18T10:00:00",
-  "queued_at": "2026-01-18T10:00:00",
-  "started_at": null,
-  "finished_at": null
-}
-```
-
-**Batch (Array) Input:**
-
-```json
-[
-  {"type": "story", "params": {"topic": "주제1"}, "priority": 0},
-  {"type": "research", "params": {"topic": "연구주제"}, "priority": 10}
-]
-```
-
-**Batch Response:** `201 Created`
+응답은 항상 `TaskBatchResponse` 형식입니다.
 
 ```json
 {
-  "tasks": [...],
+  "tasks": [
+    {
+      "task_id": "task-550e8400-e29b-41d4-a716-446655440000",
+      "task_type": "story",
+      "status": "QUEUED",
+      "params": {
+        "topic": "한국 아파트 호러",
+        "tags": ["수면공포", "청각공포"]
+      },
+      "priority": 10,
+      "position": 3,
+      "template_id": null,
+      "group_id": null,
+      "retry_of": null,
+      "created_at": "2026-01-18T10:00:00",
+      "queued_at": "2026-01-18T10:00:00",
+      "started_at": null,
+      "finished_at": null
+    },
+    {
+      "task_id": "task-661f9500-f30c-52e5-b827-557766551111",
+      "task_type": "research",
+      "status": "QUEUED",
+      "params": {
+        "topic": "도시전설 연구"
+      },
+      "priority": 5,
+      "position": 4,
+      "template_id": null,
+      "group_id": null,
+      "retry_of": null,
+      "created_at": "2026-01-18T10:00:00",
+      "queued_at": "2026-01-18T10:00:00",
+      "started_at": null,
+      "finished_at": null
+    }
+  ],
   "total": 2
 }
 ```
