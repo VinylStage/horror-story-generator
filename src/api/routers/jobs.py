@@ -124,6 +124,19 @@ def build_story_command(params: dict) -> list[str]:
     if params.get("target_length"):
         cmd.extend(["--target-length", str(params["target_length"])])
 
+    # Issue #123: Topic-based generation params
+    if params.get("topic"):
+        cmd.extend(["--topic", params["topic"]])
+    if params.get("tags"):
+        cmd.append("--tags")
+        cmd.extend(params["tags"])
+    if params.get("auto_research") is False:
+        cmd.append("--no-auto-research")
+    if params.get("research_model"):
+        cmd.extend(["--research-model", params["research_model"]])
+    if params.get("thumbnail_provider"):
+        cmd.extend(["--thumbnail-provider", params["thumbnail_provider"]])
+
     return cmd
 
 
