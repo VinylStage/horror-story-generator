@@ -1461,7 +1461,10 @@ Recommended pattern for n8n or similar workflow tools:
 
 ### Webhook Integration (v1.3.0)
 
-Jobs can be configured to send HTTP POST notifications on completion:
+Jobs can be configured to send HTTP POST notifications on completion.
+
+> **v1.6.1:** `webhook_url`을 생략하면 환경변수 `DISCORD_WEBHOOK_URL`이 자동으로 사용됩니다.
+> 요청에 `webhook_url`을 명시하면 환경변수보다 우선 적용됩니다.
 
 **Configuration (in trigger request):**
 
@@ -1519,6 +1522,9 @@ Note: `cancelled` events do not trigger webhooks by default.
 ### Sync Endpoint Webhooks (v1.4.3)
 
 The sync endpoints (`/research/run`, `/story/generate`) support fire-and-forget webhooks.
+
+> **v1.6.1:** `webhook_url`을 생략하면 환경변수 `DISCORD_WEBHOOK_URL`이 자동으로 사용됩니다.
+> 요청에 `webhook_url`을 명시하면 환경변수보다 우선 적용됩니다.
 
 **Configuration (in request body):**
 

@@ -80,6 +80,7 @@ from src.infra.job_monitor import (
     monitor_all_running_jobs,
     cancel_job as cancel_job_func,
 )
+from src.infra.webhook import resolve_webhook_url
 
 router = APIRouter()
 
@@ -403,10 +404,11 @@ async def trigger_story_generation(request: StoryTriggerRequest):
     update_job_status(job.job_id, "queued")
 
     # v1.3.0: Set webhook configuration
+    webhook_url = resolve_webhook_url(request.webhook_url)
     job_data = load_job(job.job_id)
     if job_data:
-        if request.webhook_url:
-            job_data.webhook_url = request.webhook_url
+        if webhook_url:
+            job_data.webhook_url = webhook_url
             job_data.webhook_events = request.webhook_events
         from src.infra.job_manager import save_job
         save_job(job_data)
@@ -473,10 +475,11 @@ async def trigger_research_generation(request: ResearchTriggerRequest):
     update_job_status(job.job_id, "queued")
 
     # v1.3.0: Set webhook configuration
+    webhook_url = resolve_webhook_url(request.webhook_url)
     job_data = load_job(job.job_id)
     if job_data:
-        if request.webhook_url:
-            job_data.webhook_url = request.webhook_url
+        if webhook_url:
+            job_data.webhook_url = webhook_url
             job_data.webhook_events = request.webhook_events
         from src.infra.job_manager import save_job
         save_job(job_data)
@@ -604,7 +607,7 @@ async def trigger_batch_jobs(request: BatchTriggerRequest):
     # Create batch record
     batch = create_batch(
         job_ids=job_ids,
-        webhook_url=request.webhook_url,
+        webhook_url=resolve_webhook_url(request.webhook_url),
         webhook_events=request.webhook_events,
     )
 
