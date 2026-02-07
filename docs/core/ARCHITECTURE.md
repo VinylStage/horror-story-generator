@@ -132,6 +132,11 @@ flowchart LR
 2. If no match and `auto_research=True`, generate new research via `run_research_pipeline()`
 3. Use matched/generated research card for story context
 
+**Auto-Research 실패 시 동작:**
+- auto-research가 실패하거나 예외가 발생하면 **경고를 로깅**하고 스토리 생성을 계속합니다
+- 연구 카드 없이 템플릿 기반으로만 스토리를 생성합니다
+- 단, `RESEARCH_INJECT_REQUIRE=true`인 경우 연구 카드가 없으면 생성이 중단됩니다
+
 **API Entry Point:** `POST /story/generate` (blocking) or `POST /jobs/story/trigger` (non-blocking)
 
 ### Research Auto-Injection (Default: ON)
@@ -383,6 +388,34 @@ alignment_score = matched_dimensions / 5 × 100%
   }
 }
 ```
+
+### Template Weight Penalty (Phase 3B)
+
+특정 템플릿 클러스터의 과도한 반복을 방지하기 위해 **소프트 가중치 페널티**가 적용됩니다.
+
+**SYSTEMIC_INEVITABILITY_CLUSTER:**
+
+`antagonist=system` AND `twist=inevitability` 조합의 템플릿 그룹:
+
+| Template ID | Template Name |
+|-------------|---------------|
+| `T-SYS-001` | Systemic Erosion |
+| `T-APT-001` | Apartment Social Surveillance |
+| `T-INF-001` | Infrastructure Isolation |
+| `T-ECO-001` | Economic Annihilation |
+
+**가중치 페널티 규칙:**
+
+최근 수락된 스토리 10개(`PHASE3B_LOOKBACK_WINDOW`) 내에서 클러스터 템플릿 출현 빈도에 따라 선택 가중치를 감소시킵니다:
+
+| 출현 횟수 | 가중치 배수 | 효과 |
+|-----------|------------|------|
+| < 4 | 1.00 | 페널티 없음 |
+| ≥ 4 | 0.50 | -50% 가중치 |
+| ≥ 6 | 0.20 | -80% 가중치 |
+| ≥ 8 | 0.05 | -95% 가중치 |
+
+> **설계 원칙:** 가중치는 0이 되지 않습니다 (하드 블로킹 없음). 이는 사전 생성(pre-generation) 단계의 소프트 제어입니다.
 
 ### Key Modules
 
@@ -672,8 +705,17 @@ Each template defines:
 
 | Database | Location | Purpose |
 |----------|----------|---------|
-| Story Registry | `data/stories.db` | Story dedup fingerprints |
+| Story Registry | `data/story_registry.db` | Story dedup fingerprints (configurable via `STORY_REGISTRY_DB_PATH`) |
 | Research Registry | `data/research_registry.db` | Research card metadata |
+
+**Story Registry 스키마 버전 이력:**
+
+| Version | 변경 내용 |
+|---------|----------|
+| 1.0.0 | 초기 스키마 - 기본 스토리 메타데이터 저장 |
+| 1.1.0 | `story_signature`, `canonical_core_json`, `research_used_json` 컬럼 추가 (스토리 레벨 중복 검사 지원) |
+
+> 스키마 버전 불일치 시 자동 마이그레이션이 실행되며, 마이그레이션 전 자동 백업이 생성됩니다.
 
 ### File Storage
 
