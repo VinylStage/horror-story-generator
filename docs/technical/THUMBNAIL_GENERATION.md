@@ -222,10 +222,32 @@ curl -X POST http://localhost:8000/story/generate \
 
 ## Fallback Behavior
 
-Provider 순서:
-1. Primary Provider (설정된 경우)
-2. Fallback Provider (설정된 경우)
-3. 사용 가능한 첫 번째 Provider
+### Provider 선택 흐름
+
+```
+┌─────────────────────────┐
+│ thumbnail_provider 지정? │
+└────────┬────────────────┘
+         │
+    ┌────▼────┐    Yes    ┌──────────────────┐
+    │ 지정됨?  │─────────▶│ 해당 Provider만   │
+    └────┬────┘          │ 시도 (fallback 없음)│
+         │ No            └──────────────────┘
+    ┌────▼──────────────────┐
+    │ 1. Primary Provider    │
+    │ 2. Fallback Provider   │
+    │ 3. 기타 사용 가능 Provider │
+    └────────────────────────┘
+```
+
+**상세 동작:**
+
+1. **API 요청에 `thumbnail_provider` 지정된 경우**: 해당 Provider만 시도하며, 실패 시 다른 Provider로 fallback하지 않음
+2. **`thumbnail_provider` 미지정 (자동 선택)**: 아래 순서로 시도
+   1. `IMAGE_PRIMARY_PROVIDER` (기본: `openai_dalle3`)
+   2. `IMAGE_FALLBACK_PROVIDER` (설정된 경우)
+   3. 나머지 사용 가능한 Provider (API 키가 설정된 것)
+3. **각 Provider 시도 시**: `is_available()` 확인 → 실패하면 다음 Provider로 이동
 
 ```bash
 # Primary와 Fallback 설정
@@ -233,10 +255,13 @@ IMAGE_PRIMARY_PROVIDER=openai_dalle3
 IMAGE_FALLBACK_PROVIDER=stability_ai
 ```
 
-**Graceful Degradation:**
-- API 키가 없으면 해당 Provider 건너뜀
-- 모든 Provider 실패 시 스토리는 정상 저장 (`thumbnail: ""`)
-- 기능 비활성화 시 빈 문자열 반환
+### Graceful Degradation
+
+- API 키가 없으면 해당 Provider를 건너뜀 (`is_available()` = false)
+- Provider 생성 실패 시 경고 로깅 후 다음 Provider 시도
+- **모든 Provider 실패 시**: 스토리는 정상 저장되며 `thumbnail`은 빈 문자열(`""`)
+- **기능 비활성화 시** (`ENABLE_THUMBNAIL_GENERATION=false`): 썸네일 생성 자체를 건너뛰고 빈 문자열 반환
+- 썸네일 생성 실패는 스토리 생성 성공/실패에 영향을 주지 않음
 
 ---
 
