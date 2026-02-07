@@ -14,7 +14,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI
 
 from src import __version__
-from .routers import research, dedup, jobs, story, scheduler
+from .routers import research, dedup, jobs, tasks, story, scheduler
 from .services.ollama_resource import (
     startup_resource_manager,
     shutdown_resource_manager,
@@ -67,8 +67,12 @@ tags_metadata = [
         "description": "Scheduler control - start, stop, and monitor the job execution engine",
     },
     {
+        "name": "tasks",
+        "description": "Task management - CRUD operations for scheduler-based task execution. Supports single and batch creation, concurrent groups.",
+    },
+    {
         "name": "jobs",
-        "description": "Job management - CRUD operations for scheduler-based job execution. Legacy trigger endpoints are deprecated.",
+        "description": "[DEPRECATED] Legacy job trigger endpoints. Use /tasks for scheduler-based task management.",
     },
     {
         "name": "story",
@@ -156,6 +160,10 @@ auth_dependency = [Depends(verify_api_key)] if API_AUTH_ENABLED else []
 app.include_router(
     scheduler.router, prefix="/scheduler", tags=["scheduler"], dependencies=auth_dependency
 )
+app.include_router(
+    tasks.router, prefix="/tasks", tags=["tasks"], dependencies=auth_dependency
+)
+# /jobs kept as deprecated alias for legacy trigger endpoints
 app.include_router(
     jobs.router, prefix="/jobs", tags=["jobs"], dependencies=auth_dependency
 )

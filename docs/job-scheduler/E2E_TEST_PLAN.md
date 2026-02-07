@@ -17,7 +17,7 @@ integrated, ensuring the system behaves correctly as a whole.
 
 | Category | In Scope | Out of Scope |
 |----------|----------|--------------|
-| Scheduler E2E | Job lifecycle, dispatch, retry, recovery, JobGroup | UI testing |
+| Scheduler E2E | Job lifecycle, dispatch, retry, recovery, TaskGroup | UI testing |
 | Pipeline E2E | Real story/research execution | Performance benchmarks |
 | Integration | Component interaction, callbacks | External webhook delivery |
 
@@ -70,7 +70,7 @@ integrated, ensuring the system behaves correctly as a whole.
 │  └─────────────────────────────────────────────────┘   │
 │                        │                                │
 │  ┌─────────────────────▼───────────────────────────┐   │
-│  │           E2EJobHandler (Mock)                   │   │
+│  │           E2ETaskHandler (Mock)                   │   │
 │  │  - Configurable results                          │   │
 │  │  - Execution tracking                            │   │
 │  │  - Failure injection                             │   │
@@ -110,10 +110,10 @@ integrated, ensuring the system behaves correctly as a whole.
 
 | Test ID | Description | Steps | Expected |
 |---------|-------------|-------|----------|
-| E2E-RECOVERY-01 | Running job recovery | Simulate crash during RUNNING | FAILED JobRun created |
+| E2E-RECOVERY-01 | Running job recovery | Simulate crash during RUNNING | FAILED TaskRun created |
 | E2E-RECOVERY-02 | Retry for recovered | Recovery + retry evaluation | Retry job created |
 
-### 3.5 E2E-GROUP: JobGroup Sequential Execution (DEC-012)
+### 3.5 E2E-GROUP: TaskGroup Sequential Execution (DEC-012)
 
 | Test ID | Description | Steps | Expected |
 |---------|-------------|-------|----------|
@@ -192,7 +192,7 @@ They validate real data generation pipelines through HTTP API.
 | 1 | Start real generation job | RUNNING state |
 | 2 | Kill scheduler process | Process terminated |
 | 3 | Restart scheduler | Recovery runs |
-| 4 | Verify recovery | FAILED JobRun with error |
+| 4 | Verify recovery | FAILED TaskRun with error |
 | 5 | Verify retry/cancel | Follows design rules |
 
 ---
@@ -228,7 +228,7 @@ They validate real data generation pipelines through HTTP API.
 python -m pytest tests/scheduler/test_e2e.py -v
 
 # Run specific category
-python -m pytest tests/scheduler/test_e2e.py::TestE2EJobGroup -v
+python -m pytest tests/scheduler/test_e2e.py::TestE2ETaskGroup -v
 
 # Run with coverage
 python -m pytest tests/scheduler/test_e2e.py --cov=src/scheduler
@@ -264,7 +264,7 @@ python -m pytest tests/scheduler/test_pipeline_e2e.py -v --run-pipeline
 |----------|----------|---------------|
 | DEC-004 | DESIGN_GUARDS.md | Direct API reservation tests |
 | DEC-007 | DESIGN_GUARDS.md | Retry flow tests |
-| DEC-012 | DESIGN_GUARDS.md | JobGroup tests |
+| DEC-012 | DESIGN_GUARDS.md | TaskGroup tests |
 | INV-006 | DESIGN_GUARDS.md | Group completion atomicity |
 
 ---

@@ -1,11 +1,11 @@
 """
-Scheduler Service - Main entry point for the Job Scheduler.
+Scheduler Service - Main entry point for the Task Scheduler.
 
 This service orchestrates all scheduler components:
 - PersistenceAdapter (storage)
 - QueueManager (queue operations)
-- Dispatcher (job dispatch loop)
-- Executor (job execution)
+- Dispatcher (task dispatch loop)
+- Executor (task execution)
 - RetryController (retry management)
 - RecoveryManager (crash recovery)
 
@@ -21,16 +21,16 @@ from pathlib import Path
 from typing import Optional, Callable
 
 from .entities import (
-    Job,
-    JobRun,
-    JobRunStatus,
-    JobStatus,
-    JobTemplate,
+    Task,
+    TaskRun,
+    TaskRunStatus,
+    TaskStatus,
+    TaskTemplate,
 )
 from .persistence import PersistenceAdapter
 from .queue_manager import QueueManager
 from .dispatcher import Dispatcher
-from .executor import Executor, SubprocessJobHandler
+from .executor import Executor, SubprocessTaskHandler
 from .retry_controller import RetryController
 from .recovery import RecoveryManager
 
@@ -46,7 +46,7 @@ class SchedulerService:
     - Component initialization and wiring
     - Startup with recovery
     - Graceful shutdown
-    - API-friendly methods for job operations
+    - API-friendly methods for task operations
     """
 
     def __init__(
@@ -106,7 +106,7 @@ class SchedulerService:
         )
 
         # Create executor with subprocess handler
-        handler = SubprocessJobHandler(
+        handler = SubprocessTaskHandler(
             project_root=project_root,
             logs_dir=logs_dir,
         )
@@ -128,17 +128,17 @@ class SchedulerService:
         # Wire components
         dispatcher.set_executor(executor)
 
-        # Set up completion callback for retry handling and JobGroup logic
-        def on_job_completed(job: Job, job_run: JobRun):
+        # Set up completion callback for retry handling and TaskGroup logic
+        def on_task_completed(task: Task, task_run: TaskRun):
             # Handle retry logic first
-            if job_run.status == JobRunStatus.FAILED:
-                retry_controller.on_job_failed(job, job_run)
+            if task_run.status == TaskRunStatus.FAILED:
+                retry_controller.on_task_failed(task, task_run)
 
-            # Handle JobGroup completion (DEC-012)
+            # Handle TaskGroup completion (DEC-012)
             # This checks for stop-on-failure and updates group status
-            queue_manager.handle_group_job_completion(job, job_run)
+            queue_manager.handle_group_job_completion(task, task_run)
 
-        dispatcher.set_on_job_completed(on_job_completed)
+        dispatcher.set_on_job_completed(on_task_completed)
 
         return cls(
             persistence=persistence,
@@ -185,10 +185,10 @@ class SchedulerService:
         """
         Stop the scheduler service gracefully.
 
-        Waits for current job to complete (no preemption).
+        Waits for current task to complete (no preemption).
 
         Args:
-            timeout: Maximum wait time for current job
+            timeout: Maximum wait time for current task
         """
         if not self._started:
             return
@@ -210,54 +210,54 @@ class SchedulerService:
     def create_template(
         self,
         name: str,
-        job_type: str,
+        task_type: str,
         default_params: Optional[dict] = None,
         retry_policy: Optional[dict] = None,
         description: Optional[str] = None,
-    ) -> JobTemplate:
-        """Create a new job template."""
-        template = JobTemplate.create(
+    ) -> TaskTemplate:
+        """Create a new task template."""
+        template = TaskTemplate.create(
             name=name,
-            job_type=job_type,
+            task_type=task_type,
             default_params=default_params,
             retry_policy=retry_policy,
             description=description,
         )
         return self.persistence.create_template(template)
 
-    def get_template(self, template_id: str) -> Optional[JobTemplate]:
-        """Get a job template by ID."""
+    def get_template(self, template_id: str) -> Optional[TaskTemplate]:
+        """Get a task template by ID."""
         return self.persistence.get_template(template_id)
 
-    def list_templates(self) -> list[JobTemplate]:
-        """List all job templates."""
+    def list_templates(self) -> list[TaskTemplate]:
+        """List all task templates."""
         return self.persistence.list_templates()
 
     # =========================================================================
-    # Job Operations (API-friendly)
+    # Task Operations (API-friendly)
     # =========================================================================
 
-    def enqueue_job(
+    def enqueue_task(
         self,
-        job_type: str,
+        task_type: str,
         params: dict,
         priority: int = 0,
         template_id: Optional[str] = None,
-    ) -> Job:
+    ) -> Task:
         """
-        Enqueue a new job for execution.
+        Enqueue a new task for execution.
 
         Args:
-            job_type: Type of work ("story" or "research")
+            task_type: Type of work ("story" or "research")
             params: Execution parameters
             priority: Dispatch priority (higher = sooner)
             template_id: Optional source template
 
         Returns:
-            The created Job
+            The created Task
         """
         return self.queue_manager.enqueue(
-            job_type=job_type,
+            task_type=task_type,
             params=params,
             priority=priority,
             template_id=template_id,
@@ -268,9 +268,9 @@ class SchedulerService:
         template_id: str,
         priority: int = 0,
         param_overrides: Optional[dict] = None,
-    ) -> Job:
+    ) -> Task:
         """
-        Create and enqueue a job from a template.
+        Create and enqueue a task from a template.
 
         Args:
             template_id: Source template ID
@@ -278,7 +278,7 @@ class SchedulerService:
             param_overrides: Override template default params
 
         Returns:
-            The created Job
+            The created Task
         """
         return self.queue_manager.enqueue_from_template(
             template_id=template_id,
@@ -286,59 +286,59 @@ class SchedulerService:
             param_overrides=param_overrides,
         )
 
-    def get_job(self, job_id: str) -> Optional[Job]:
-        """Get a job by ID."""
-        return self.persistence.get_job(job_id)
+    def get_task(self, task_id: str) -> Optional[Task]:
+        """Get a task by ID."""
+        return self.persistence.get_task(task_id)
 
-    def get_job_run(self, run_id: str) -> Optional[JobRun]:
-        """Get a job run by ID."""
-        return self.persistence.get_job_run(run_id)
+    def get_task_run(self, run_id: str) -> Optional[TaskRun]:
+        """Get a task run by ID."""
+        return self.persistence.get_task_run(run_id)
 
-    def get_job_run_for_job(self, job_id: str) -> Optional[JobRun]:
-        """Get the job run for a job."""
-        return self.persistence.get_job_run_for_job(job_id)
+    def get_task_run_for_task(self, task_id: str) -> Optional[TaskRun]:
+        """Get the task run for a task."""
+        return self.persistence.get_task_run_for_task(task_id)
 
-    def list_queued_jobs(self, limit: int = 100) -> list[Job]:
-        """List all queued jobs in dispatch order."""
+    def list_queued_tasks(self, limit: int = 100) -> list[Task]:
+        """List all queued tasks in dispatch order."""
         return self.queue_manager.list_queued(limit=limit)
 
-    def list_running_jobs(self, limit: int = 100) -> list[Job]:
-        """List all running jobs."""
+    def list_running_tasks(self, limit: int = 100) -> list[Task]:
+        """List all running tasks."""
         return self.queue_manager.list_running(limit=limit)
 
-    def list_job_runs(self, limit: int = 100) -> list[JobRun]:
-        """List recent job runs."""
-        return self.persistence.list_job_runs(limit=limit)
+    def list_task_runs(self, limit: int = 100) -> list[TaskRun]:
+        """List recent task runs."""
+        return self.persistence.list_task_runs(limit=limit)
 
-    def cancel_job(self, job_id: str) -> Job:
+    def cancel_task(self, task_id: str) -> Task:
         """
-        Cancel a queued job.
+        Cancel a queued task.
 
-        Only QUEUED jobs can be cancelled from queue.
-        RUNNING jobs must wait for completion.
+        Only QUEUED tasks can be cancelled from queue.
+        RUNNING tasks must wait for completion.
 
         Args:
-            job_id: Job to cancel
+            task_id: Task to cancel
 
         Returns:
-            The cancelled Job
+            The cancelled Task
         """
-        return self.queue_manager.cancel(job_id)
+        return self.queue_manager.cancel(task_id)
 
-    def retry_job_run(
+    def retry_task_run(
         self,
         run_id: str,
         priority: Optional[int] = None,
-    ) -> Job:
+    ) -> Task:
         """
-        Manually retry a failed job run.
+        Manually retry a failed task run.
 
         Args:
-            run_id: JobRun ID to retry
-            priority: Optional priority for retry job
+            run_id: TaskRun ID to retry
+            priority: Optional priority for retry task
 
         Returns:
-            The new retry Job
+            The new retry Task
         """
         return self.retry_controller.manual_retry(run_id, priority=priority)
 
@@ -360,10 +360,10 @@ class SchedulerService:
             "is_running": self.is_running,
         }
 
-    def get_current_job_id(self) -> Optional[str]:
-        """Get the ID of the currently executing job, if any."""
-        current_job = self.dispatcher.current_job
-        return current_job.job_id if current_job else None
+    def get_current_task_id(self) -> Optional[str]:
+        """Get the ID of the currently executing task, if any."""
+        current_task = self.dispatcher.current_job
+        return current_task.task_id if current_task else None
 
     def get_scheduler_status(self) -> dict:
         """
@@ -372,18 +372,18 @@ class SchedulerService:
         Returns:
             Dict containing:
             - scheduler_running: bool
-            - current_job_id: Optional[str]
+            - current_task_id: Optional[str]
             - queue_length: int
             - cumulative_stats: dict
             - has_active_reservation: bool
         """
-        # Get job run statistics
-        run_stats = self.persistence.get_job_run_stats()
-        cancelled_count = self.persistence.count_cancelled_jobs()
+        # Get task run statistics
+        run_stats = self.persistence.get_task_run_stats()
+        cancelled_count = self.persistence.count_cancelled_tasks()
 
         return {
             "scheduler_running": self.is_running,
-            "current_job_id": self.get_current_job_id(),
+            "current_task_id": self.get_current_task_id(),
             "queue_length": self.queue_manager.count_queued(),
             "cumulative_stats": {
                 "total_executed": run_stats["total_executed"],
@@ -395,37 +395,37 @@ class SchedulerService:
             "has_active_reservation": self.queue_manager.has_active_reservation(),
         }
 
-    def update_job_priority(self, job_id: str, priority: int) -> Job:
+    def update_task_priority(self, task_id: str, priority: int) -> Task:
         """
-        Update job priority (QUEUED jobs only).
+        Update task priority (QUEUED tasks only).
 
         Args:
-            job_id: Job to update
+            task_id: Task to update
             priority: New priority value
 
         Returns:
-            Updated Job
+            Updated Task
 
         Raises:
-            JobNotFoundError: If job doesn't exist
-            InvalidOperationError: If job is not QUEUED
+            TaskNotFoundError: If task doesn't exist
+            InvalidOperationError: If task is not QUEUED
         """
-        job = self.persistence.get_job(job_id)
-        if job is None:
-            from .errors import JobNotFoundError
-            raise JobNotFoundError(job_id)
+        task = self.persistence.get_task(task_id)
+        if task is None:
+            from .errors import TaskNotFoundError
+            raise TaskNotFoundError(task_id)
 
-        if job.status != JobStatus.QUEUED:
+        if task.status != TaskStatus.QUEUED:
             from .errors import InvalidOperationError
             raise InvalidOperationError(
-                f"Cannot update priority of job in {job.status.value} status"
+                f"Cannot update priority of task in {task.status.value} status"
             )
 
-        return self.persistence.update_job(job_id, priority=priority)
+        return self.persistence.update_task(task_id, priority=priority)
 
-    def list_all_jobs(self, limit: int = 100) -> list[Job]:
-        """List all jobs (QUEUED, RUNNING, CANCELLED) ordered by created_at DESC."""
-        return self.persistence.list_jobs(limit=limit)
+    def list_all_tasks(self, limit: int = 100) -> list[Task]:
+        """List all tasks (QUEUED, RUNNING, CANCELLED) ordered by created_at DESC."""
+        return self.persistence.list_tasks(limit=limit)
 
     # =========================================================================
     # Direct API Support
@@ -433,84 +433,127 @@ class SchedulerService:
 
     def execute_direct(
         self,
-        job_type: str,
+        task_type: str,
         params: dict,
         reserved_by: str,
         timeout: Optional[float] = None,
-    ) -> JobRun:
+    ) -> TaskRun:
         """
         Execute a direct API request with next-slot reservation.
 
         From DEC-004:
         1. Reserve next slot
-        2. Wait for current job to complete
+        2. Wait for current task to complete
         3. Execute direct request
         4. Release reservation
 
         Args:
-            job_type: Type of work
+            task_type: Type of work
             params: Execution parameters
             reserved_by: Identifier for reservation
-            timeout: Maximum wait for current job
+            timeout: Maximum wait for current task
 
         Returns:
-            The completed JobRun
+            The completed TaskRun
         """
         return self.dispatcher.execute_direct(
-            job_type=job_type,
+            task_type=task_type,
             params=params,
             reserved_by=reserved_by,
             timeout=timeout,
         )
 
     # =========================================================================
-    # JobGroup Operations (DEC-012)
+    # TaskGroup Operations (DEC-012)
     # =========================================================================
 
-    def create_job_group(
+    def create_task_group(
         self,
-        jobs: list[dict],
+        tasks: list[dict],
         name: Optional[str] = None,
         priority: int = 0,
     ) -> tuple:
         """
-        Create a JobGroup and enqueue its jobs.
+        Create a TaskGroup and enqueue its tasks.
 
-        From DEC-012: Jobs in a group execute sequentially.
+        From DEC-012: Tasks in a group execute sequentially.
 
         Args:
-            jobs: List of job specs, each with 'job_type' and 'params'.
-                  Jobs are assigned sequence_numbers 0, 1, 2, ... in order.
+            tasks: List of task specs, each with 'task_type' and 'params'.
+                   Tasks are assigned sequence_numbers 0, 1, 2, ... in order.
             name: Optional group name
-            priority: Dispatch priority for all jobs in the group
+            priority: Dispatch priority for all tasks in the group
 
         Returns:
-            Tuple of (JobGroup, list of created Jobs)
+            Tuple of (TaskGroup, list of created Tasks)
         """
-        return self.queue_manager.create_job_group(
-            jobs=jobs,
+        return self.queue_manager.create_task_group(
+            tasks=tasks,
             name=name,
             priority=priority,
         )
 
-    def get_job_group(self, group_id: str):
-        """Get a JobGroup by ID."""
+    def create_concurrent_group(
+        self,
+        task_ids: list[str],
+        name: Optional[str] = None,
+    ) -> object:
+        """
+        Create a concurrent execution group from existing task IDs.
+
+        Delegates to queue_manager.create_concurrent_group.
+
+        Args:
+            task_ids: List of task IDs to group for concurrent execution
+            name: Optional group name
+
+        Returns:
+            The created TaskGroup
+        """
+        return self.queue_manager.create_concurrent_group(
+            task_ids=task_ids,
+            name=name,
+        )
+
+    def get_task_group(self, group_id: str):
+        """Get a TaskGroup by ID."""
         return self.queue_manager.get_job_group(group_id)
 
-    def get_jobs_in_group(self, group_id: str) -> list[Job]:
-        """Get all jobs in a group, ordered by sequence_number."""
+    def get_tasks_in_group(self, group_id: str) -> list[Task]:
+        """Get all tasks in a group, ordered by sequence_number."""
         return self.queue_manager.get_jobs_in_group(group_id)
 
-    def cancel_job_group(self, group_id: str):
+    def cancel_task_group(self, group_id: str):
         """
-        Cancel all QUEUED jobs in a group.
+        Cancel all QUEUED tasks in a group.
 
-        Note: RUNNING jobs complete normally (no preemption per DEC-004).
+        Note: RUNNING tasks complete normally (no preemption per DEC-004).
 
         Args:
             group_id: Group to cancel
 
         Returns:
-            The updated JobGroup
+            The updated TaskGroup
         """
         return self.queue_manager.cancel_job_group(group_id)
+
+    # =========================================================================
+    # Backward Compatibility Aliases
+    # =========================================================================
+
+    enqueue_job = enqueue_task
+    get_job = get_task
+    get_job_run = get_task_run
+    get_job_run_for_job = get_task_run_for_task
+    list_queued_jobs = list_queued_tasks
+    list_running_jobs = list_running_tasks
+    list_job_runs = list_task_runs
+    cancel_job = cancel_task
+    retry_job_run = retry_task_run
+    get_current_job_id = get_current_task_id
+    create_job_group = create_task_group
+    get_job_group = get_task_group
+    get_jobs_in_group = get_tasks_in_group
+    cancel_job_group = cancel_task_group
+    update_job_priority = update_task_priority
+    list_all_jobs = list_all_tasks

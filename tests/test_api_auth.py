@@ -213,7 +213,7 @@ class TestAuthEnabled:
             # Test various endpoints across routers
             protected_endpoints = [
                 ("GET", "/story/list"),
-                ("GET", "/jobs"),
+                ("GET", "/tasks"),
                 ("GET", "/research/list"),
             ]
 

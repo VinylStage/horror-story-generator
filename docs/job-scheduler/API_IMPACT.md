@@ -1,4 +1,4 @@
-# Job Scheduler API Impact Analysis
+# Task Scheduler API Impact Analysis
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
@@ -9,7 +9,7 @@
 
 ## Overview
 
-This document analyzes how the proposed Job Scheduler system impacts existing API endpoints. It covers endpoint mapping to domain entities, breaking changes, migration strategies, and coexistence patterns.
+This document analyzes how the proposed Task Scheduler system impacts existing API endpoints. It covers endpoint mapping to domain entities, breaking changes, migration strategies, and coexistence patterns.
 
 ---
 
@@ -31,12 +31,12 @@ This document analyzes how the proposed Job Scheduler system impacts existing AP
 | `/jobs` | `/research/trigger` | POST | Async, immediate execution |
 | `/jobs` | `/batch/trigger` | POST | Async, parallel execution |
 | `/jobs` | `/batch/{batch_id}` | GET | Batch status |
-| `/jobs` | `/{job_id}` | GET | Job status |
-| `/jobs` | (list) | GET | List all jobs |
-| `/jobs` | `/{job_id}/cancel` | POST | Cancel job |
-| `/jobs` | `/monitor` | POST | Monitor all jobs |
-| `/jobs` | `/{job_id}/monitor` | POST | Monitor single job |
-| `/jobs` | `/{job_id}/dedup_check` | POST | Check dedup for job |
+| `/jobs` | `/{task_id}` | GET | Task status |
+| `/jobs` | (list) | GET | List all tasks |
+| `/jobs` | `/{task_id}/cancel` | POST | Cancel task |
+| `/jobs` | `/monitor` | POST | Monitor all tasks |
+| `/jobs` | `/{task_id}/monitor` | POST | Monitor single task |
+| `/jobs` | `/{task_id}/dedup_check` | POST | Check dedup for task |
 
 ---
 
@@ -54,44 +54,44 @@ POST /research/run        → Blocking research generation
 **Impact**: These remain unchanged. They use the "next-slot reservation" pattern.
 
 **Scheduler Interpretation**:
-- Direct APIs do NOT create Jobs in the scheduler
-- They reserve the next execution slot (no preemption of running jobs)
-- Execution order: [current job finishes] → [direct request] → [queue resumes]
+- Direct APIs do NOT create Tasks in the scheduler
+- They reserve the next execution slot (no preemption of running tasks)
+- Execution order: [current task finishes] → [direct request] → [queue resumes]
 
 ---
 
-### Category 2: Job Trigger APIs (Current Async)
+### Category 2: Task Trigger APIs (Current Async)
 
-These endpoints create jobs that execute **immediately but asynchronously**.
+These endpoints create tasks that execute **immediately but asynchronously**.
 
 ```
-POST /jobs/story/trigger     → Async story job
-POST /jobs/research/trigger  → Async research job
-POST /jobs/batch/trigger     → Async batch jobs
+POST /jobs/story/trigger     → Async story task
+POST /jobs/research/trigger  → Async research task
+POST /jobs/batch/trigger     → Async batch tasks
 ```
 
 **Current Behavior**:
-- Job created immediately
+- Task created immediately
 - Subprocess spawned immediately
 - No queue, no waiting, no ordering
 
 **Proposed Behavior**:
-- Job created and added to queue
+- Task created and added to queue
 - Execution controlled by scheduler
 - Supports priority, ordering, grouping
 
 ---
 
-### Category 3: Job Management APIs
+### Category 3: Task Management APIs
 
-These endpoints query and control jobs.
+These endpoints query and control tasks.
 
 ```
-GET  /jobs/{job_id}          → Job status
-GET  /jobs                   → List jobs
-POST /jobs/{job_id}/cancel   → Cancel job
+GET  /jobs/{task_id}          → Task status
+GET  /jobs                   → List tasks
+POST /jobs/{task_id}/cancel   → Cancel task
 POST /jobs/monitor           → Monitor all
-POST /jobs/{job_id}/monitor  → Monitor single
+POST /jobs/{task_id}/monitor  → Monitor single
 ```
 
 **Impact**: These map directly to scheduler entities and will be enhanced.
@@ -104,57 +104,57 @@ POST /jobs/{job_id}/monitor  → Monitor single
 
 | Current Concept | Current Implementation | Proposed Entity |
 |-----------------|------------------------|-----------------|
-| Job type "story" | `job_type` field | JobTemplate (named) |
-| Job type "research" | `job_type` field | JobTemplate (named) |
-| Job params | `params` dict | JobTemplate.default_params + Job.params |
-| Batch | `Batch` dataclass | JobGroup |
-| Job status | File-based JSON | Job + JobRun |
-| Job ID | UUID string | Job.job_id |
-| Batch ID | UUID string | JobGroup.group_id |
+| Task type "story" | `task_type` field | TaskTemplate (named) |
+| Task type "research" | `task_type` field | TaskTemplate (named) |
+| Task params | `params` dict | TaskTemplate.default_params + Task.params |
+| Batch | `Batch` dataclass | TaskGroup |
+| Task status | File-based JSON | Task + TaskRun |
+| Task ID | UUID string | Task.task_id |
+| Batch ID | UUID string | TaskGroup.group_id |
 | None | None | Schedule (NEW) |
 
 ### Detailed Mapping
 
-#### JobTemplate Mapping
+#### TaskTemplate Mapping
 
-Current: No explicit templates; job type is a string.
+Current: No explicit templates; task type is a string.
 
 ```python
 # Current
-create_job(job_type="story_generation", params={...})
+create_task(task_type="story_generation", params={...})
 
 # Proposed
 # Pre-registered templates
 template = get_template("daily-story")
-create_job(template_id=template.id, params={...})
+create_task(template_id=template.id, params={...})
 ```
 
 **Migration Path**:
-1. Create default JobTemplates for "story_generation" and "research"
-2. Support both `job_type` and `template_id` during transition
-3. Deprecate `job_type` string in favor of `template_id`
+1. Create default TaskTemplates for "story_generation" and "research"
+2. Support both `task_type` and `template_id` during transition
+3. Deprecate `task_type` string in favor of `template_id`
 
-#### Job Mapping
+#### Task Mapping
 
-Current: Single Job entity with mixed responsibilities.
+Current: Single Task entity with mixed responsibilities.
 
 ```python
-# Current Job dataclass (legacy)
-class Job:
-    job_id: str
+# Current Task dataclass (legacy)
+class Task:
+    task_id: str
     type: str            # "story_generation" | "research"
     status: str          # "created" | "queued" | "running" | "succeeded" | "failed"
     # ... other fields
 ```
 
-> Note: Legacy statuses `succeeded` and `failed` are replaced by JobRun statuses in the new model.
+> Note: Legacy statuses `succeeded` and `failed` are replaced by TaskRun statuses in the new model.
 
-Proposed: Split into Job (queue) and JobRun (history).
+Proposed: Split into Task (queue) and TaskRun (history).
 
 ```python
-# Proposed Job (queue-level, external statuses only)
-class Job:
-    job_id: str
+# Proposed Task (queue-level, external statuses only)
+class Task:
+    task_id: str
     template_id: Optional[str]
     schedule_id: Optional[str]
     group_id: Optional[str]
@@ -163,10 +163,10 @@ class Job:
     position: int
     status: str  # QUEUED | RUNNING | CANCELLED
 
-# Proposed JobRun (execution result)
-class JobRun:
+# Proposed TaskRun (execution result)
+class TaskRun:
     run_id: str
-    job_id: str
+    task_id: str
     status: str  # COMPLETED | FAILED | SKIPPED
     started_at: datetime
     finished_at: Optional[datetime]
@@ -177,7 +177,7 @@ class JobRun:
     log_path: Optional[str]
 ```
 
-#### Batch → JobGroup Mapping
+#### Batch → TaskGroup Mapping
 
 Current:
 ```python
@@ -191,7 +191,7 @@ class Batch:
 
 Proposed:
 ```python
-class JobGroup:
+class TaskGroup:
     group_id: str
     name: Optional[str]
     mode: str  # "parallel" | "sequential"
@@ -239,17 +239,17 @@ DELETE /templates/{template_id}    Archive template
 ```
 GET    /queue                      View current queue
 POST   /queue/reorder              Reorder queue items
-POST   /queue/{job_id}/priority    Set job priority
-POST   /queue/{job_id}/move        Move job position
+POST   /queue/{task_id}/priority    Set task priority
+POST   /queue/{task_id}/move        Move task position
 GET    /queue/stats                Queue statistics
 ```
 
-### JobRun Queries
+### TaskRun Queries
 
 ```
-GET    /runs                       List job runs (history)
+GET    /runs                       List task runs (history)
 GET    /runs/{run_id}              Get run details
-GET    /jobs/{job_id}/runs         Get runs for job (1:1, but useful for retry chains)
+GET    /tasks/{task_id}/runs         Get runs for task (1:1, but useful for retry chains)
 ```
 
 ---
@@ -265,7 +265,7 @@ These changes add new functionality without breaking existing clients.
 | New Schedule endpoints | None | Purely additive |
 | New Template endpoints | None | Purely additive |
 | New Queue endpoints | None | Purely additive |
-| JobRun as separate entity | Low | Job status still accessible |
+| TaskRun as separate entity | Low | Task status still accessible |
 
 ### Medium Risk (Behavioral)
 
@@ -273,9 +273,9 @@ These changes alter existing behavior but maintain API compatibility.
 
 | Change | Risk | Mitigation |
 |--------|------|------------|
-| Jobs enter queue instead of immediate execution | Medium | Add `priority: "immediate"` flag for legacy behavior |
-| Batch becomes JobGroup | Medium | Keep `/jobs/batch/*` as aliases |
-| Job status reflects queue position | Medium | Add `queue_position` field, keep `status` semantics |
+| Tasks enter queue instead of immediate execution | Medium | Add `priority: "immediate"` flag for legacy behavior |
+| Batch becomes TaskGroup | Medium | Keep `/jobs/batch/*` as aliases |
+| Task status reflects queue position | Medium | Add `queue_position` field, keep `status` semantics |
 
 ### High Risk (Breaking)
 
@@ -325,7 +325,7 @@ Add compatibility layer.
 async def trigger_story_generation(request: StoryTriggerRequest):
     if config.USE_SCHEDULER:
         # Route to scheduler with immediate priority
-        return await scheduler.create_job(
+        return await scheduler.create_task(
             template_id="story_generation",
             params=request.model_dump(),
             priority=Priority.IMMEDIATE,
@@ -346,7 +346,7 @@ async def trigger_story_generation(request: StoryTriggerRequest):
 
 ## Request/Response Changes
 
-### Job Trigger Request Evolution
+### Task Trigger Request Evolution
 
 **Current**:
 ```json
@@ -385,12 +385,12 @@ async def trigger_story_generation(request: StoryTriggerRequest):
 }
 ```
 
-### Job Status Response Evolution
+### Task Status Response Evolution
 
 **Current**:
 ```json
 {
-  "job_id": "abc123",
+  "task_id": "abc123",
   "type": "story_generation",
   "status": "running",
   "pid": 12345,
@@ -401,7 +401,7 @@ async def trigger_story_generation(request: StoryTriggerRequest):
 **Proposed**:
 ```json
 {
-  "job_id": "abc123",
+  "task_id": "abc123",
   "template_id": "story_generation",
   "template_name": "Story Generation",
   "status": "running",
@@ -452,9 +452,9 @@ X-API-Version: 2    → New scheduler
 
 Direct APIs (`/story/generate`, `/research/run`) follow these rules:
 
-1. **DO NOT** create scheduler Jobs
-2. **DO NOT** preempt a currently running Job
-3. **Reserve the next execution slot** (executed immediately after current Job)
+1. **DO NOT** create scheduler Tasks
+2. **DO NOT** preempt a currently running Task
+3. **Reserve the next execution slot** (executed immediately after current Task)
 4. **Queue resumes normally** after direct execution completes
 
 ```
@@ -464,14 +464,14 @@ Direct APIs (`/story/generate`, `/research/run`) follow these rules:
 └──────────────────┘   Reservation      └───────┬───────┘
                                                 │
                                     ┌───────────▼───────────┐
-                                    │  Wait for current job │
+                                    │  Wait for current task│
                                     │  then execute         │
                                     └───────────────────────┘
 ```
 
 ### Next-Slot Reservation Pattern
 
-When a direct API is called while a job is running:
+When a direct API is called while a task is running:
 
 ```
 Before Direct API:
@@ -496,7 +496,7 @@ After Direct API:
 
 This guarantees:
 - **Immediate responsiveness** (reserves slot instantly)
-- **No forced interruption** (running job completes normally)
+- **No forced interruption** (running task completes normally)
 - **Deterministic ordering** (direct → remaining queue)
 
 ---
@@ -507,17 +507,17 @@ This guarantees:
 |------------------|------------------|-------------|
 | `POST /story/generate` | None (Direct) | Unchanged |
 | `POST /research/run` | None (Direct) | Unchanged |
-| `POST /jobs/story/trigger` | Job + JobTemplate | Enhanced |
-| `POST /jobs/research/trigger` | Job + JobTemplate | Enhanced |
-| `POST /jobs/batch/trigger` | JobGroup + Jobs | Enhanced |
-| `GET /jobs/{job_id}` | Job + JobRun | Enhanced |
-| `GET /jobs` | Job (list) | Enhanced |
-| `POST /jobs/{job_id}/cancel` | Job.status | Unchanged |
-| `POST /jobs/monitor` | JobRun | Enhanced |
+| `POST /jobs/story/trigger` | Task + TaskTemplate | Enhanced |
+| `POST /jobs/research/trigger` | Task + TaskTemplate | Enhanced |
+| `POST /jobs/batch/trigger` | TaskGroup + Tasks | Enhanced |
+| `GET /jobs/{task_id}` | Task + TaskRun | Enhanced |
+| `GET /jobs` | Task (list) | Enhanced |
+| `POST /jobs/{task_id}/cancel` | Task.status | Unchanged |
+| `POST /jobs/monitor` | TaskRun | Enhanced |
 | NEW: Schedule endpoints | Schedule | Added |
-| NEW: Template endpoints | JobTemplate | Added |
-| NEW: Queue endpoints | Job (queue view) | Added |
-| NEW: Run endpoints | JobRun | Added |
+| NEW: Template endpoints | TaskTemplate | Added |
+| NEW: Queue endpoints | Task (queue view) | Added |
+| NEW: Run endpoints | TaskRun | Added |
 
 ---
 
@@ -526,10 +526,10 @@ This guarantees:
 | Term | Definition |
 |------|------------|
 | **Direct API** | Synchronous endpoint that executes work immediately |
-| **Job API** | Asynchronous endpoint that creates schedulable work |
-| **Legacy System** | Current immediate-execution job system |
+| **Task API** | Asynchronous endpoint that creates schedulable work |
+| **Legacy System** | Current immediate-execution task system |
 | **Coexistence** | Period where both systems operate in parallel |
-| **Next-Slot Reservation** | Direct API reserving next execution slot without preempting current job |
+| **Next-Slot Reservation** | Direct API reserving next execution slot without preempting current task |
 
 ---
 
