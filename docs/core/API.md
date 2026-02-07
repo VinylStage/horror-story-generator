@@ -254,6 +254,22 @@ curl -X POST http://localhost:8000/story/generate \
 }
 ```
 
+**Topic-based story example (v1.6.1):**
+
+```json
+{
+  "type": "story",
+  "params": {
+    "topic": "한국 아파트 호러",
+    "tags": ["수면공포", "청각공포"],
+    "auto_research": true,
+    "research_model": "deep-research",
+    "thumbnail_provider": "local_sd"
+  },
+  "priority": 10
+}
+```
+
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `type` | string | **Yes** | - | Job 타입: `"story"` 또는 `"research"` |
@@ -264,15 +280,16 @@ curl -X POST http://localhost:8000/story/generate \
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `topic` | string | 스토리 주제. 지정 시 topic 기반 생성 사용 (v1.6.1) |
+| `tags` | string[] | 커스텀 태그 (v1.6.1) |
+| `auto_research` | boolean | 연구 카드 자동 생성 (기본: true) (v1.6.1) |
+| `research_model` | string | 연구 생성 모델 선택 (v1.6.1) |
+| `thumbnail_provider` | string | 썸네일 프로바이더: `openai_dalle3`, `stability_ai`, `flux`, `local_sd` (v1.6.1) |
 | `max_stories` | integer | 생성할 최대 스토리 수 (1-100, 기본 1) |
 | `duration_seconds` | integer | 실행 제한 시간 (초) |
 | `enable_dedup` | boolean | 중복 검사 활성화 (기본 false) |
 | `model` | string | 모델 선택 |
 | `target_length` | integer | 목표 스토리 길이 (300-10000자) |
-
-> **⚠️ 제한사항:** Story Job은 현재 `topic`, `tags`, `webhook_url` 파라미터를 지원하지 않습니다.
-> topic/tags를 지정하여 스토리를 생성하려면 `POST /story/generate`를 사용하세요.
-> 이 제한은 [#123](https://github.com/VinylStage/horror-story-generator/issues/123)에서 추적 중입니다.
 
 **Research Job params:**
 
@@ -533,14 +550,14 @@ Job의 실행 이력 (JobRun)을 조회합니다.
 | 용도 | 권장 API | 특징 |
 |------|---------|------|
 | **topic/tags 지정 스토리 생성** | `POST /story/generate` | Blocking. topic, tags, webhook_url 모두 지원 |
-| **대량/주기적 스토리 생성** | `POST /jobs` + Scheduler | Async, 큐 기반. 단, topic/tags 미지원 ([#123](https://github.com/VinylStage/horror-story-generator/issues/123)) |
+| **대량/주기적 스토리 생성** | `POST /jobs` + Scheduler | Async, 큐 기반. topic/tags 지원 (v1.6.1) |
 | **topic 지정 연구 생성 (blocking)** | `POST /research/run` | Blocking. Ollama/Gemini 직접 실행 |
 | **연구 생성 (async)** | `POST /jobs` (type: research) | Scheduler 큐 기반 비동기 실행 |
 | **하위 호환 (legacy)** | `POST /jobs/story/trigger` | ⚠️ Deprecated. 신규 클라이언트 비권장 |
 
 **요약:**
-- **topic/tags가 필요하면** → `POST /story/generate` (blocking)
-- **스케줄러 큐가 필요하면** → `POST /jobs` + Scheduler API (topic/tags 미지원)
+- **topic/tags가 필요하면** → `POST /story/generate` (blocking) 또는 `POST /jobs` (async, v1.6.1)
+- **스케줄러 큐가 필요하면** → `POST /jobs` + Scheduler API
 - **Legacy trigger** → 하위 호환용으로만 유지, 신규 사용 비권장
 
 ---
