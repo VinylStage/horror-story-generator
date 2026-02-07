@@ -5,8 +5,8 @@ Phase 3: Independent scheduler control plane.
 Endpoints under /scheduler/* for start, stop, and status operations.
 
 Design rationale (from Phase 3 design):
-- Scheduler is a system-level control plane, NOT a sub-resource of Job
-- Separate namespace avoids route conflicts with /jobs/{job_id}
+- Scheduler is a system-level control plane, NOT a sub-resource of Task
+- Separate namespace avoids route conflicts with /tasks/{task_id}
 - Enables future extensibility (/scheduler/config, /scheduler/metrics)
 """
 
@@ -67,7 +67,7 @@ async def stop_scheduler(request: SchedulerStopRequest = SchedulerStopRequest())
     """
     Stop the scheduler dispatch loop gracefully.
 
-    Waits for currently running job to complete (no preemption).
+    Waits for currently running task to complete (no preemption).
     Idempotent: If scheduler is already stopped, returns success.
     """
     service = get_scheduler_service()
@@ -100,8 +100,8 @@ async def get_scheduler_status():
 
     Returns:
     - scheduler_running: Whether dispatch loop is active
-    - current_job_id: ID of currently executing job (null if none)
-    - queue_length: Number of QUEUED jobs waiting
+    - current_task_id: ID of currently executing task (null if none)
+    - queue_length: Number of QUEUED tasks waiting
     - cumulative_stats: Execution statistics (total, succeeded, failed, etc.)
     - has_active_reservation: Whether Direct API reservation is active
     """
@@ -112,7 +112,7 @@ async def get_scheduler_status():
 
         return SchedulerStatusResponse(
             scheduler_running=status["scheduler_running"],
-            current_job_id=status["current_job_id"],
+            current_task_id=status["current_task_id"],
             queue_length=status["queue_length"],
             cumulative_stats=CumulativeStats(
                 total_executed=status["cumulative_stats"]["total_executed"],

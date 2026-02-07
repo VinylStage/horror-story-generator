@@ -5,7 +5,7 @@ Local-only server for research operations.
 
 Phase B+: Includes Ollama resource management with auto-cleanup.
 Phase C: Optional API key authentication.
-Phase 3: Scheduler-based job execution model.
+Phase 3: Scheduler-based task execution model.
 """
 
 from contextlib import asynccontextmanager
@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     await startup_resource_manager()
 
     # Initialize scheduler service (does NOT start dispatch loop)
-    # Explicit /scheduler/start call required to begin job processing
+    # Explicit /scheduler/start call required to begin task processing
     SCHEDULER_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     SCHEDULER_LOGS_DIR.mkdir(parents=True, exist_ok=True)
     init_scheduler_service(
@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
 tags_metadata = [
     {
         "name": "scheduler",
-        "description": "Scheduler control - start, stop, and monitor the job execution engine",
+        "description": "Scheduler control - start, stop, and monitor the task execution engine",
     },
     {
         "name": "tasks",

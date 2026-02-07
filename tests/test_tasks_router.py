@@ -55,7 +55,7 @@ class TestCreateTask:
             assert data["status"] == "QUEUED"
 
     def test_create_batch_tasks(self, client):
-        """Should create multiple tasks from array."""
+        """Should create multiple tasks from array via /tasks/batch."""
         from src.scheduler.entities import Task, TaskStatus
 
         mock_task1 = MagicMock(spec=Task)
@@ -94,7 +94,7 @@ class TestCreateTask:
             mock_get_service.return_value = mock_service
 
             response = client.post(
-                "/tasks",
+                "/tasks/batch",
                 json=[
                     {"type": "story", "params": {"max_stories": 1}, "priority": 0},
                     {"type": "research", "params": {"topic": "test"}, "priority": 10},

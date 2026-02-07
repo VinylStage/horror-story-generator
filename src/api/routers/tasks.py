@@ -5,7 +5,8 @@ Phase 3+: Scheduler-based task execution model.
 Renamed from jobs.py; /jobs endpoints kept as deprecated aliases.
 
 Endpoints:
-- POST /tasks - Create task(s) (single or batch)
+- POST /tasks - Create a single task
+- POST /tasks/batch - Create multiple tasks at once
 - GET /tasks - List tasks
 - GET /tasks/{task_id} - Get task details
 - PATCH /tasks/{task_id} - Update task priority
@@ -14,8 +15,8 @@ Endpoints:
 - POST /tasks/group - Create concurrent execution group
 """
 
-from typing import Union
-from fastapi import APIRouter, HTTPException, Query, Request
+from typing import List
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 from ..schemas.scheduler import (
@@ -70,32 +71,55 @@ def _task_run_to_response(task_run) -> TaskRunResponse:
     )
 
 
-@router.post("", status_code=201)
-async def create_tasks(request: Request):
-    """Create task(s). Accepts single object or array."""
-    service = get_scheduler_service()
-    body = await request.json()
+# POST /tasks - Create a single task
+@router.post("", response_model=TaskResponse, status_code=201)
+async def create_task(request: TaskCreateRequest):
+    """
+    Create a single task.
 
+    Enqueues a new task for scheduler execution.
+    """
+    service = get_scheduler_service()
     try:
-        if isinstance(body, list):
-            # Batch mode
-            created = []
-            for item in body:
-                req = TaskCreateRequest(**item)
-                task = service.enqueue_task(task_type=req.type, params=req.params, priority=req.priority)
-                created.append(_task_to_response(task))
-            return TaskBatchResponse(tasks=created, total=len(created))
-        else:
-            # Single mode
-            req = TaskCreateRequest(**body)
-            task = service.enqueue_task(task_type=req.type, params=req.params, priority=req.priority)
-            return _task_to_response(task)
+        task = service.enqueue_task(
+            task_type=request.type,
+            params=request.params,
+            priority=request.priority,
+        )
+        return _task_to_response(task)
     except Exception as e:
         if "validation" in str(type(e).__name__).lower():
             raise HTTPException(status_code=422, detail=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to create task: {str(e)}")
 
 
+# POST /tasks/batch - Create multiple tasks at once
+@router.post("/batch", response_model=TaskBatchResponse, status_code=201)
+async def create_batch_tasks(requests: List[TaskCreateRequest]):
+    """
+    Create multiple tasks at once.
+
+    Accepts an array of task specifications and enqueues them all.
+    Returns the list of created tasks.
+    """
+    service = get_scheduler_service()
+    try:
+        created = []
+        for req in requests:
+            task = service.enqueue_task(
+                task_type=req.type,
+                params=req.params,
+                priority=req.priority,
+            )
+            created.append(_task_to_response(task))
+        return TaskBatchResponse(tasks=created, total=len(created))
+    except Exception as e:
+        if "validation" in str(type(e).__name__).lower():
+            raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to create tasks: {str(e)}")
+
+
+# POST /tasks/group - Create concurrent execution group
 @router.post("/group", response_model=TaskGroupResponse, status_code=201)
 async def create_task_group(request: TaskGroupCreateRequest):
     """Create a concurrent execution group from existing QUEUED tasks."""
@@ -106,9 +130,6 @@ async def create_task_group(request: TaskGroupCreateRequest):
             task_ids=request.task_ids,
             name=request.name,
         )
-        # If mode is sequential, we need to handle differently
-        # But create_concurrent_group always creates concurrent mode
-        # For sequential, use the existing create_task_group
 
         return TaskGroupResponse(
             group_id=group.group_id,
@@ -132,6 +153,7 @@ async def create_task_group(request: TaskGroupCreateRequest):
 # GET /tasks
 @router.get("", response_model=TaskListResponse)
 async def list_tasks(limit: int = Query(default=50, ge=1, le=200)):
+    """List all tasks with queue statistics."""
     service = get_scheduler_service()
     try:
         tasks = service.list_all_tasks(limit=limit)
@@ -149,6 +171,7 @@ async def list_tasks(limit: int = Query(default=50, ge=1, le=200)):
 # GET /tasks/{task_id}
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(task_id: str):
+    """Get task details by ID."""
     service = get_scheduler_service()
     try:
         task = service.get_task(task_id)
@@ -164,6 +187,7 @@ async def get_task(task_id: str):
 # PATCH /tasks/{task_id}
 @router.patch("/{task_id}", response_model=TaskResponse)
 async def update_task(task_id: str, request: TaskUpdateRequest):
+    """Update task priority (QUEUED tasks only)."""
     service = get_scheduler_service()
     if request.priority is None:
         raise HTTPException(status_code=400, detail="No update fields provided.")
@@ -182,6 +206,7 @@ async def update_task(task_id: str, request: TaskUpdateRequest):
 # DELETE /tasks/{task_id}
 @router.delete("/{task_id}", response_model=TaskDeleteResponse)
 async def delete_task(task_id: str):
+    """Cancel a task (QUEUED tasks only)."""
     service = get_scheduler_service()
     try:
         task = service.cancel_task(task_id)
@@ -202,6 +227,7 @@ async def delete_task(task_id: str):
 # GET /tasks/{task_id}/runs
 @router.get("/{task_id}/runs", response_model=TaskRunListResponse)
 async def get_task_runs(task_id: str):
+    """Get execution history (TaskRuns) for a task."""
     service = get_scheduler_service()
     try:
         task = service.get_task(task_id)
