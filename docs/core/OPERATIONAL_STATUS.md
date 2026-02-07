@@ -58,6 +58,7 @@
 
 | 환경 변수 | 기본값 | 설명 |
 |-----------|--------|------|
+| `DISCORD_WEBHOOK_URL` | (없음) | Webhook URL 기본값. 요청에 `webhook_url` 미지정 시 자동 사용 (v1.6.1) |
 | `AUTO_INJECT_RESEARCH` | `true` | 연구 카드 자동 주입 |
 | `RESEARCH_INJECT_TOP_K` | `1` | 주입할 연구 카드 수 |
 | `RESEARCH_INJECT_REQUIRE` | `false` | 연구 카드 필수 여부 |

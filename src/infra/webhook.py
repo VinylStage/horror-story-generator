@@ -7,6 +7,7 @@ v1.4.3: Fire-and-forget webhook support for sync endpoints.
 
 import asyncio
 import logging
+import os
 import threading
 from datetime import datetime
 from typing import Any, Dict, Optional
@@ -15,6 +16,14 @@ import httpx
 from src.infra.job_manager import Job, WebhookEvent, save_job
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_webhook_url(request_url: Optional[str] = None) -> Optional[str]:
+    """Resolve webhook URL: request value > DISCORD_WEBHOOK_URL env > None."""
+    if request_url:
+        return request_url
+    return os.getenv("DISCORD_WEBHOOK_URL")
+
 
 # Webhook configuration
 WEBHOOK_TIMEOUT_SECONDS = 30
