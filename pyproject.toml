@@ -44,8 +44,7 @@ source = ["src"]
 omit = [
     "tests/*",
     "*/__pycache__/*",
-    # CLI entry points (not unit-testable)
-    "src/research/executor/cli.py",
+    # CLI / subprocess entry points (not unit-testable)
     "src/research/executor/__main__.py",
     "src/research/executor/config.py",
     "src/research/executor/executor.py",
@@ -53,7 +52,7 @@ omit = [
     "src/research/executor/output_writer.py",
     "src/research/executor/prompt_template.py",
     "src/research/executor/validator.py",
-    "src/story/cli.py",
+    "src/story/runner.py",
     # Large file - separate issue
     "src/story/generator.py",
     # Image providers require actual API calls

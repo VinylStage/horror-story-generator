@@ -11,22 +11,17 @@
 ## Overview
 
 The Horror Story Generator API provides:
-- **Scheduler Control** - Scheduler-based task queue management (Phase 3)
+- **Scheduler Control** - Scheduler-based task queue management
 - **Tasks CRUD** - Scheduler-based task creation, listing, and management
 - **Story Generation** - Direct (blocking) and task-based (non-blocking) story creation
 - **Research Generation** - Ollama/Gemini-based research card creation
 - **Deduplication** - Semantic and canonical similarity checking
-- **Job Management** - Background job execution and monitoring (Legacy, Deprecated)
 
 ### Design Principle
 
-> **Scheduler = Task Execution Engine** (Phase 3)
+> **Scheduler = Task Execution Engine**
 
-The Scheduler controls task execution timing and order. Tasks are enqueued via API and processed by the dispatch loop when running.
-
-> **CLI = Source of Truth** (Legacy)
-
-Legacy trigger endpoints launch CLI commands via subprocess. All business logic resides in the CLI tools (`main.py`, `src.research.executor`).
+The Scheduler controls task execution timing and order. Tasks are enqueued via API and processed by the dispatch loop when running. The API server is the sole execution interface.
 
 ---
 
@@ -56,11 +51,6 @@ curl -X POST http://localhost:8000/tasks \
     {"type": "story", "params": {"topic": "Apartment horror"}, "priority": 0},
     {"type": "research", "params": {"topic": "Urban legends"}, "priority": 10}
   ]'
-
-# (Deprecated) Generate research via legacy trigger
-# curl -X POST http://localhost:8000/jobs/research/trigger \
-#   -H "Content-Type: application/json" \
-#   -d '{"topic": "Korean apartment horror", "model": "deep-research", "timeout": 300}'
 
 # Check task status
 curl http://localhost:8000/tasks/{task_id}
@@ -640,15 +630,13 @@ Task의 실행 이력 (TaskRun)을 조회합니다.
 | 용도 | 권장 API | 특징 |
 |------|---------|------|
 | **topic/tags 지정 스토리 생성** | `POST /story/generate` | Blocking. topic, tags, webhook_url 모두 지원 |
-| **대량/주기적 스토리 생성** | `POST /tasks` + Scheduler | Async, 큐 기반. topic/tags 지원 (v1.6.1) |
+| **대량/주기적 스토리 생성** | `POST /tasks` + Scheduler | Async, 큐 기반. topic/tags 지원 |
 | **topic 지정 연구 생성 (blocking)** | `POST /research/run` | Blocking. Ollama/Gemini 직접 실행 |
 | **연구 생성 (async)** | `POST /tasks` (type: research) | Scheduler 큐 기반 비동기 실행 |
-| **하위 호환 (legacy)** | `POST /jobs/story/trigger` | ⚠️ Deprecated. 신규 클라이언트 비권장 |
 
 **요약:**
-- **topic/tags가 필요하면** → `POST /story/generate` (blocking) 또는 `POST /tasks` (async, v1.6.1)
+- **topic/tags가 필요하면** → `POST /story/generate` (blocking) 또는 `POST /tasks` (async)
 - **스케줄러 큐가 필요하면** → `POST /tasks` + Scheduler API
-- **Legacy trigger** → 하위 호환용으로만 유지, 신규 사용 비권장
 
 ---
 
@@ -811,411 +799,6 @@ Get detailed information about a specific story.
     "threat_mechanism": "erosion"
   },
   "research_used": ["RC-20260113-084040"]
-}
-```
-
----
-
-### Job Trigger Endpoints (Legacy - Deprecated)
-
-> **⚠️ Deprecated:** Phase 3부터 `POST /tasks` 사용을 권장합니다.
-> Legacy trigger 엔드포인트는 하위 호환성을 위해 유지되지만, 신규 클라이언트는 Scheduler 기반 API를 사용해야 합니다.
-
-#### POST /jobs/story/trigger [DEPRECATED]
-
-Trigger a story generation job.
-
-**Request Body:**
-
-```json
-{
-  "max_stories": 5,
-  "duration_seconds": 300,
-  "interval_seconds": 30,
-  "enable_dedup": true,
-  "db_path": "/path/to/stories.db",
-  "load_history": true,
-  "model": "ollama:llama3",
-  "webhook_url": "https://your-server.com/callback",
-  "webhook_events": ["succeeded", "failed", "skipped"]
-}
-```
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `max_stories` | integer | No | 1 | Maximum stories to generate |
-| `duration_seconds` | integer | No | null | Time limit in seconds |
-| `interval_seconds` | integer | No | 0 | Wait between generations |
-| `enable_dedup` | boolean | No | false | Enable deduplication |
-| `db_path` | string | No | null | SQLite database path |
-| `load_history` | boolean | No | false | Load existing stories |
-| `model` | string | No | null | Model selection. Format: `ollama:llama3`, `ollama:qwen`, or Claude model name |
-| `webhook_url` | string | No | null | URL for webhook notification on job completion (v1.3.0) |
-| `webhook_events` | array | No | ["succeeded", "failed", "skipped"] | Events that trigger webhook (v1.3.0) |
-
-**Response:** `202 Accepted`
-
-```json
-{
-  "job_id": "abc-123-def",
-  "type": "story_generation",
-  "status": "running",
-  "message": "Story generation job started with PID 12345"
-}
-```
-
----
-
-#### POST /jobs/research/trigger [DEPRECATED]
-
-Trigger a research generation job.
-
-**Request Body:**
-
-```json
-{
-  "topic": "Korean apartment horror",
-  "tags": ["urban", "isolation"],
-  "model": "qwen3:30b",
-  "timeout": 120,
-  "webhook_url": "https://your-server.com/callback",
-  "webhook_events": ["succeeded", "failed", "skipped"]
-}
-```
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `topic` | string | **Yes** | - | Research topic |
-| `tags` | array | No | [] | Classification tags |
-| `model` | string | No | "qwen3:30b" | Model name. Ollama: `qwen3:30b`. Gemini: `gemini` or `deep-research` (Deep Research Agent, requires GEMINI_ENABLED=true) |
-| `timeout` | integer | No | 60 | Generation timeout (deep-research supports up to 600s) |
-| `webhook_url` | string | No | null | URL for webhook notification on job completion (v1.3.0) |
-| `webhook_events` | array | No | ["succeeded", "failed", "skipped"] | Events that trigger webhook (v1.3.0) |
-
-**Response:** `202 Accepted`
-
-```json
-{
-  "job_id": "xyz-789-ghi",
-  "type": "research",
-  "status": "running",
-  "message": "Research job started with PID 54321"
-}
-```
-
----
-
-### Job Management Endpoints
-
-#### GET /jobs/{job_id}
-
-Get status of a specific job.
-
-**Response:** `200 OK`
-
-```json
-{
-  "job_id": "abc-123-def",
-  "type": "story_generation",
-  "status": "succeeded",
-  "params": {
-    "max_stories": 5,
-    "enable_dedup": true
-  },
-  "pid": 12345,
-  "log_path": "logs/story_abc-123-def.log",
-  "artifacts": [
-    "data/stories/story_20260112_143052.json"
-  ],
-  "created_at": "2026-01-12T14:30:00",
-  "started_at": "2026-01-12T14:30:01",
-  "finished_at": "2026-01-12T14:35:00",
-  "exit_code": 0,
-  "error": null,
-  "webhook_url": "https://your-server.com/callback",
-  "webhook_events": ["succeeded", "failed", "skipped"],
-  "webhook_sent": true,
-  "webhook_error": null
-}
-```
-
-**Error Response:** `404 Not Found`
-
-```json
-{
-  "detail": "Job not found: nonexistent-id"
-}
-```
-
----
-
-#### GET /jobs
-
-List all jobs with optional filtering.
-
-**Query Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `status` | string | Filter by status (queued, running, succeeded, failed, cancelled, skipped) |
-| `type` | string | Filter by type (story_generation, research) |
-| `limit` | integer | Max results (default: 50, max: 200) |
-
-**Response:** `200 OK`
-
-```json
-{
-  "jobs": [
-    {
-      "job_id": "abc-123-def",
-      "type": "story_generation",
-      "status": "running",
-      ...
-    }
-  ],
-  "total": 1,
-  "message": "Found 1 jobs"
-}
-```
-
----
-
-### Batch Job Endpoints (v1.4.0)
-
-#### POST /jobs/batch/trigger
-
-여러 Job을 한 번에 트리거합니다.
-
-**Request Body:**
-
-```json
-{
-  "jobs": [
-    {
-      "type": "research",
-      "topic": "Korean apartment horror",
-      "tags": ["urban", "isolation"],
-      "model": "deep-research",
-      "timeout": 300
-    },
-    {
-      "type": "story",
-      "max_stories": 1,
-      "enable_dedup": true,
-      "model": "ollama:qwen3:30b"
-    }
-  ],
-  "webhook_url": "https://your-server.com/callback",
-  "webhook_events": ["succeeded", "failed", "skipped"]
-}
-```
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `jobs` | array | **Yes** | - | Job 스펙 배열 (1-50개) |
-| `webhook_url` | string | No | null | 모든 Job 완료 시 호출할 URL |
-| `webhook_events` | array | No | ["succeeded", "failed", "skipped"] | Webhook 트리거 이벤트 |
-
-**Job Spec Fields:**
-
-| Field | Type | Job Type | Description |
-|-------|------|----------|-------------|
-| `type` | string | All | **필수** - "research" 또는 "story" |
-| `topic` | string | Research | **필수** - 연구 주제 |
-| `tags` | array | Research | 분류 태그 |
-| `max_stories` | integer | Story | 최대 스토리 수 (기본 1) |
-| `enable_dedup` | boolean | Story | 중복 검사 활성화 |
-| `target_length` | integer | Story | 목표 스토리 길이 (300-10000자) |
-| `model` | string | All | 모델 선택 |
-| `timeout` | integer | All | 타임아웃 (초) |
-
-**Response:** `202 Accepted`
-
-```json
-{
-  "batch_id": "batch-abc123",
-  "job_ids": ["job-1", "job-2"],
-  "job_count": 2,
-  "status": "running",
-  "message": "Batch triggered with 2 jobs"
-}
-```
-
-**Error Response:** `400 Bad Request`
-
-```json
-{"detail": "No jobs were created. Errors: Job 0: Research job requires 'topic'"}
-```
-
----
-
-#### GET /jobs/batch/{batch_id}
-
-Batch 상태를 조회합니다.
-
-**Response:** `200 OK`
-
-```json
-{
-  "batch_id": "batch-abc123",
-  "status": "running",
-  "total_jobs": 2,
-  "completed_jobs": 1,
-  "succeeded_jobs": 1,
-  "failed_jobs": 0,
-  "running_jobs": 1,
-  "queued_jobs": 0,
-  "jobs": [
-    {
-      "job_id": "job-1",
-      "type": "research",
-      "status": "succeeded",
-      "error": null
-    },
-    {
-      "job_id": "job-2",
-      "type": "story_generation",
-      "status": "running",
-      "error": null
-    }
-  ],
-  "created_at": "2026-01-18T10:00:00",
-  "finished_at": null,
-  "webhook_url": "https://your-server.com/callback",
-  "webhook_sent": false
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `status` | string | 전체 상태: queued, running, completed, partial_failure, failed |
-| `total_jobs` | integer | 총 Job 수 |
-| `completed_jobs` | integer | 완료된 Job 수 |
-| `succeeded_jobs` | integer | 성공한 Job 수 |
-| `failed_jobs` | integer | 실패한 Job 수 |
-| `running_jobs` | integer | 실행 중인 Job 수 |
-| `queued_jobs` | integer | 대기 중인 Job 수 |
-
-**Error Response:** `404 Not Found`
-
-```json
-{"detail": "Batch not found: batch-nonexistent"}
-```
-
----
-
-#### POST /jobs/{job_id}/cancel
-
-Cancel a running job by sending SIGTERM.
-
-**Response:** `200 OK`
-
-```json
-{
-  "job_id": "abc-123-def",
-  "success": true,
-  "message": "Sent SIGTERM to PID 12345",
-  "error": null
-}
-```
-
-**Error Response:**
-
-```json
-{
-  "job_id": "abc-123-def",
-  "success": false,
-  "message": null,
-  "error": "Job not running (status: succeeded)"
-}
-```
-
----
-
-### Monitoring Endpoints
-
-#### POST /jobs/monitor
-
-Monitor all running jobs and update their status.
-
-Checks if processes are still running, collects artifacts, and updates job status to succeeded/failed.
-
-**Response:** `200 OK`
-
-```json
-{
-  "monitored_count": 2,
-  "results": [
-    {
-      "job_id": "abc-123-def",
-      "status": "succeeded",
-      "pid": null,
-      "artifacts": ["data/stories/story_1.json"],
-      "error": null,
-      "message": null
-    },
-    {
-      "job_id": "xyz-789-ghi",
-      "status": "running",
-      "pid": 54321,
-      "artifacts": [],
-      "error": null,
-      "message": "Process still running"
-    }
-  ]
-}
-```
-
----
-
-#### POST /jobs/{job_id}/monitor
-
-Monitor a single job and update its status.
-
-**Response:** `200 OK`
-
-```json
-{
-  "job_id": "abc-123-def",
-  "status": "succeeded",
-  "pid": null,
-  "artifacts": ["data/stories/story_1.json"],
-  "error": null,
-  "message": null
-}
-```
-
----
-
-#### POST /jobs/{job_id}/dedup_check
-
-Check deduplication signal for a research job's artifact.
-
-Only available for research jobs with completed artifacts.
-
-**Response:** `200 OK`
-
-```json
-{
-  "job_id": "xyz-789-ghi",
-  "has_artifact": true,
-  "artifact_path": "data/research/RC-20260112-143052.json",
-  "signal": "LOW",
-  "similarity_score": 0.15,
-  "message": null
-}
-```
-
-**No Artifact Response:**
-
-```json
-{
-  "job_id": "xyz-789-ghi",
-  "has_artifact": false,
-  "artifact_path": null,
-  "signal": null,
-  "similarity_score": null,
-  "message": "Job has no artifacts yet (still running or failed)"
 }
 ```
 
@@ -1489,24 +1072,6 @@ Only available for research jobs with completed artifacts.
 
 ## Data Schemas
 
-### Task Status Values (Legacy)
-
-| Status | Description |
-|--------|-------------|
-| `queued` | Task created, not yet started |
-| `running` | Process is executing |
-| `succeeded` | Process completed with no errors |
-| `failed` | Process exited with errors |
-| `cancelled` | User cancelled the task |
-| `skipped` | Expected skip (e.g., duplicate detection) - NOT a failure (v1.3.0) |
-
-### Task Types
-
-| Type | Description |
-|------|-------------|
-| `story_generation` | Story generation via `main.py` |
-| `research` | Research generation via `src.research.executor` |
-
 ### Dedup Signal Values
 
 **Story Dedup (Canonical Matching):**
@@ -1536,8 +1101,8 @@ Research embeddings use `nomic-embed-text` model via Ollama (768 dimensions).
 | Code | Meaning |
 |------|---------|
 | 200 | Success |
-| 202 | Accepted (job triggered) |
-| 404 | Job not found |
+| 201 | Created (task created) |
+| 404 | Not found |
 | 422 | Validation error (invalid parameters) |
 | 500 | Internal server error |
 
@@ -1553,80 +1118,9 @@ Research embeddings use `nomic-embed-text` model via Ollama (768 dimensions).
 
 ## Workflow Integration
 
-### Polling Pattern
+### Webhook Integration
 
-Recommended pattern for n8n or similar workflow tools:
-
-```
-1. POST /jobs/*/trigger → Get job_id
-2. Wait 30 seconds
-3. GET /jobs/{job_id} → Check status
-4. If status == "running": Go to step 2
-5. If status == "succeeded": Process artifacts
-6. If status == "failed": Handle error
-```
-
-### Webhook Integration (v1.3.0)
-
-Jobs can be configured to send HTTP POST notifications on completion.
-
-> **v1.6.1:** `webhook_url`을 생략하면 환경변수 `DISCORD_WEBHOOK_URL`이 자동으로 사용됩니다.
-> 요청에 `webhook_url`을 명시하면 환경변수보다 우선 적용됩니다.
-
-**Configuration (in trigger request):**
-
-```json
-{
-  "webhook_url": "https://your-server.com/callback",
-  "webhook_events": ["succeeded", "failed", "skipped"]
-}
-```
-
-**Webhook Payload:**
-
-```json
-{
-  "event": "succeeded",
-  "job_id": "abc-123-def",
-  "type": "story_generation",
-  "status": "succeeded",
-  "params": {...},
-  "created_at": "2026-01-13T12:00:00",
-  "started_at": "2026-01-13T12:00:01",
-  "finished_at": "2026-01-13T12:05:00",
-  "exit_code": 0,
-  "error": null,
-  "artifacts": ["data/stories/story_1.json"],
-  "timestamp": "2026-01-13T12:05:01"
-}
-```
-
-**Webhook Headers:**
-
-| Header | Description |
-|--------|-------------|
-| `Content-Type` | `application/json` |
-| `User-Agent` | `HorrorStoryGenerator/1.3` |
-| `X-Job-ID` | Job identifier |
-| `X-Job-Event` | Event type (succeeded, failed, skipped) |
-
-**Retry Logic:**
-
-- Max 3 attempts with exponential backoff
-- Base delay: 1 second, max delay: 10 seconds
-- Timeout: 30 seconds per request
-
-**Webhook Events:**
-
-| Event | Description |
-|-------|-------------|
-| `succeeded` | Job completed successfully |
-| `failed` | Job failed with error |
-| `skipped` | Job skipped (duplicate detection) |
-
-Note: `cancelled` events do not trigger webhooks by default.
-
-### Sync Endpoint Webhooks (v1.4.3)
+### Sync Endpoint Webhooks
 
 The sync endpoints (`/research/run`, `/story/generate`) support fire-and-forget webhooks.
 
@@ -1728,42 +1222,6 @@ Discord가 아닌 URL에는 표준 sync webhook payload 형식을 사용하며, 
   "timestamp": "2026-01-18T10:05:01"
 }
 ```
-
----
-
-## CLI Command Mapping
-
-The API triggers these CLI commands:
-
-### Story Generation
-
-```bash
-python main.py \
-  --max-stories {max_stories} \
-  --duration-seconds {duration_seconds} \
-  --interval-seconds {interval_seconds} \
-  --enable-dedup \
-  --db-path {db_path} \
-  --load-history \
-  --model {model}
-```
-
-| Parameter | Description |
-|-----------|-------------|
-| `--model` | Model selection. Default: Claude Sonnet. Format: `ollama:llama3`, `ollama:qwen`, or Claude model name |
-
-### Research Generation
-
-```bash
-python -m src.research.executor run {topic} \
-  --tags {tag1} {tag2} \
-  --model {model} \
-  --timeout {timeout}
-```
-
-| Parameter | Description |
-|-----------|-------------|
-| `--model` | Model selection. Default: Ollama qwen3:30b. Formats: `qwen:14b` (Ollama), `gemini` (standard), `deep-research` (Deep Research Agent). Gemini requires GEMINI_ENABLED=true |
 
 ---
 

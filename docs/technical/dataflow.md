@@ -254,38 +254,38 @@ flowchart TB
 
 ---
 
-## 3. API Pipeline Dataflow
+## 3. Task Scheduler Pipeline Dataflow
 
 ### 3.1 전체 흐름
 
 ```mermaid
 flowchart LR
     subgraph Request["요청"]
-        A1["POST /jobs/*/trigger"]
+        A1["POST /tasks"]
         A2["Request Validation<br/>(Pydantic)"]
     end
 
-    subgraph JobCreation["Job 생성"]
-        B1["Generate Job ID"]
-        B2["Create Job File"]
-        B3["Launch subprocess"]
+    subgraph TaskCreation["Task 생성"]
+        B1["Generate Task ID"]
+        B2["Save to SQLite"]
+        B3["Enqueue"]
     end
 
     subgraph Execution["실행"]
-        C1["CLI Process"]
-        C2["Log Output"]
+        C1["Scheduler Dispatch"]
+        C2["Executor"]
         C3["Artifacts"]
     end
 
-    subgraph Monitoring["모니터링"]
-        D1["PID Polling"]
+    subgraph Completion["완료"]
+        D1["TaskRun Creation"]
         D2["Status Update"]
         D3["Webhook Notification"]
     end
 
     subgraph Response["응답"]
-        E1["202 Accepted"]
-        E2["GET /jobs/{id}"]
+        E1["201 Created"]
+        E2["GET /tasks/{id}"]
     end
 
     A1 --> A2
@@ -295,19 +295,19 @@ flowchart LR
     B3 --> E1
     B3 --> C1
     C1 --> C2
-    C1 --> C3
-    D1 --> C1
+    C2 --> C3
+    C2 --> D1
     D1 --> D2
     D2 --> D3
     E2 --> D2
 ```
 
-### 3.2 Job Lifecycle
+### 3.2 Task Lifecycle
 
 ```
-queued → running → succeeded
-                 ↘ failed
-                 ↘ cancelled
+QUEUED → RUNNING → COMPLETED (TaskRun)
+                 ↘ FAILED (TaskRun)
+       ↘ CANCELLED
 ```
 
 ---
@@ -320,7 +320,7 @@ queued → running → succeeded
 |------------|------|------|
 | Research | topic, tags, model | `RC-*.json`, FAISS index |
 | Story | template, research | `horror_story_*.md`, registry |
-| API | HTTP request | job file, log, artifacts |
+| Scheduler | POST /tasks request | SQLite task record, log, artifacts |
 
 ### 4.2 데이터 의존성
 

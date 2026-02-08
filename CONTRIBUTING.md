@@ -18,11 +18,9 @@
 
 ```
 horror-story-generator/
-├── main.py                        # 스토리 생성 CLI 진입점
 ├── src/                           # 메인 소스 패키지
 │   ├── infra/                     # 인프라 모듈
 │   │   ├── data_paths.py          # 경로 관리
-│   │   ├── job_manager.py         # 작업 관리
 │   │   └── logging_config.py      # 로깅 설정
 │   ├── registry/                  # 데이터 저장소
 │   │   └── story_registry.py      # 스토리 중복 레지스트리
@@ -31,11 +29,16 @@ horror-story-generator/
 │   │   └── research/              # 연구 중복 검사 (FAISS)
 │   ├── story/                     # 스토리 생성 파이프라인
 │   │   ├── generator.py           # 핵심 생성 오케스트레이션
+│   │   ├── runner.py              # 스케줄러용 서브프로세스 진입점
 │   │   ├── api_client.py          # Claude API 클라이언트
 │   │   └── prompt_builder.py      # 프롬프트 생성
 │   ├── research/                  # 연구 생성
-│   │   ├── executor/              # CLI 실행기
+│   │   ├── executor/              # 연구 실행기
 │   │   └── integration/           # 스토리-연구 연동
+│   ├── scheduler/                 # Task Scheduler 엔진
+│   │   ├── service.py             # 스케줄러 서비스
+│   │   ├── persistence.py         # SQLite 영속성
+│   │   └── executor.py            # 작업 실행 디스패치
 │   └── api/                       # FastAPI 서버
 ├── assets/                        # 템플릿 및 리소스
 │   └── templates/                 # 15개 템플릿 스켈레톤
@@ -52,10 +55,13 @@ horror-story-generator/
   - Claude API 호출
   - 중복 검사 및 재생성 로직
 
-- **`main.py`**: CLI 진입점
-  - `--enable-dedup`: 중복 검사 활성화
-  - `--max-stories N`: N개 스토리 생성
-  - `--duration-seconds`: 지속 시간 설정
+- **`src/api/main.py`**: FastAPI 서버 진입점
+  - API 서버 설정 및 라우터 등록
+  - 스케줄러 서비스 통합
+
+- **`src/scheduler/service.py`**: Task Scheduler 서비스
+  - 큐 기반 작업 디스패치
+  - 우선순위 및 순서 관리
 
 - **`assets/templates/`**: 템플릿 스켈레톤
   - 15개의 호러 템플릿 정의
@@ -120,7 +126,7 @@ API_KEY=your_secure_key   # 인증에 사용할 API 키
 ### 5. 테스트 실행
 
 ```bash
-python main.py
+pytest tests/ -v
 ```
 
 ---
@@ -274,20 +280,12 @@ def test_new_feature():
 ### 기본 테스트
 
 ```bash
-# 기본 실행
-python main.py
-```
+# 테스트 실행
+pytest tests/ -v
 
-### 특정 기능 테스트
-
-`main.py`에서 해당 테스트를 주석 해제하고 실행:
-
-```python
-# 테스트 2: 커스텀 요청
-custom_result = run_custom_generation(
-    "1980년대 한국 시골 마을을 배경으로, "
-    "폐교된 초등학교에서 벌어지는 섬뜩한 사건을 다룬 호러 소설을 써주세요."
-)
+# 특정 모듈 테스트
+pytest tests/test_story/ -v
+pytest tests/test_scheduler/ -v
 ```
 
 ### 로그 확인
@@ -415,11 +413,11 @@ release-please가 이 커밋 메시지를 분석하여 자동으로 CHANGELOG를
 
 변경이 적용되는 영역을 괄호 안에 명시합니다:
 
-- `api` - Trigger API 관련
+- `api` - API 관련
 - `story` - 스토리 생성 관련
 - `research` - 리서치 생성 관련
 - `dedup` - 중복 검사 관련
-- `cli` - CLI 관련
+- `scheduler` - Task Scheduler 관련
 - `docs` - 문서 관련
 - `release` - 릴리스/버전 관련
 
