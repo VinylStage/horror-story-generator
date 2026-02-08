@@ -39,6 +39,17 @@ from .queue_manager import QueueManager
 logger = logging.getLogger(__name__)
 
 
+def _run_status_to_task_status(run_status: TaskRunStatus) -> TaskStatus:
+    """Map TaskRun terminal status to Task terminal status."""
+    if run_status == TaskRunStatus.COMPLETED:
+        return TaskStatus.COMPLETED
+    elif run_status == TaskRunStatus.FAILED:
+        return TaskStatus.FAILED
+    else:
+        # SKIPPED → treat as CANCELLED at task level
+        return TaskStatus.CANCELLED
+
+
 class DispatcherState(str, Enum):
     """Dispatcher lifecycle states."""
 
@@ -222,9 +233,11 @@ class Dispatcher:
             # Execute via executor
             completed_run = self._executor.execute(task, task_run)
 
-            # Update task finished_at
+            # Update task status and finished_at
+            task_status = _run_status_to_task_status(completed_run.status)
             self.persistence.update_task(
                 task.task_id,
+                status=task_status,
                 finished_at=completed_run.finished_at,
             )
 
@@ -303,9 +316,11 @@ class Dispatcher:
             try:
                 completed_run = self._executor.execute(claimed_task, task_run)
 
-                # Update task finished_at
+                # Update task status and finished_at
+                task_status = _run_status_to_task_status(completed_run.status)
                 self.persistence.update_task(
                     claimed_task.task_id,
+                    status=task_status,
                     finished_at=completed_run.finished_at,
                 )
 
@@ -525,9 +540,11 @@ class Dispatcher:
             try:
                 completed_run = self._executor.execute(task, task_run)
 
-                # Update task finished_at
+                # Update task status and finished_at
+                task_status = _run_status_to_task_status(completed_run.status)
                 self.persistence.update_task(
                     task.task_id,
+                    status=task_status,
                     finished_at=completed_run.finished_at,
                 )
 

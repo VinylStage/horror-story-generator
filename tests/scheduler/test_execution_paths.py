@@ -84,7 +84,7 @@ class TestEPNormalExecution:
 
         # Verify task state
         task_fresh = persistence.get_task(task.task_id)
-        assert task_fresh.status == TaskStatus.RUNNING
+        assert task_fresh.status == TaskStatus.COMPLETED
         assert task_fresh.finished_at is not None
 
     def test_ep_norm_02_execution_order_matches_queue_order(

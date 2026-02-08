@@ -41,6 +41,8 @@ Used for:
 |------|--------|
 | QUEUED | Waiting in queue |
 | RUNNING | Currently executing |
+| COMPLETED | Execution finished successfully |
+| FAILED | Execution failed |
 | CANCELLED | Cancelled before completion |
 
 > These statuses are exposed via API and webhooks.
