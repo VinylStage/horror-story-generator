@@ -186,6 +186,78 @@ class TestListTasks:
             assert data["total"] == 0
 
 
+    def test_list_tasks_sorted_by_status_priority(self, client):
+        """Should return tasks sorted: RUNNING → QUEUED → COMPLETED."""
+        from src.scheduler.entities import Task, TaskStatus
+
+        mock_cancelled = MagicMock(spec=Task)
+        mock_cancelled.task_id = "task-done"
+        mock_cancelled.task_type = "story"
+        mock_cancelled.status = TaskStatus.CANCELLED
+        mock_cancelled.params = {}
+        mock_cancelled.priority = 0
+        mock_cancelled.position = 0
+        mock_cancelled.template_id = None
+        mock_cancelled.group_id = None
+        mock_cancelled.retry_of = None
+        mock_cancelled.created_at = "2026-01-18T10:00:00"
+        mock_cancelled.queued_at = "2026-01-18T10:00:00"
+        mock_cancelled.started_at = "2026-01-18T10:01:00"
+        mock_cancelled.finished_at = "2026-01-18T10:05:00"
+
+        mock_queued = MagicMock(spec=Task)
+        mock_queued.task_id = "task-wait"
+        mock_queued.task_type = "story"
+        mock_queued.status = TaskStatus.QUEUED
+        mock_queued.params = {}
+        mock_queued.priority = 0
+        mock_queued.position = 100
+        mock_queued.template_id = None
+        mock_queued.group_id = None
+        mock_queued.retry_of = None
+        mock_queued.created_at = "2026-01-18T10:02:00"
+        mock_queued.queued_at = "2026-01-18T10:02:00"
+        mock_queued.started_at = None
+        mock_queued.finished_at = None
+
+        mock_running = MagicMock(spec=Task)
+        mock_running.task_id = "task-run"
+        mock_running.task_type = "research"
+        mock_running.status = TaskStatus.RUNNING
+        mock_running.params = {}
+        mock_running.priority = 0
+        mock_running.position = 0
+        mock_running.template_id = None
+        mock_running.group_id = None
+        mock_running.retry_of = None
+        mock_running.created_at = "2026-01-18T10:01:00"
+        mock_running.queued_at = "2026-01-18T10:01:00"
+        mock_running.started_at = "2026-01-18T10:03:00"
+        mock_running.finished_at = None
+
+        # Service returns already-sorted list (persistence handles ORDER BY)
+        with patch("src.api.routers.tasks.get_scheduler_service") as mock_get_service:
+            mock_service = MagicMock()
+            mock_service.list_all_tasks.return_value = [mock_running, mock_queued, mock_cancelled]
+            mock_service.get_queue_stats.return_value = {
+                "queued_count": 1,
+                "running_count": 1,
+            }
+            mock_get_service.return_value = mock_service
+
+            response = client.get("/tasks")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["total"] == 3
+            assert data["tasks"][0]["task_id"] == "task-run"
+            assert data["tasks"][0]["status"] == "RUNNING"
+            assert data["tasks"][1]["task_id"] == "task-wait"
+            assert data["tasks"][1]["status"] == "QUEUED"
+            assert data["tasks"][2]["task_id"] == "task-done"
+            assert data["tasks"][2]["status"] == "CANCELLED"
+
+
 class TestDeleteTask:
     """Tests for DELETE /tasks/{task_id} endpoint."""
 

@@ -792,12 +792,20 @@ class PersistenceAdapter:
         return [self._row_to_task(row) for row in rows]
 
     def list_tasks(self, limit: int = 100) -> list[Task]:
-        """List all tasks ordered by created_at DESC."""
+        """List all tasks sorted by status priority: RUNNING → QUEUED → rest."""
         with self._connection() as conn:
             rows = conn.execute(
                 """
                 SELECT * FROM tasks
-                ORDER BY created_at DESC
+                ORDER BY
+                    CASE status
+                        WHEN 'RUNNING' THEN 0
+                        WHEN 'QUEUED' THEN 1
+                        ELSE 2
+                    END,
+                    CASE WHEN status = 'QUEUED' THEN position END ASC,
+                    finished_at DESC,
+                    created_at DESC
                 LIMIT ?
                 """,
                 (limit,),
