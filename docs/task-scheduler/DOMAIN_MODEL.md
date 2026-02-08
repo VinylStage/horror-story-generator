@@ -1,4 +1,4 @@
-# Job Scheduler Domain Model
+# Task Scheduler Domain Model
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
@@ -9,7 +9,7 @@
 
 ## Overview
 
-This document defines the canonical domain model for the Job Scheduler system. These entities form the conceptual foundation for all scheduler-related functionality. Implementation details are intentionally omitted; this document serves as the authoritative reference for what each entity represents and why it exists.
+This document defines the canonical domain model for the Task Scheduler system. These entities form the conceptual foundation for all scheduler-related functionality. Implementation details are intentionally omitted; this document serves as the authoritative reference for what each entity represents and why it exists.
 
 ---
 
@@ -94,24 +94,24 @@ CREATED → ENABLED ⇄ DISABLED → [DELETED]
 ```
 
 - **CREATED**: Schedule defined but not yet enabled
-- **ENABLED**: Schedule actively creates Jobs at defined times
-- **DISABLED**: Schedule paused, no new Jobs created
+- **ENABLED**: Schedule actively creates Tasks at defined times
+- **DISABLED**: Schedule paused, no new Tasks created
 - **DELETED**: Schedule removed
 
 #### What Schedule is NOT
 
-- Schedule is NOT a Job
+- Schedule is NOT a Task
 - Schedule does NOT execute work directly
 - Schedule does NOT store execution results
 - Schedule does NOT manage queue position
 
 ---
 
-### 3. Job
+### 3. Task
 
 #### Purpose
 
-A Job represents a **single unit of work** that has been queued for execution. It is an ephemeral entity that exists from the moment work is requested until execution completes.
+A Task represents a **single unit of work** that has been queued for execution. It is an ephemeral entity that exists from the moment work is requested until execution completes.
 
 #### Responsibilities
 
@@ -125,7 +125,7 @@ A Job represents a **single unit of work** that has been queued for execution. I
 | Field | Description |
 |-------|-------------|
 | `task_id` | Unique identifier |
-| `template_id` | Reference to source TaskTemplate (nullable for ad-hoc jobs) |
+| `template_id` | Reference to source TaskTemplate (nullable for ad-hoc tasks) |
 | `schedule_id` | Reference to triggering Schedule (nullable) |
 | `group_id` | Reference to TaskGroup (nullable) |
 | `task_type` | Type of work |
@@ -138,29 +138,25 @@ A Job represents a **single unit of work** that has been queued for execution. I
 
 #### Lifecycle
 
-**External (API/Webhook visible):**
 ```
-QUEUED → RUNNING → CANCELLED
+QUEUED → RUNNING → COMPLETED | FAILED
+QUEUED → CANCELLED
 ```
 
 | Status | Meaning |
 |--------|---------|
-| **QUEUED** | Job in queue, awaiting execution |
-| **RUNNING** | Job actively executing |
-| **CANCELLED** | Job cancelled before completion |
+| **QUEUED** | Task in queue, awaiting execution |
+| **RUNNING** | Task actively executing |
+| **COMPLETED** | Task execution finished successfully |
+| **FAILED** | Task execution encountered an error |
+| **CANCELLED** | Task cancelled before completion |
 
-**Internal only (not exposed via API):**
-- `PENDING`: Job created but not yet queued (e.g., awaiting group)
-- `DISPATCHED`: Job assigned to worker (brief transition state)
+#### What Task is NOT
 
-> Note: Execution outcome (success/failure) is recorded in TaskRun, not Job.
-
-#### What Job is NOT
-
-- Job is NOT a historical record (that is TaskRun)
-- Job does NOT persist after completion indefinitely
-- Job does NOT define what work to do (that is TaskTemplate)
-- Job does NOT define when to execute (that is Schedule)
+- Task is NOT a historical record (that is TaskRun)
+- Task does NOT persist after completion indefinitely
+- Task does NOT define what work to do (that is TaskTemplate)
+- Task does NOT define when to execute (that is Schedule)
 
 ---
 
@@ -168,7 +164,7 @@ QUEUED → RUNNING → CANCELLED
 
 #### Purpose
 
-A TaskRun represents a **historical record** of a single execution attempt. It is the immutable audit trail of what happened when a Job was executed.
+A TaskRun represents a **historical record** of a single execution attempt. It is the immutable audit trail of what happened when a Task was executed.
 
 #### Responsibilities
 
@@ -183,7 +179,7 @@ A TaskRun represents a **historical record** of a single execution attempt. It i
 | Field | Description |
 |-------|-------------|
 | `run_id` | Unique identifier |
-| `task_id` | Reference to the Job |
+| `task_id` | Reference to the Task |
 | `template_id` | Snapshot of template used |
 | `params_snapshot` | Snapshot of parameters used |
 | `status` | Execution result |
@@ -241,11 +237,11 @@ A TaskGroup represents a **logical collection** of Jobs that share execution con
 | `group_id` | Unique identifier |
 | `name` | Human-readable label (optional) |
 | `mode` | Execution mode (`parallel` or `sequential`) |
-| `task_ids` | Ordered list of Job references |
+| `task_ids` | Ordered list of Task references |
 | `status` | Aggregate status |
 | `created_at` | Creation timestamp |
-| `started_at` | When first job started |
-| `finished_at` | When last job finished |
+| `started_at` | When first task started |
+| `finished_at` | When last task finished |
 
 #### Lifecycle
 
@@ -253,42 +249,42 @@ A TaskGroup represents a **logical collection** of Jobs that share execution con
 CREATED → QUEUED → RUNNING → [terminal state]
 
 Terminal states:
-- COMPLETED (all jobs finished)
-- PARTIAL (some jobs failed)
+- COMPLETED (all tasks finished)
+- PARTIAL (some tasks failed)
 - CANCELLED
 ```
 
-- **CREATED**: Group defined, jobs being added
+- **CREATED**: Group defined, tasks being added
 - **QUEUED**: Group in queue, awaiting execution
-- **RUNNING**: At least one job in group is executing
-- **COMPLETED**: All jobs finished (success or skip)
-- **PARTIAL**: Some jobs succeeded, some failed
+- **RUNNING**: At least one task in group is executing
+- **COMPLETED**: All tasks finished (success or skip)
+- **PARTIAL**: Some tasks succeeded, some failed
 - **CANCELLED**: Group cancelled
 
 #### What TaskGroup is NOT
 
 - TaskGroup is NOT a TaskTemplate (it does not define work)
 - TaskGroup is NOT a Schedule (it does not define timing)
-- TaskGroup does NOT execute work (Jobs do)
+- TaskGroup does NOT execute work (Tasks do)
 - TaskGroup does NOT persist execution history (TaskRuns do)
 
 ---
 
 ## Key Distinctions
 
-### TaskTemplate vs Job
+### TaskTemplate vs Task
 
-| Aspect | TaskTemplate | Job |
-|--------|-------------|-----|
+| Aspect | TaskTemplate | Task |
+|--------|-------------|------|
 | Lifespan | Long-lived | Ephemeral |
 | Purpose | Define work | Request execution |
 | Mutability | Mutable | Immutable after queued |
-| Cardinality | One template → Many jobs | One job → One execution |
+| Cardinality | One template → Many tasks | One task → One execution |
 
-### Job vs TaskRun
+### Task vs TaskRun
 
-| Aspect | Job | TaskRun |
-|--------|-----|--------|
+| Aspect | Task | TaskRun |
+|--------|------|--------|
 | Temporal scope | Future/present | Past |
 | Purpose | Queue management | Audit trail |
 | Mutability | State changes | Immutable |
@@ -307,7 +303,7 @@ Terminal states:
 ## Design Principles
 
 1. **Separation of Concerns**
-   - Configuration (TaskTemplate) is separate from execution (Job/TaskRun)
+   - Configuration (TaskTemplate) is separate from execution (Task/TaskRun)
    - Timing (Schedule) is separate from grouping (TaskGroup)
 
 2. **Single Responsibility**
@@ -316,7 +312,7 @@ Terminal states:
 
 3. **Immutability Where Appropriate**
    - TaskRun is immutable (audit integrity)
-   - Job is immutable after dispatch (execution consistency)
+   - Task is immutable after dispatch (execution consistency)
 
 4. **Explicit Over Implicit**
    - All relationships are explicit references
@@ -328,9 +324,9 @@ Terminal states:
 
 | Term | Definition |
 |------|------------|
-| **Execution** | The act of running work defined by a Job |
-| **Dispatch** | Assigning a Job to a Worker for execution |
-| **Queue** | Ordered collection of Jobs awaiting execution |
+| **Execution** | The act of running work defined by a Task |
+| **Dispatch** | Assigning a Task to a Worker for execution |
+| **Queue** | Ordered collection of Tasks awaiting execution |
 | **Worker** | Component that performs actual execution |
 | **Artifact** | File produced by execution (e.g., story JSON) |
 | **Priority** | Relative importance affecting execution order |
@@ -343,4 +339,4 @@ Terminal states:
 - [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
 - [API_CONTRACT.md](./API_CONTRACT.md) - API 계약
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요

@@ -1,4 +1,4 @@
-# Job Scheduler Implementation Plan
+# Task Scheduler Implementation Plan
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
@@ -724,5 +724,5 @@ The following questions have been resolved and implemented.
 - [EXECUTION_FLOW.md](./EXECUTION_FLOW.md) - 실행 흐름 다이어그램
 - [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
 - [API_CONTRACT.md](./API_CONTRACT.md) - API 계약
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

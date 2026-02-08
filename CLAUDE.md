@@ -220,7 +220,7 @@ Skipping any layer is a common source of bugs (e.g., KeyError from mismatched di
 | Target | Check |
 |--------|-------|
 | **`docs/core/API.md`** | Endpoint paths, request/response examples, field names |
-| **`docs/job-scheduler/*.md`** | Domain model, design docs, test plans |
+| **`docs/task-scheduler/*.md`** | Domain model, design docs, test plans |
 | **Module-level docstrings** | Top-of-file `"""..."""` in every changed module |
 | **Inline comments** | Comments referencing old names |
 | **README / CLAUDE.md** | If conventions or workflows changed |

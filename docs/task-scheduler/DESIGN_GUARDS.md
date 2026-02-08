@@ -27,7 +27,7 @@ This document captures the **invariants, constraints, and critical decisions** t
 
 ### INV-001: Task Immutability After Dispatch
 
-**Statement**: Once a Task enters `DISPATCHED` state, its `params` field MUST NOT change.
+**Statement**: Once a Task enters `RUNNING` state, its `params` field MUST NOT change.
 
 **Rationale**: Execution consistency requires stable parameters. If params could change mid-execution, workers would have inconsistent views of what they're running.
 
@@ -35,7 +35,7 @@ This document captures the **invariants, constraints, and critical decisions** t
 ```python
 def update_task(task_id: str, **updates):
     task = load_task(task_id)
-    if task.status in [TaskStatus.DISPATCHED, TaskStatus.RUNNING]:
+    if task.status == TaskStatus.RUNNING:
         if "params" in updates:
             raise InvalidOperationError("Cannot modify params after dispatch")
 ```
@@ -248,7 +248,7 @@ def compute_group_status(group: TaskGroup) -> GroupStatus:
 1. On failure, scheduler creates new Task with `retry_of` reference
 2. Automatic retries: max 3 attempts per original task
 3. After 3 failures: task marked as permanently failed
-4. Manual retry always allowed via `POST /api/job-runs/{run_id}/retry`
+4. Manual retry always allowed via `POST /api/task-runs/{run_id}/retry`
 
 **Rationale**: Balances automation with control. Prevents infinite retry loops while handling transient failures.
 
@@ -362,7 +362,7 @@ def compute_group_status(group: TaskGroup) -> GroupStatus:
 - Phase 5+: Add `on_failure: stop | continue | skip` field when user requests flexibility
 - Default value `stop` ensures backward compatibility
 
-**Reference**: See `JOBGROUP_BEHAVIOR_OPTIONS.md` for full decision analysis.
+**Reference**: See `TASKGROUP_BEHAVIOR_OPTIONS.md` for full decision analysis.
 
 ---
 
@@ -495,5 +495,5 @@ Before implementation of any component:
 - [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
 - [API_CONTRACT.md](./API_CONTRACT.md) - API 계약
 - [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

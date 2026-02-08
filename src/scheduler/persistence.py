@@ -113,9 +113,9 @@ class PersistenceAdapter:
         self._migrate_tables()
 
         with self._transaction() as conn:
-            # TaskTemplate table (still job_templates for backward compat)
+            # TaskTemplate table
             conn.execute("""
-                CREATE TABLE IF NOT EXISTS job_templates (
+                CREATE TABLE IF NOT EXISTS task_templates (
                     template_id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     job_type TEXT NOT NULL,
@@ -140,7 +140,7 @@ class PersistenceAdapter:
                     last_triggered_at TEXT,
                     next_trigger_at TEXT,
                     created_at TEXT NOT NULL,
-                    FOREIGN KEY (template_id) REFERENCES job_templates(template_id)
+                    FOREIGN KEY (template_id) REFERENCES task_templates(template_id)
                 )
             """)
 
@@ -175,7 +175,7 @@ class PersistenceAdapter:
                     queued_at TEXT NOT NULL,
                     started_at TEXT,
                     finished_at TEXT,
-                    FOREIGN KEY (template_id) REFERENCES job_templates(template_id),
+                    FOREIGN KEY (template_id) REFERENCES task_templates(template_id),
                     FOREIGN KEY (schedule_id) REFERENCES schedules(schedule_id),
                     FOREIGN KEY (group_id) REFERENCES task_groups(group_id),
                     FOREIGN KEY (retry_of) REFERENCES tasks(task_id)
@@ -316,7 +316,7 @@ class PersistenceAdapter:
         with self._transaction() as conn:
             conn.execute(
                 """
-                INSERT INTO job_templates
+                INSERT INTO task_templates
                 (template_id, name, job_type, default_params, retry_policy, description, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
@@ -337,7 +337,7 @@ class PersistenceAdapter:
         """Get a task template by ID."""
         with self._connection() as conn:
             row = conn.execute(
-                "SELECT * FROM job_templates WHERE template_id = ?",
+                "SELECT * FROM task_templates WHERE template_id = ?",
                 (template_id,),
             ).fetchone()
 
@@ -395,7 +395,7 @@ class PersistenceAdapter:
 
             with self._transaction() as conn:
                 conn.execute(
-                    f"UPDATE job_templates SET {', '.join(updates)} WHERE template_id = ?",
+                    f"UPDATE task_templates SET {', '.join(updates)} WHERE template_id = ?",
                     values,
                 )
 
@@ -405,7 +405,7 @@ class PersistenceAdapter:
         """List all task templates."""
         with self._connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM job_templates ORDER BY created_at DESC"
+                "SELECT * FROM task_templates ORDER BY created_at DESC"
             ).fetchall()
 
         return [

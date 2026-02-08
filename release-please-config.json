@@ -80,82 +80,82 @@
         },
         {
           "type": "generic",
-          "path": "docs/technical/JOB_SCHEDULER_DESIGN.md",
+          "path": "docs/technical/TASK_SCHEDULER_DESIGN.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/technical/job-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md",
+          "path": "docs/technical/task-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/API_CONTRACT.md",
+          "path": "docs/task-scheduler/API_CONTRACT.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/API_IMPACT.md",
+          "path": "docs/task-scheduler/API_IMPACT.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/CONCURRENCY_OPTIONS.md",
+          "path": "docs/task-scheduler/CONCURRENCY_OPTIONS.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/DESIGN_GUARDS.md",
+          "path": "docs/task-scheduler/DESIGN_GUARDS.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/DOMAIN_MODEL.md",
+          "path": "docs/task-scheduler/DOMAIN_MODEL.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/E2E_TEST_PLAN.md",
+          "path": "docs/task-scheduler/E2E_TEST_PLAN.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/E2E_TEST_REPORT.md",
+          "path": "docs/task-scheduler/E2E_TEST_REPORT.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/ENTITY_RELATIONSHIPS.md",
+          "path": "docs/task-scheduler/ENTITY_RELATIONSHIPS.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/EXECUTION_FLOW.md",
+          "path": "docs/task-scheduler/EXECUTION_FLOW.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/IMPLEMENTATION_PLAN.md",
+          "path": "docs/task-scheduler/IMPLEMENTATION_PLAN.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/JOBGROUP_BEHAVIOR_OPTIONS.md",
+          "path": "docs/task-scheduler/TASKGROUP_BEHAVIOR_OPTIONS.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/PERSISTENCE_SCHEMA.md",
+          "path": "docs/task-scheduler/PERSISTENCE_SCHEMA.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/RECOVERY_SCENARIOS.md",
+          "path": "docs/task-scheduler/RECOVERY_SCENARIOS.md",
           "glob": false
         },
         {
           "type": "generic",
-          "path": "docs/job-scheduler/TEST_STRATEGY.md",
+          "path": "docs/task-scheduler/TEST_STRATEGY.md",
           "glob": false
         }
       ]

@@ -370,4 +370,4 @@ distinct from direct API endpoint webhooks (`build_discord_embed_payload`):
 - [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
 - [API_IMPACT.md](./API_IMPACT.md) - API 영향 분석
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일 및 결정사항
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요

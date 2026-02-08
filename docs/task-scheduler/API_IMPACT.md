@@ -7,6 +7,8 @@
 
 ---
 
+> **Implementation Note:** Phase 3 implementation is complete. The scheduler task API is available under the `/tasks` prefix. Template and schedule endpoints (`/scheduler/templates`, `/scheduler/schedules`) remain planned for future phases.
+
 ## Overview
 
 This document analyzes how the proposed Task Scheduler system impacts existing API endpoints. It covers endpoint mapping to domain entities, breaking changes, migration strategies, and coexistence patterns.
@@ -298,7 +300,7 @@ Run old and new systems in parallel.
 │                    API Gateway                       │
 ├─────────────────────────────────────────────────────┤
 │  Legacy Path              │  New Path               │
-│  /jobs/story/trigger      │  /scheduler/jobs        │
+│  /jobs/story/trigger      │  /tasks                 │
 │  /jobs/research/trigger   │  /scheduler/templates   │
 │  /jobs/batch/trigger      │  /scheduler/schedules   │
 │         │                 │         │               │
@@ -538,5 +540,5 @@ This guarantees:
 - [API_CONTRACT.md](./API_CONTRACT.md) - API 계약 및 구현 상태
 - [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

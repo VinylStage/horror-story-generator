@@ -1,4 +1,4 @@
-# Job Scheduler End-to-End Test Plan
+# Task Scheduler End-to-End Test Plan
 
 **Document Version:** 1.1.0
 **Application Version:** 1.6.0 <!-- x-release-please-version -->
@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-This document defines the End-to-End (E2E) test plan for the Job Scheduler.
+This document defines the End-to-End (E2E) test plan for the Task Scheduler.
 E2E tests validate the complete scheduler lifecycle with all components
 integrated, ensuring the system behaves correctly as a whole.
 
@@ -17,7 +17,7 @@ integrated, ensuring the system behaves correctly as a whole.
 
 | Category | In Scope | Out of Scope |
 |----------|----------|--------------|
-| Scheduler E2E | Job lifecycle, dispatch, retry, recovery, TaskGroup | UI testing |
+| Scheduler E2E | Task lifecycle, dispatch, retry, recovery, TaskGroup | UI testing |
 | Pipeline E2E | Real story/research execution | Performance benchmarks |
 | Integration | Component interaction, callbacks | External webhook delivery |
 
@@ -32,7 +32,7 @@ integrated, ensuring the system behaves correctly as a whole.
 |------------|-------------|
 | **API-ONLY** | All Pipeline E2E tests MUST execute through HTTP API. No direct CLI invocation. |
 | **NO MOCKS** | Pipeline tests use real generation (Claude API, Ollama). Mock execution is not acceptable. |
-| **RESOURCE SAFE** | Only ONE Ollama workload at a time. Concurrent jobs must use external APIs. |
+| **RESOURCE SAFE** | Only ONE Ollama workload at a time. Concurrent tasks must use external APIs. |
 
 ---
 
@@ -86,48 +86,48 @@ integrated, ensuring the system behaves correctly as a whole.
 
 | Test ID | Description | Steps | Expected |
 |---------|-------------|-------|----------|
-| E2E-NORM-01 | Single job lifecycle | Enqueue → Dispatch → Execute | COMPLETED |
-| E2E-NORM-02 | Priority ordering | Enqueue 3 jobs with different priorities | Execute in priority order |
-| E2E-NORM-03 | Job cancellation | Enqueue → Cancel before dispatch | CANCELLED, no execution |
+| E2E-NORM-01 | Single task lifecycle | Enqueue → Dispatch → Execute | COMPLETED |
+| E2E-NORM-02 | Priority ordering | Enqueue 3 tasks with different priorities | Execute in priority order |
+| E2E-NORM-03 | Task cancellation | Enqueue → Cancel before dispatch | CANCELLED, no execution |
 
 ### 3.2 E2E-DIRECT: Direct API Reservation (DEC-004)
 
 | Test ID | Description | Steps | Expected |
 |---------|-------------|-------|----------|
 | E2E-DIRECT-01 | Empty queue immediate | Direct on empty queue | Executes immediately |
-| E2E-DIRECT-02 | Between queued jobs | Job1 → Direct → Job2 | Order preserved |
+| E2E-DIRECT-02 | Between queued tasks | Task1 → Direct → Task2 | Order preserved |
 | E2E-DIRECT-03 | Queue pauses | Create reservation → Dispatch | Queue paused |
 
 ### 3.3 E2E-RETRY: Retry Flow (DEC-007)
 
 | Test ID | Description | Steps | Expected |
 |---------|-------------|-------|----------|
-| E2E-RETRY-01 | Single failure retry | Job fails once | Retry created |
-| E2E-RETRY-02 | Max 3 attempts | Job fails repeatedly | 4 total attempts (1+3) |
+| E2E-RETRY-01 | Single failure retry | Task fails once | Retry created |
+| E2E-RETRY-02 | Max 3 attempts | Task fails repeatedly | 4 total attempts (1+3) |
 | E2E-RETRY-03 | Retry chain linkage | Multiple failures | retry_of chain preserved |
 
 ### 3.4 E2E-RECOVERY: Crash Recovery
 
 | Test ID | Description | Steps | Expected |
 |---------|-------------|-------|----------|
-| E2E-RECOVERY-01 | Running job recovery | Simulate crash during RUNNING | FAILED TaskRun created |
-| E2E-RECOVERY-02 | Retry for recovered | Recovery + retry evaluation | Retry job created |
+| E2E-RECOVERY-01 | Running task recovery | Simulate crash during RUNNING | FAILED TaskRun created |
+| E2E-RECOVERY-02 | Retry for recovered | Recovery + retry evaluation | Retry task created |
 
 ### 3.5 E2E-GROUP: TaskGroup Sequential Execution (DEC-012)
 
 | Test ID | Description | Steps | Expected |
 |---------|-------------|-------|----------|
-| E2E-GROUP-01 | Sequential execution | 3 jobs in group | Execute in sequence order |
-| E2E-GROUP-02 | Stop-on-failure | Job 2 fails (all retries) | Job 3 SKIPPED, group PARTIAL |
-| E2E-GROUP-03 | Completed group | All jobs succeed | Group COMPLETED |
+| E2E-GROUP-01 | Sequential execution | 3 tasks in group | Execute in sequence order |
+| E2E-GROUP-02 | Stop-on-failure | Task 2 fails (all retries) | Task 3 SKIPPED, group PARTIAL |
+| E2E-GROUP-03 | Completed group | All tasks succeed | Group COMPLETED |
 
 ### 3.6 E2E-WEBHOOK: Webhook Emission
 
 | Test ID | Description | Steps | Expected |
 |---------|-------------|-------|----------|
-| E2E-WEBHOOK-01 | Completed schema | Job completes | event: job.run.completed |
-| E2E-WEBHOOK-02 | Failed includes error | Job fails | error field populated |
-| E2E-WEBHOOK-03 | Skipped for group | Stop-on-failure | event: job.run.skipped |
+| E2E-WEBHOOK-01 | Completed schema | Task completes | event: task.run.completed |
+| E2E-WEBHOOK-02 | Failed includes error | Task fails | error field populated |
+| E2E-WEBHOOK-03 | Skipped for group | Stop-on-failure | event: task.run.skipped |
 | E2E-WEBHOOK-04 | At-least-once | Semantic validation | run_id as idempotency key |
 
 ---
@@ -143,8 +143,8 @@ They validate real data generation pipelines through HTTP API.
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 1 | Create story job with external API model | Job QUEUED |
-| 2 | Execute job | RUNNING state |
+| 1 | Create story task with external API model | Task QUEUED |
+| 2 | Execute task | RUNNING state |
 | 3 | Wait for completion | COMPLETED state |
 | 4 | Verify artifacts | Story output file exists |
 | 5 | Verify logs | Execution log preserved |
@@ -155,9 +155,9 @@ They validate real data generation pipelines through HTTP API.
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 1 | Create research job with Ollama model | Job QUEUED |
-| 2 | Execute job | RUNNING state |
-| 3 | Verify single Ollama usage | No concurrent Ollama jobs |
+| 1 | Create research task with Ollama model | Task QUEUED |
+| 2 | Execute task | RUNNING state |
+| 3 | Verify single Ollama usage | No concurrent Ollama tasks |
 | 4 | Wait for completion | COMPLETED state |
 | 5 | Verify artifacts | Research card created |
 
@@ -167,11 +167,11 @@ They validate real data generation pipelines through HTTP API.
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 1 | Start Ollama job | RUNNING state |
-| 2 | Enqueue API job | QUEUED state |
+| 1 | Start Ollama task | RUNNING state |
+| 2 | Enqueue API task | QUEUED state |
 | 3 | Verify no concurrent Ollama | Only one Ollama workload |
-| 4 | Complete Ollama job | COMPLETED |
-| 5 | API job executes | RUNNING → COMPLETED |
+| 4 | Complete Ollama task | COMPLETED |
+| 5 | API task executes | RUNNING → COMPLETED |
 
 **Resource:** Ollama (exclusive) + External API (concurrent OK)
 
@@ -179,7 +179,7 @@ They validate real data generation pipelines through HTTP API.
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 1 | Create job with invalid params | Job QUEUED |
+| 1 | Create task with invalid params | Task QUEUED |
 | 2 | Execute → Fail | FAILED state |
 | 3 | Verify auto-retry | Up to 3 retries |
 | 4 | All attempts fail | Final FAILED state |
@@ -189,7 +189,7 @@ They validate real data generation pipelines through HTTP API.
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 1 | Start real generation job | RUNNING state |
+| 1 | Start real generation task | RUNNING state |
 | 2 | Kill scheduler process | Process terminated |
 | 3 | Restart scheduler | Recovery runs |
 | 4 | Verify recovery | FAILED TaskRun with error |
@@ -251,7 +251,7 @@ python -m pytest tests/scheduler/test_pipeline_e2e.py -v --run-pipeline
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-| Application | 1.5.0 | Managed by release-please |
+| Application | 1.6.0 <!-- x-release-please-version --> | Managed by release-please |
 | This Document | 1.0.0 | Independent versioning |
 | Test Framework | pytest 9.0+ | With asyncio plugin |
 | Python | 3.11+ | Required |
@@ -275,4 +275,4 @@ python -m pytest tests/scheduler/test_pipeline_e2e.py -v --run-pipeline
 - [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
 - [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요

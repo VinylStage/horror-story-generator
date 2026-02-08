@@ -1,4 +1,4 @@
-# OQ-002: JobGroup Sequential Failure Behavior — Decision Pack
+# OQ-002: TaskGroup Sequential Failure Behavior — Decision Pack
 
 > **Status:** RESOLVED → DEC-012
 > **Document Version:** 1.0.0
@@ -169,5 +169,5 @@ This ensures retry semantics are respected before group-level decisions.
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일 (DEC-012 참조)
 - [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
 - [EXECUTION_FLOW.md](./EXECUTION_FLOW.md) - 실행 흐름 다이어그램
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 
