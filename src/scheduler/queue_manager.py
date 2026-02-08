@@ -1,14 +1,14 @@
 """
-Queue Manager for Job Scheduler.
+Queue Manager for Task Scheduler.
 
 From IMPLEMENTATION_PLAN.md Section 1.1:
-- Maintains the ordered queue of QUEUED jobs
+- Maintains the ordered queue of QUEUED tasks
 - Provides insertion, cancellation, reordering
 - Supports Direct API next-slot reservation (DEC-004)
 
 What QueueManager MUST NOT do:
-- Execute jobs (Executor's responsibility)
-- Create JobRuns (Executor's responsibility)
+- Execute tasks (Executor's responsibility)
+- Create TaskRuns (Executor's responsibility)
 - Manage retry logic (RetryController's responsibility)
 - Interact with external APIs or webhooks
 """
@@ -17,18 +17,18 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from .entities import (
-    Job,
-    JobRun,
-    JobGroup,
-    JobStatus,
-    JobRunStatus,
-    JobGroupStatus,
+    Task,
+    TaskRun,
+    TaskGroup,
+    TaskStatus,
+    TaskRunStatus,
+    TaskGroupStatus,
     DirectReservation,
     ReservationStatus,
 )
 from .errors import (
     InvalidOperationError,
-    JobNotFoundError,
+    TaskNotFoundError,
     ReservationConflictError,
 )
 from .persistence import PersistenceAdapter
@@ -40,12 +40,12 @@ DEFAULT_RESERVATION_EXPIRY_MINUTES = 10
 
 class QueueManager:
     """
-    Manages the job queue with priority-based ordering.
+    Manages the task queue with priority-based ordering.
 
     Key behaviors:
     - Insertion: Assign position using gap strategy
     - Ordering: priority DESC, position ASC, created_at ASC (INV-004)
-    - Cancellation: QUEUED → CANCELLED only
+    - Cancellation: QUEUED -> CANCELLED only
     - Direct API Reservation: Blocks queue dispatch (DEC-004)
     """
 
@@ -59,12 +59,12 @@ class QueueManager:
         self.persistence = persistence
 
     # =========================================================================
-    # Job Insertion
+    # Task Insertion
     # =========================================================================
 
     def enqueue(
         self,
-        job_type: str,
+        task_type: str,
         params: dict,
         priority: int = 0,
         template_id: Optional[str] = None,
@@ -72,28 +72,28 @@ class QueueManager:
         group_id: Optional[str] = None,
         sequence_number: Optional[int] = None,
         retry_of: Optional[str] = None,
-    ) -> Job:
+    ) -> Task:
         """
-        Add a new job to the queue.
+        Add a new task to the queue.
 
         From IMPLEMENTATION_PLAN.md:
-        Job added → assign position → persist to SQLite → status = QUEUED
+        Task added -> assign position -> persist to SQLite -> status = QUEUED
 
         Args:
-            job_type: Type of work ("story" or "research")
+            task_type: Type of work ("story" or "research")
             params: Execution parameters
             priority: Dispatch priority (higher = sooner)
             template_id: Source template reference
             schedule_id: Triggering schedule reference
-            group_id: JobGroup membership
-            sequence_number: Order within JobGroup (0-indexed)
-            retry_of: Previous job in retry chain
+            group_id: TaskGroup membership
+            sequence_number: Order within TaskGroup (0-indexed)
+            retry_of: Previous task in retry chain
 
         Returns:
-            The created Job with assigned position
+            The created Task with assigned position
         """
-        job = Job.create(
-            job_type=job_type,
+        task = Task.create(
+            task_type=task_type,
             params=params,
             priority=priority,
             template_id=template_id,
@@ -104,7 +104,7 @@ class QueueManager:
         )
 
         # PersistenceAdapter handles position assignment
-        return self.persistence.create_job(job)
+        return self.persistence.create_task(task)
 
     def enqueue_from_template(
         self,
@@ -112,9 +112,9 @@ class QueueManager:
         priority: int = 0,
         param_overrides: Optional[dict] = None,
         schedule_id: Optional[str] = None,
-    ) -> Job:
+    ) -> Task:
         """
-        Create and enqueue a job from a template.
+        Create and enqueue a task from a template.
 
         Args:
             template_id: Source template ID
@@ -123,7 +123,7 @@ class QueueManager:
             schedule_id: Triggering schedule reference
 
         Returns:
-            The created Job
+            The created Task
 
         Raises:
             InvalidOperationError: If template not found
@@ -138,7 +138,7 @@ class QueueManager:
             params.update(param_overrides)
 
         return self.enqueue(
-            job_type=template.job_type,
+            task_type=template.task_type,
             params=params,
             priority=priority,
             template_id=template_id,
@@ -146,143 +146,143 @@ class QueueManager:
         )
 
     # =========================================================================
-    # Job Retrieval
+    # Task Retrieval
     # =========================================================================
 
-    def get_next(self) -> Optional[Job]:
+    def get_next(self) -> Optional[Task]:
         """
-        Get the next job to dispatch, respecting JobGroup constraints.
+        Get the next task to dispatch, respecting TaskGroup constraints.
 
         From INV-004: priority DESC, position ASC, created_at ASC
-        From DEC-012: JobGroup sequential execution
+        From DEC-012: TaskGroup sequential execution
 
-        Note: This does NOT dispatch the job. The caller must use
-        atomic_claim_job() to actually dispatch.
+        Note: This does NOT dispatch the task. The caller must use
+        atomic_claim_task() to actually dispatch.
 
-        For jobs in a JobGroup, only returns the job if:
-        - No other job in the group is RUNNING
-        - No prior job in the group (by sequence_number) is QUEUED
-
-        Returns:
-            The next dispatchable QUEUED job, or None if queue is empty
-        """
-        return self.persistence.get_next_dispatchable_job()
-
-    def get_job(self, job_id: str) -> Optional[Job]:
-        """Get a job by ID."""
-        return self.persistence.get_job(job_id)
-
-    def list_queued(self, limit: int = 100) -> list[Job]:
-        """
-        List all queued jobs in dispatch order.
+        For tasks in a TaskGroup, only returns the task if:
+        - No other task in the group is RUNNING
+        - No prior task in the group (by sequence_number) is QUEUED
 
         Returns:
-            Jobs ordered by (priority DESC, position ASC, created_at ASC)
+            The next dispatchable QUEUED task, or None if queue is empty
         """
-        return self.persistence.list_jobs_by_status(JobStatus.QUEUED, limit=limit)
+        return self.persistence.get_next_dispatchable_task()
 
-    def list_running(self, limit: int = 100) -> list[Job]:
-        """List all currently running jobs."""
-        return self.persistence.list_jobs_by_status(JobStatus.RUNNING, limit=limit)
+    def get_task(self, task_id: str) -> Optional[Task]:
+        """Get a task by ID."""
+        return self.persistence.get_task(task_id)
+
+    def list_queued(self, limit: int = 100) -> list[Task]:
+        """
+        List all queued tasks in dispatch order.
+
+        Returns:
+            Tasks ordered by (priority DESC, position ASC, created_at ASC)
+        """
+        return self.persistence.list_tasks_by_status(TaskStatus.QUEUED, limit=limit)
+
+    def list_running(self, limit: int = 100) -> list[Task]:
+        """List all currently running tasks."""
+        return self.persistence.list_tasks_by_status(TaskStatus.RUNNING, limit=limit)
 
     def count_queued(self) -> int:
-        """Get the count of queued jobs."""
-        return self.persistence.count_jobs_by_status(JobStatus.QUEUED)
+        """Get the count of queued tasks."""
+        return self.persistence.count_tasks_by_status(TaskStatus.QUEUED)
 
     def count_running(self) -> int:
-        """Get the count of running jobs."""
-        return self.persistence.count_jobs_by_status(JobStatus.RUNNING)
+        """Get the count of running tasks."""
+        return self.persistence.count_tasks_by_status(TaskStatus.RUNNING)
 
     # =========================================================================
-    # Job Cancellation
+    # Task Cancellation
     # =========================================================================
 
-    def cancel(self, job_id: str) -> Job:
+    def cancel(self, task_id: str) -> Task:
         """
-        Cancel a queued job.
+        Cancel a queued task.
 
         From IMPLEMENTATION_PLAN.md:
-        - QUEUED → CANCELLED
-        - RUNNING → delegate to Executor (not handled here)
+        - QUEUED -> CANCELLED
+        - RUNNING -> delegate to Executor (not handled here)
 
         Args:
-            job_id: Job to cancel
+            task_id: Task to cancel
 
         Returns:
-            The cancelled Job
+            The cancelled Task
 
         Raises:
-            JobNotFoundError: If job doesn't exist
-            InvalidOperationError: If job is not QUEUED
+            TaskNotFoundError: If task doesn't exist
+            InvalidOperationError: If task is not QUEUED
         """
-        job = self.persistence.get_job(job_id)
-        if job is None:
-            raise JobNotFoundError(job_id)
+        task = self.persistence.get_task(task_id)
+        if task is None:
+            raise TaskNotFoundError(task_id)
 
-        if job.status != JobStatus.QUEUED:
+        if task.status != TaskStatus.QUEUED:
             raise InvalidOperationError(
-                f"Cannot cancel job in {job.status.value} status from queue. "
-                "RUNNING jobs must be cancelled through Executor."
+                f"Cannot cancel task in {task.status.value} status from queue. "
+                "RUNNING tasks must be cancelled through Executor."
             )
 
         now = datetime.utcnow().isoformat() + "Z"
-        return self.persistence.update_job(
-            job_id,
-            status=JobStatus.CANCELLED,
+        return self.persistence.update_task(
+            task_id,
+            status=TaskStatus.CANCELLED,
             finished_at=now,
         )
 
     # =========================================================================
-    # Job Reordering
+    # Task Reordering
     # =========================================================================
 
-    def update_priority(self, job_id: str, priority: int) -> Job:
+    def update_priority(self, task_id: str, priority: int) -> Task:
         """
-        Update a job's priority.
+        Update a task's priority.
 
-        Only allowed for QUEUED jobs.
+        Only allowed for QUEUED tasks.
 
         Args:
-            job_id: Job to update
+            task_id: Task to update
             priority: New priority value
 
         Returns:
-            The updated Job
+            The updated Task
         """
-        job = self.persistence.get_job(job_id)
-        if job is None:
-            raise JobNotFoundError(job_id)
+        task = self.persistence.get_task(task_id)
+        if task is None:
+            raise TaskNotFoundError(task_id)
 
-        if job.status != JobStatus.QUEUED:
+        if task.status != TaskStatus.QUEUED:
             raise InvalidOperationError(
-                f"Cannot update priority for job in {job.status.value} status"
+                f"Cannot update priority for task in {task.status.value} status"
             )
 
-        return self.persistence.update_job(job_id, priority=priority)
+        return self.persistence.update_task(task_id, priority=priority)
 
-    def reorder(self, job_id: str, new_position: int) -> Job:
+    def reorder(self, task_id: str, new_position: int) -> Task:
         """
-        Move a job to a new position within its priority level.
+        Move a task to a new position within its priority level.
 
-        Only allowed for QUEUED jobs.
+        Only allowed for QUEUED tasks.
 
         Args:
-            job_id: Job to reorder
+            task_id: Task to reorder
             new_position: New position value
 
         Returns:
-            The updated Job
+            The updated Task
         """
-        job = self.persistence.get_job(job_id)
-        if job is None:
-            raise JobNotFoundError(job_id)
+        task = self.persistence.get_task(task_id)
+        if task is None:
+            raise TaskNotFoundError(task_id)
 
-        if job.status != JobStatus.QUEUED:
+        if task.status != TaskStatus.QUEUED:
             raise InvalidOperationError(
-                f"Cannot reorder job in {job.status.value} status"
+                f"Cannot reorder task in {task.status.value} status"
             )
 
-        return self.persistence.update_job(job_id, position=new_position)
+        return self.persistence.update_task(task_id, position=new_position)
 
     # =========================================================================
     # Direct API Reservation (DEC-004)
@@ -299,7 +299,7 @@ class QueueManager:
         From DEC-004:
         - Direct APIs reserve the next execution slot
         - Queue dispatch is paused while reservation is active
-        - Running job completes normally (no preemption)
+        - Running task completes normally (no preemption)
 
         From PERSISTENCE_SCHEMA.md Section 2.5:
         - At most ONE reservation may be ACTIVE at any time
@@ -379,117 +379,189 @@ class QueueManager:
         """Check if the queue is empty."""
         return self.count_queued() == 0
 
-    def has_running_job(self) -> bool:
-        """Check if any job is currently running."""
+    def has_running_task(self) -> bool:
+        """Check if any task is currently running."""
         return self.count_running() > 0
 
-    def get_queue_position(self, job_id: str) -> Optional[int]:
+    def get_queue_position(self, task_id: str) -> Optional[int]:
         """
-        Get a job's position in the queue.
+        Get a task's position in the queue.
 
         Returns:
             Position (1-indexed) or None if not found/not queued
         """
-        job = self.persistence.get_job(job_id)
-        if job is None or job.status != JobStatus.QUEUED:
+        task = self.persistence.get_task(task_id)
+        if task is None or task.status != TaskStatus.QUEUED:
             return None
 
         queued = self.list_queued()
-        for i, queued_job in enumerate(queued):
-            if queued_job.job_id == job_id:
+        for i, queued_task in enumerate(queued):
+            if queued_task.task_id == task_id:
                 return i + 1
 
         return None
 
     # =========================================================================
-    # JobGroup Operations (DEC-012)
+    # TaskGroup Operations (DEC-012)
     # =========================================================================
 
-    def create_job_group(
+    def create_task_group(
         self,
-        jobs: list[dict],
+        tasks: list[dict],
         name: Optional[str] = None,
         priority: int = 0,
-    ) -> tuple[JobGroup, list[Job]]:
+    ) -> tuple[TaskGroup, list[Task]]:
         """
-        Create a JobGroup and enqueue its jobs.
+        Create a TaskGroup and enqueue its tasks.
 
-        From DEC-012: Jobs in a group execute sequentially.
+        From DEC-012: Tasks in a group execute sequentially by default.
 
         Args:
-            jobs: List of job specs, each with 'job_type' and 'params'.
-                  Jobs are assigned sequence_numbers 0, 1, 2, ... in order.
+            tasks: List of task specs, each with 'task_type' (or 'job_type' for
+                   backward compat) and 'params'.
+                   Tasks are assigned sequence_numbers 0, 1, 2, ... in order.
             name: Optional group name
-            priority: Dispatch priority for all jobs in the group
+            priority: Dispatch priority for all tasks in the group
 
         Returns:
-            Tuple of (JobGroup, list of created Jobs)
+            Tuple of (TaskGroup, list of created Tasks)
 
         Example:
-            group, jobs = queue_manager.create_job_group([
-                {"job_type": "story", "params": {"topic": "A"}},
-                {"job_type": "story", "params": {"topic": "B"}},
+            group, tasks = queue_manager.create_task_group([
+                {"task_type": "story", "params": {"topic": "A"}},
+                {"task_type": "story", "params": {"topic": "B"}},
             ], name="My Group")
         """
         # Create the group
-        group = JobGroup.create(name=name)
-        group = self.persistence.create_job_group(group)
+        group = TaskGroup.create(name=name)
+        group = self.persistence.create_task_group(group)
 
         # Update group status to QUEUED
-        group = self.persistence.update_job_group(
+        group = self.persistence.update_task_group(
             group.group_id,
-            status=JobGroupStatus.QUEUED,
+            status=TaskGroupStatus.QUEUED,
         )
 
-        # Create jobs with sequence numbers
-        created_jobs = []
-        for seq_num, job_spec in enumerate(jobs):
-            job = self.enqueue(
-                job_type=job_spec["job_type"],
-                params=job_spec.get("params", {}),
+        # Create tasks with sequence numbers
+        created_tasks = []
+        for seq_num, task_spec in enumerate(tasks):
+            # Support both 'task_type' and legacy 'job_type' keys
+            task_type = task_spec.get("task_type") or task_spec.get("job_type")
+            task = self.enqueue(
+                task_type=task_type,
+                params=task_spec.get("params", {}),
                 priority=priority,
-                template_id=job_spec.get("template_id"),
+                template_id=task_spec.get("template_id"),
                 group_id=group.group_id,
                 sequence_number=seq_num,
             )
-            created_jobs.append(job)
+            created_tasks.append(task)
 
-        return group, created_jobs
+        return group, created_tasks
 
-    def get_job_group(self, group_id: str) -> Optional[JobGroup]:
-        """Get a JobGroup by ID."""
-        return self.persistence.get_job_group(group_id)
-
-    def get_jobs_in_group(self, group_id: str) -> list[Job]:
-        """Get all jobs in a group, ordered by sequence_number."""
-        return self.persistence.get_jobs_by_group(group_id)
-
-    def cancel_job_group(self, group_id: str) -> JobGroup:
+    def create_concurrent_group(
+        self,
+        task_ids: list[str],
+        name: Optional[str] = None,
+    ) -> tuple[TaskGroup, list[Task]]:
         """
-        Cancel all QUEUED jobs in a group.
+        Create a concurrent TaskGroup from existing QUEUED tasks.
 
-        From DEC-012: Cancellation cancels remaining jobs.
+        Groups the given tasks into a new TaskGroup with execution_mode="concurrent",
+        allowing them to execute simultaneously via ThreadPoolExecutor.
+
+        Args:
+            task_ids: List of existing QUEUED task IDs to group together
+            name: Optional group name
+
+        Returns:
+            Tuple of (TaskGroup, list of updated Tasks)
+
+        Raises:
+            TaskNotFoundError: If any task_id does not exist
+            InvalidOperationError: If any task is not QUEUED or already in a group
+        """
+        # Validate all tasks exist, are QUEUED, and are not already in a group
+        tasks_to_group = []
+        for task_id in task_ids:
+            task = self.persistence.get_task(task_id)
+            if task is None:
+                raise TaskNotFoundError(task_id)
+            if task.status != TaskStatus.QUEUED:
+                raise InvalidOperationError(
+                    f"Cannot add task {task_id} to concurrent group: "
+                    f"task is in {task.status.value} status (must be QUEUED)"
+                )
+            if task.group_id is not None:
+                raise InvalidOperationError(
+                    f"Cannot add task {task_id} to concurrent group: "
+                    f"task already belongs to group {task.group_id}"
+                )
+            tasks_to_group.append(task)
+
+        # Create the group with concurrent execution mode
+        group = TaskGroup.create(name=name, execution_mode="concurrent")
+        group = self.persistence.create_task_group(group)
+
+        # Update group status to QUEUED
+        group = self.persistence.update_task_group(
+            group.group_id,
+            status=TaskGroupStatus.QUEUED,
+        )
+
+        # Assign each task to the group with a sequence_number.
+        # group_id and sequence_number are immutable-after-set fields not exposed
+        # through update_task(), so we use a direct SQL update via the persistence
+        # adapter's internal transaction context.
+        updated_tasks = []
+        with self.persistence._transaction() as conn:
+            for seq_num, task in enumerate(tasks_to_group):
+                conn.execute(
+                    "UPDATE tasks SET group_id = ?, sequence_number = ? WHERE task_id = ?",
+                    (group.group_id, seq_num, task.task_id),
+                )
+
+        # Re-read tasks to return updated state
+        for task in tasks_to_group:
+            updated_task = self.persistence.get_task(task.task_id)
+            updated_tasks.append(updated_task)
+
+        return group, updated_tasks
+
+    def get_task_group(self, group_id: str) -> Optional[TaskGroup]:
+        """Get a TaskGroup by ID."""
+        return self.persistence.get_task_group(group_id)
+
+    def get_tasks_in_group(self, group_id: str) -> list[Task]:
+        """Get all tasks in a group, ordered by sequence_number."""
+        return self.persistence.get_tasks_by_group(group_id)
+
+    def cancel_task_group(self, group_id: str) -> TaskGroup:
+        """
+        Cancel all QUEUED tasks in a group.
+
+        From DEC-012: Cancellation cancels remaining tasks.
 
         Args:
             group_id: Group to cancel
 
         Returns:
-            The updated JobGroup
+            The updated TaskGroup
 
-        Note: RUNNING jobs are not cancelled (no preemption per DEC-004).
+        Note: RUNNING tasks are not cancelled (no preemption per DEC-004).
               They will complete normally, then the group status is updated.
         """
-        jobs = self.persistence.get_jobs_by_group(group_id)
+        tasks = self.persistence.get_tasks_by_group(group_id)
 
-        for job in jobs:
-            if job.status == JobStatus.QUEUED:
-                self.cancel(job.job_id)
+        for task in tasks:
+            if task.status == TaskStatus.QUEUED:
+                self.cancel(task.task_id)
 
         # Recompute and update group status
         new_status = self.persistence.compute_group_status(group_id)
         now = datetime.utcnow().isoformat() + "Z"
 
-        group = self.persistence.update_job_group(
+        group = self.persistence.update_task_group(
             group_id,
             status=new_status,
             finished_at=now if new_status.value in ("COMPLETED", "PARTIAL", "CANCELLED") else None,
@@ -497,107 +569,122 @@ class QueueManager:
 
         return group
 
-    def compute_group_status(self, group_id: str) -> JobGroupStatus:
+    def compute_group_status(self, group_id: str) -> TaskGroupStatus:
         """
-        Compute a group's status from its member jobs.
+        Compute a group's status from its member tasks.
 
-        From INV-006: Group terminal status determined only when ALL jobs terminal.
+        From INV-006: Group terminal status determined only when ALL tasks terminal.
         """
         return self.persistence.compute_group_status(group_id)
 
-    def handle_group_job_completion(self, job: Job, job_run: JobRun) -> None:
+    def handle_group_task_completion(self, task: Task, task_run: TaskRun) -> None:
         """
-        Handle job completion for group-related logic.
+        Handle task completion for group-related logic.
 
         From DEC-012: Stop-on-failure behavior
-        - When a job in a group FAILS (after retry exhaustion)
-        - Cancel remaining QUEUED jobs
+        - When a task in a group FAILS (after retry exhaustion)
+        - Cancel remaining QUEUED tasks
         - Update group status
 
-        This should be called after retry controller has processed the job.
-        If a retry was created, this does nothing (job not truly failed yet).
+        This should be called after retry controller has processed the task.
+        If a retry was created, this does nothing (task not truly failed yet).
 
         Args:
-            job: The completed job
-            job_run: The completed JobRun
+            task: The completed task
+            task_run: The completed TaskRun
         """
 
-        if job.group_id is None:
+        if task.group_id is None:
             return
 
-        # Only process if job completed (has finished_at)
-        if job.finished_at is None:
+        # Only process if task completed (has finished_at)
+        if task.finished_at is None:
             return
 
-        # Update group status based on all jobs
-        group = self.persistence.get_job_group(job.group_id)
+        # Update group status based on all tasks
+        group = self.persistence.get_task_group(task.group_id)
         if group is None:
             return
 
         # Compute current group status
-        new_status = self.persistence.compute_group_status(job.group_id)
+        new_status = self.persistence.compute_group_status(task.group_id)
         now = datetime.utcnow().isoformat() + "Z"
 
-        # If group is starting (first job running), mark started_at
-        if group.started_at is None and new_status == JobGroupStatus.RUNNING:
-            self.persistence.update_job_group(
-                job.group_id,
+        # If group is starting (first task running), mark started_at
+        if group.started_at is None and new_status == TaskGroupStatus.RUNNING:
+            self.persistence.update_task_group(
+                task.group_id,
                 status=new_status,
                 started_at=now,
             )
             return
 
-        # If job FAILED, check if we need stop-on-failure
-        if job_run.status == JobRunStatus.FAILED:
-            # Check if a retry job was created for this job
-            # If retry exists, the job isn't truly "failed" yet
-            retry_job = self.persistence.get_retry_job_for(job.job_id)
-            if retry_job is not None:
+        # If task FAILED, check if we need stop-on-failure
+        if task_run.status == TaskRunStatus.FAILED:
+            # Check if a retry task was created for this task
+            # If retry exists, the task isn't truly "failed" yet
+            retry_task = self.persistence.get_retry_task_for(task.task_id)
+            if retry_task is not None:
                 # Retry pending, don't stop the group yet
-                self.persistence.update_job_group(
-                    job.group_id,
+                self.persistence.update_task_group(
+                    task.group_id,
                     status=new_status,
                 )
                 return
 
             # No retry created - this is final failure
-            # Cancel remaining QUEUED jobs (DEC-012 stop-on-failure)
-            jobs_in_group = self.persistence.get_jobs_by_group(job.group_id)
+            # Cancel remaining QUEUED tasks (DEC-012 stop-on-failure)
+            tasks_in_group = self.persistence.get_tasks_by_group(task.group_id)
 
-            for group_job in jobs_in_group:
-                if group_job.status == JobStatus.QUEUED:
-                    # Cancel the job
-                    self.cancel(group_job.job_id)
+            for group_task in tasks_in_group:
+                if group_task.status == TaskStatus.QUEUED:
+                    # Cancel the task
+                    self.cancel(group_task.task_id)
 
-                    # Create SKIPPED JobRun for audit trail
-                    skipped_run = JobRun.create(
-                        job_id=group_job.job_id,
-                        params_snapshot=group_job.params,
-                        template_id=group_job.template_id,
+                    # Create SKIPPED TaskRun for audit trail
+                    skipped_run = TaskRun.create(
+                        task_id=group_task.task_id,
+                        params_snapshot=group_task.params,
+                        template_id=group_task.template_id,
                     )
-                    skipped_run.status = JobRunStatus.SKIPPED
+                    skipped_run.status = TaskRunStatus.SKIPPED
                     skipped_run.finished_at = now
-                    skipped_run.error = "Skipped: predecessor job failed"
-                    self.persistence.create_job_run(skipped_run)
+                    skipped_run.error = "Skipped: predecessor task failed"
+                    self.persistence.create_task_run(skipped_run)
 
             # Update group to PARTIAL
-            self.persistence.update_job_group(
-                job.group_id,
-                status=JobGroupStatus.PARTIAL,
+            self.persistence.update_task_group(
+                task.group_id,
+                status=TaskGroupStatus.PARTIAL,
                 finished_at=now,
             )
             return
 
-        # For COMPLETED jobs, check if group is now complete
-        if new_status in (JobGroupStatus.COMPLETED, JobGroupStatus.PARTIAL, JobGroupStatus.CANCELLED):
-            self.persistence.update_job_group(
-                job.group_id,
+        # For COMPLETED tasks, check if group is now complete
+        if new_status in (TaskGroupStatus.COMPLETED, TaskGroupStatus.PARTIAL, TaskGroupStatus.CANCELLED):
+            self.persistence.update_task_group(
+                task.group_id,
                 status=new_status,
                 finished_at=now,
             )
         else:
-            # Still running or queued jobs
-            self.persistence.update_job_group(
-                job.group_id,
+            # Still running or queued tasks
+            self.persistence.update_task_group(
+                task.group_id,
                 status=new_status,
             )
+
+    # =========================================================================
+    # Backward Compatibility Aliases
+    # =========================================================================
+
+    # Task retrieval (old Job names)
+    get_job = get_task
+    has_running_job = has_running_task
+
+    # TaskGroup operations (old JobGroup names)
+    create_job_group = create_task_group
+    get_job_group = get_task_group
+    get_jobs_in_group = get_tasks_in_group
+    cancel_job_group = cancel_task_group
+    handle_group_job_completion = handle_group_task_completion

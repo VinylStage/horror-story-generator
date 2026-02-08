@@ -2,8 +2,8 @@
 Scheduler-specific exceptions.
 
 These exceptions enforce invariants from DESIGN_GUARDS.md:
-- INV-001: Job immutability after dispatch
-- INV-002: JobRun immutability
+- INV-001: Task immutability after dispatch
+- INV-002: TaskRun immutability
 - PERS-005: Reservation exclusivity
 """
 
@@ -18,35 +18,35 @@ class InvalidOperationError(SchedulerError):
     Raised when an operation violates scheduler invariants.
 
     Examples:
-    - Modifying Job.params after dispatch (INV-001)
-    - Modifying immutable JobRun fields (INV-002)
+    - Modifying Task.params after dispatch (INV-001)
+    - Modifying immutable TaskRun fields (INV-002)
     - Invalid state transitions
     """
     pass
 
 
-class JobNotFoundError(SchedulerError):
-    """Raised when a requested job does not exist."""
+class TaskNotFoundError(SchedulerError):
+    """Raised when a requested task does not exist."""
 
-    def __init__(self, job_id: str):
-        self.job_id = job_id
-        super().__init__(f"Job not found: {job_id}")
+    def __init__(self, task_id: str):
+        self.task_id = task_id
+        super().__init__(f"Task not found: {task_id}")
 
 
-class JobRunNotFoundError(SchedulerError):
-    """Raised when a requested job run does not exist."""
+class TaskRunNotFoundError(SchedulerError):
+    """Raised when a requested task run does not exist."""
 
     def __init__(self, run_id: str):
         self.run_id = run_id
-        super().__init__(f"JobRun not found: {run_id}")
+        super().__init__(f"TaskRun not found: {run_id}")
 
 
 class TemplateNotFoundError(SchedulerError):
-    """Raised when a requested job template does not exist."""
+    """Raised when a requested task template does not exist."""
 
     def __init__(self, template_id: str):
         self.template_id = template_id
-        super().__init__(f"JobTemplate not found: {template_id}")
+        super().__init__(f"TaskTemplate not found: {template_id}")
 
 
 class ReservationConflictError(SchedulerError):
@@ -75,15 +75,20 @@ class ConcurrencyViolationError(SchedulerError):
     """
     Raised when a concurrent modification is detected.
 
-    Used for atomic claim operations where the job was already claimed
+    Used for atomic claim operations where the task was already claimed
     by another process.
     """
 
-    def __init__(self, job_id: str, expected_status: str, actual_status: str):
-        self.job_id = job_id
+    def __init__(self, task_id: str, expected_status: str, actual_status: str):
+        self.task_id = task_id
         self.expected_status = expected_status
         self.actual_status = actual_status
         super().__init__(
-            f"Concurrency violation for job {job_id}: "
+            f"Concurrency violation for task {task_id}: "
             f"expected status '{expected_status}', got '{actual_status}'"
         )
+
+
+# Backward compatibility aliases
+JobNotFoundError = TaskNotFoundError
+JobRunNotFoundError = TaskRunNotFoundError

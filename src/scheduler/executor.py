@@ -1,13 +1,13 @@
 """
-Executor for Job Scheduler.
+Executor for Task Scheduler.
 
 From IMPLEMENTATION_PLAN.md Section 1.3:
-- Runs the actual job work and produces JobRun
+- Runs the actual task work and produces TaskRun
 - Respects cancellation
 - Reports execution result
 
 What Executor MUST NOT do:
-- Modify the Job entity (except through Dispatcher)
+- Modify the Task entity (except through Dispatcher)
 - Decide retry policy (RetryController's responsibility)
 - Send webhooks directly (WebhookService's responsibility)
 - Manage queue state
@@ -23,9 +23,9 @@ from pathlib import Path
 from typing import Optional, Callable
 
 from .entities import (
-    Job,
-    JobRun,
-    JobRunStatus,
+    Task,
+    TaskRun,
+    TaskRunStatus,
 )
 from .persistence import PersistenceAdapter
 
@@ -33,24 +33,24 @@ from .persistence import PersistenceAdapter
 logger = logging.getLogger(__name__)
 
 
-class JobHandler(ABC):
+class TaskHandler(ABC):
     """
-    Abstract base class for job type handlers.
+    Abstract base class for task type handlers.
 
-    Each job type (story, research) implements this interface.
+    Each task type (story, research) implements this interface.
     """
 
     @abstractmethod
     def execute(
         self,
-        job: Job,
+        task: Task,
         log_path: Optional[str] = None,
-    ) -> tuple[JobRunStatus, Optional[str], Optional[int], list[str]]:
+    ) -> tuple[TaskRunStatus, Optional[str], Optional[int], list[str]]:
         """
-        Execute the job.
+        Execute the task.
 
         Args:
-            job: The job to execute
+            task: The task to execute
             log_path: Optional path for execution log
 
         Returns:
@@ -61,7 +61,7 @@ class JobHandler(ABC):
     @abstractmethod
     def cancel(self) -> bool:
         """
-        Cancel the currently executing job.
+        Cancel the currently executing task.
 
         Returns:
             True if cancellation was initiated
@@ -69,9 +69,9 @@ class JobHandler(ABC):
         ...
 
 
-class SubprocessJobHandler(JobHandler):
+class SubprocessTaskHandler(TaskHandler):
     """
-    Job handler that executes work via subprocess.
+    Task handler that executes work via subprocess.
 
     This matches the existing CLI-based execution model.
     """
@@ -95,10 +95,10 @@ class SubprocessJobHandler(JobHandler):
 
     def execute(
         self,
-        job: Job,
+        task: Task,
         log_path: Optional[str] = None,
-    ) -> tuple[JobRunStatus, Optional[str], Optional[int], list[str]]:
-        """Execute job via subprocess."""
+    ) -> tuple[TaskRunStatus, Optional[str], Optional[int], list[str]]:
+        """Execute task via subprocess."""
         self._cancelled = False
 
         # Ensure logs directory exists
@@ -107,13 +107,13 @@ class SubprocessJobHandler(JobHandler):
         # Generate log path if not provided
         if log_path is None:
             log_path = str(
-                self.logs_dir / f"{job.job_type}_{job.job_id}.log"
+                self.logs_dir / f"{task.task_type}_{task.task_id}.log"
             )
 
-        # Build command based on job type
-        cmd = self._build_command(job)
+        # Build command based on task type
+        cmd = self._build_command(task)
 
-        logger.info(f"Executing job {job.job_id}: {' '.join(cmd)}")
+        logger.info(f"Executing task {task.task_id}: {' '.join(cmd)}")
 
         try:
             with open(log_path, "w") as log_file:
@@ -131,18 +131,18 @@ class SubprocessJobHandler(JobHandler):
 
             if self._cancelled:
                 return (
-                    JobRunStatus.FAILED,
-                    "Job was cancelled",
+                    TaskRunStatus.FAILED,
+                    "Task was cancelled",
                     exit_code,
                     [],
                 )
 
             # Parse artifacts from log or output
-            artifacts = self._collect_artifacts(job, log_path)
+            artifacts = self._collect_artifacts(task, log_path)
 
             if exit_code == 0:
                 return (
-                    JobRunStatus.COMPLETED,
+                    TaskRunStatus.COMPLETED,
                     None,
                     exit_code,
                     artifacts,
@@ -151,16 +151,16 @@ class SubprocessJobHandler(JobHandler):
                 # Read error from log
                 error = self._read_error_from_log(log_path)
                 return (
-                    JobRunStatus.FAILED,
+                    TaskRunStatus.FAILED,
                     error or f"Process exited with code {exit_code}",
                     exit_code,
                     artifacts,
                 )
 
         except Exception as e:
-            logger.exception(f"Error executing job {job.job_id}")
+            logger.exception(f"Error executing task {task.task_id}")
             return (
-                JobRunStatus.FAILED,
+                TaskRunStatus.FAILED,
                 str(e),
                 -1,
                 [],
@@ -177,11 +177,11 @@ class SubprocessJobHandler(JobHandler):
                 logger.error(f"Error terminating process: {e}")
         return False
 
-    def _build_command(self, job: Job) -> list[str]:
-        """Build subprocess command based on job type."""
-        params = job.params
+    def _build_command(self, task: Task) -> list[str]:
+        """Build subprocess command based on task type."""
+        params = task.params
 
-        if job.job_type == "story":
+        if task.task_type == "story":
             cmd = [sys.executable, str(self.project_root / "main.py")]
 
             if params.get("max_stories"):
@@ -216,7 +216,7 @@ class SubprocessJobHandler(JobHandler):
 
             return cmd
 
-        elif job.job_type == "research":
+        elif task.task_type == "research":
             cmd = [sys.executable, "-m", "src.research.executor", "run"]
 
             topic = params.get("topic", "")
@@ -235,27 +235,27 @@ class SubprocessJobHandler(JobHandler):
             return cmd
 
         else:
-            raise ValueError(f"Unknown job type: {job.job_type}")
+            raise ValueError(f"Unknown task type: {task.task_type}")
 
-    def _collect_artifacts(self, job: Job, log_path: str) -> list[str]:
-        """Collect artifacts produced by the job."""
+    def _collect_artifacts(self, task: Task, log_path: str) -> list[str]:
+        """Collect artifacts produced by the task."""
         artifacts = []
 
         # Include log file as artifact
         if Path(log_path).exists():
             artifacts.append(log_path)
 
-        # For story jobs, look for generated story files
-        if job.job_type == "story":
+        # For story tasks, look for generated story files
+        if task.task_type == "story":
             stories_dir = self.project_root / "data" / "stories"
             if stories_dir.exists():
-                # Get recent files (created after job started)
+                # Get recent files (created after task started)
                 # This is a simple heuristic
                 for story_file in stories_dir.glob("*.json"):
                     artifacts.append(str(story_file))
 
-        # For research jobs, look for research cards
-        elif job.job_type == "research":
+        # For research tasks, look for research cards
+        elif task.task_type == "research":
             research_dir = self.project_root / "data" / "research"
             if research_dir.exists():
                 for card_file in research_dir.glob("*.json"):
@@ -279,11 +279,11 @@ class SubprocessJobHandler(JobHandler):
 
 class Executor:
     """
-    Executes jobs and manages JobRun lifecycle.
+    Executes tasks and manages TaskRun lifecycle.
 
     From IMPLEMENTATION_PLAN.md Section 1.3:
-    1. Execute work via job handler
-    2. Update JobRun with result
+    1. Execute work via task handler
+    2. Update TaskRun with result
     3. Signal completion
 
     Execution happens synchronously - the caller (Dispatcher) blocks
@@ -293,53 +293,53 @@ class Executor:
     def __init__(
         self,
         persistence: PersistenceAdapter,
-        handler: Optional[JobHandler] = None,
+        handler: Optional[TaskHandler] = None,
     ):
         """
         Initialize Executor.
 
         Args:
-            persistence: PersistenceAdapter for JobRun updates
-            handler: JobHandler for actual execution (injectable for testing)
+            persistence: PersistenceAdapter for TaskRun updates
+            handler: TaskHandler for actual execution (injectable for testing)
         """
         self.persistence = persistence
         self._handler = handler
-        self._current_job: Optional[Job] = None
+        self._current_task: Optional[Task] = None
 
-    def set_handler(self, handler: JobHandler) -> None:
-        """Set the job handler for execution."""
+    def set_handler(self, handler: TaskHandler) -> None:
+        """Set the task handler for execution."""
         self._handler = handler
 
-    def execute(self, job: Job, job_run: JobRun) -> JobRun:
+    def execute(self, task: Task, task_run: TaskRun) -> TaskRun:
         """
-        Execute a job and return the completed JobRun.
+        Execute a task and return the completed TaskRun.
 
         This is the main execution entry point called by Dispatcher.
 
         Args:
-            job: The job to execute
-            job_run: The JobRun record for this execution
+            task: The task to execute
+            task_run: The TaskRun record for this execution
 
         Returns:
-            The completed JobRun with terminal status
+            The completed TaskRun with terminal status
         """
         if self._handler is None:
-            raise RuntimeError("Job handler not set. Call set_handler() first.")
+            raise RuntimeError("Task handler not set. Call set_handler() first.")
 
-        self._current_job = job
+        self._current_task = task
 
         try:
             # Execute via handler
             status, error, exit_code, artifacts = self._handler.execute(
-                job,
-                log_path=job_run.log_path,
+                task,
+                log_path=task_run.log_path,
             )
 
-            # Update JobRun with result
+            # Update TaskRun with result
             now = datetime.utcnow().isoformat() + "Z"
 
-            updated_run = self.persistence.update_job_run(
-                job_run.run_id,
+            updated_run = self.persistence.update_task_run(
+                task_run.run_id,
                 status=status,
                 finished_at=now,
                 exit_code=exit_code,
@@ -348,7 +348,7 @@ class Executor:
             )
 
             logger.info(
-                f"Job {job.job_id} execution completed: "
+                f"Task {task.task_id} execution completed: "
                 f"status={status.value}, exit_code={exit_code}"
             )
 
@@ -356,28 +356,28 @@ class Executor:
 
         except Exception as e:
             # Handle unexpected execution errors
-            logger.exception(f"Unexpected error executing job {job.job_id}")
+            logger.exception(f"Unexpected error executing task {task.task_id}")
 
             now = datetime.utcnow().isoformat() + "Z"
 
-            return self.persistence.update_job_run(
-                job_run.run_id,
-                status=JobRunStatus.FAILED,
+            return self.persistence.update_task_run(
+                task_run.run_id,
+                status=TaskRunStatus.FAILED,
                 finished_at=now,
                 error=f"Execution error: {str(e)}",
             )
 
         finally:
-            self._current_job = None
+            self._current_task = None
 
     def cancel_current(self) -> bool:
         """
-        Cancel the currently executing job.
+        Cancel the currently executing task.
 
         Returns:
             True if cancellation was initiated
         """
-        if self._current_job is None:
+        if self._current_task is None:
             return False
 
         if self._handler is not None:
@@ -387,13 +387,13 @@ class Executor:
 
     @property
     def is_executing(self) -> bool:
-        """Check if executor is currently running a job."""
-        return self._current_job is not None
+        """Check if executor is currently running a task."""
+        return self._current_task is not None
 
 
 class SkipExecutor:
     """
-    Special executor that immediately marks jobs as SKIPPED.
+    Special executor that immediately marks tasks as SKIPPED.
 
     Used for dedup scenarios where execution should be skipped.
     """
@@ -402,13 +402,18 @@ class SkipExecutor:
         self.persistence = persistence
         self.reason = reason
 
-    def execute(self, job: Job, job_run: JobRun) -> JobRun:
-        """Mark job as skipped immediately."""
+    def execute(self, task: Task, task_run: TaskRun) -> TaskRun:
+        """Mark task as skipped immediately."""
         now = datetime.utcnow().isoformat() + "Z"
 
-        return self.persistence.update_job_run(
-            job_run.run_id,
-            status=JobRunStatus.SKIPPED,
+        return self.persistence.update_task_run(
+            task_run.run_id,
+            status=TaskRunStatus.SKIPPED,
             finished_at=now,
             error=self.reason,
         )
+
+
+# Backward compatibility aliases
+JobHandler = TaskHandler
+SubprocessJobHandler = SubprocessTaskHandler

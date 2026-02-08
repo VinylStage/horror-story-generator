@@ -2,178 +2,155 @@
 Scheduler API schemas.
 
 Phase 3: Scheduler-based execution model API schemas.
-Supports /scheduler/* and /jobs CRUD endpoints.
+Supports /scheduler/* and /tasks CRUD endpoints.
 """
 
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Union
 from pydantic import BaseModel, Field
 
 
 # =============================================================================
-# Job Schemas (Scheduler-based)
+# Task Schemas (was Job)
 # =============================================================================
 
 
-class JobCreateRequest(BaseModel):
-    """Request to create a new job."""
-
-    type: Literal["story", "research"] = Field(
-        ...,
-        description="Job type: 'story' for story generation, 'research' for research generation"
-    )
-    params: dict = Field(
-        default_factory=dict,
-        description="Job parameters (type-specific)"
-    )
-    priority: int = Field(
-        default=0,
-        ge=0,
-        le=100,
-        description="Job priority (higher = dispatched sooner)"
-    )
+class TaskCreateRequest(BaseModel):
+    """Request to create a new task."""
+    type: Literal["story", "research"] = Field(..., description="Task type")
+    params: dict = Field(default_factory=dict, description="Task parameters")
+    priority: int = Field(default=0, ge=0, le=100, description="Task priority")
 
 
-class JobUpdateRequest(BaseModel):
-    """Request to update a job (QUEUED only)."""
-
-    priority: Optional[int] = Field(
-        default=None,
-        ge=0,
-        le=100,
-        description="New priority value"
-    )
+class TaskUpdateRequest(BaseModel):
+    """Request to update a task (QUEUED only)."""
+    priority: Optional[int] = Field(default=None, ge=0, le=100, description="New priority")
 
 
-class JobResponse(BaseModel):
-    """Response representing a Job."""
-
-    job_id: str = Field(..., description="Unique job identifier")
-    job_type: str = Field(..., description="Job type (story/research)")
-    status: str = Field(..., description="Job status (QUEUED/RUNNING/CANCELLED)")
-    params: dict = Field(default_factory=dict, description="Job parameters")
-    priority: int = Field(default=0, description="Job priority")
-    position: int = Field(default=0, description="Queue position")
-    template_id: Optional[str] = Field(default=None, description="Source template ID")
-    group_id: Optional[str] = Field(default=None, description="Job group ID")
-    retry_of: Optional[str] = Field(default=None, description="Original job ID if retry")
-    created_at: str = Field(..., description="Creation timestamp (ISO format)")
-    queued_at: str = Field(..., description="Queue entry timestamp (ISO format)")
-    started_at: Optional[str] = Field(default=None, description="Execution start timestamp")
-    finished_at: Optional[str] = Field(default=None, description="Completion timestamp")
-
-
-class JobListResponse(BaseModel):
-    """Response for job list endpoint."""
-
-    jobs: List[JobResponse] = Field(default_factory=list)
-    total: int = Field(..., description="Total number of jobs")
-    queued_count: int = Field(default=0, description="Number of QUEUED jobs")
-    running_count: int = Field(default=0, description="Number of RUNNING jobs")
+class TaskResponse(BaseModel):
+    """Response representing a Task."""
+    task_id: str = Field(..., description="Unique task identifier")
+    task_type: str = Field(..., description="Task type (story/research)")
+    status: str = Field(..., description="Task status (QUEUED/RUNNING/CANCELLED)")
+    params: dict = Field(default_factory=dict)
+    priority: int = Field(default=0)
+    position: int = Field(default=0)
+    template_id: Optional[str] = None
+    group_id: Optional[str] = None
+    retry_of: Optional[str] = None
+    created_at: str
+    queued_at: str
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
 
 
-class JobDeleteResponse(BaseModel):
-    """Response from job deletion."""
+class TaskListResponse(BaseModel):
+    """Response for task list endpoint."""
+    tasks: List[TaskResponse] = Field(default_factory=list)
+    total: int
+    queued_count: int = 0
+    running_count: int = 0
 
-    job_id: str
+
+class TaskBatchResponse(BaseModel):
+    """Response when creating multiple tasks at once."""
+    tasks: List[TaskResponse] = Field(default_factory=list)
+    total: int
+
+
+class TaskDeleteResponse(BaseModel):
+    """Response from task deletion."""
+    task_id: str
     success: bool
     message: Optional[str] = None
 
 
 # =============================================================================
-# JobRun Schemas
+# TaskRun Schemas
 # =============================================================================
 
-
-class JobRunResponse(BaseModel):
-    """Response representing a JobRun."""
-
-    run_id: str = Field(..., description="Unique run identifier")
-    job_id: str = Field(..., description="Associated job ID")
-    status: Optional[str] = Field(default=None, description="Run status (COMPLETED/FAILED/SKIPPED)")
-    params_snapshot: dict = Field(default_factory=dict, description="Parameters at execution time")
-    template_id: Optional[str] = Field(default=None, description="Source template ID")
-    started_at: str = Field(..., description="Execution start timestamp")
-    finished_at: Optional[str] = Field(default=None, description="Completion timestamp")
-    exit_code: Optional[int] = Field(default=None, description="Process exit code")
-    error: Optional[str] = Field(default=None, description="Error message if failed")
-    artifacts: List[str] = Field(default_factory=list, description="Output artifact paths")
-    log_path: Optional[str] = Field(default=None, description="Execution log path")
+class TaskRunResponse(BaseModel):
+    """Response representing a TaskRun."""
+    run_id: str
+    task_id: str
+    status: Optional[str] = None
+    params_snapshot: dict = Field(default_factory=dict)
+    template_id: Optional[str] = None
+    started_at: str
+    finished_at: Optional[str] = None
+    exit_code: Optional[int] = None
+    error: Optional[str] = None
+    artifacts: List[str] = Field(default_factory=list)
+    log_path: Optional[str] = None
 
 
-class JobRunListResponse(BaseModel):
-    """Response for job runs list endpoint."""
-
-    runs: List[JobRunResponse] = Field(default_factory=list)
-    total: int = Field(..., description="Total number of runs")
+class TaskRunListResponse(BaseModel):
+    """Response for task runs list endpoint."""
+    runs: List[TaskRunResponse] = Field(default_factory=list)
+    total: int
 
 
 # =============================================================================
-# Scheduler Control Schemas
+# TaskGroup Schemas (new)
 # =============================================================================
 
+class TaskGroupCreateRequest(BaseModel):
+    """Request to create a concurrent task group from existing QUEUED tasks."""
+    task_ids: List[str] = Field(..., min_length=1, description="IDs of QUEUED tasks to group")
+    mode: Literal["concurrent", "sequential"] = Field(default="concurrent", description="Execution mode")
+    name: Optional[str] = Field(default=None, description="Optional group name")
+
+
+class TaskGroupResponse(BaseModel):
+    """Response representing a TaskGroup."""
+    group_id: str
+    name: Optional[str] = None
+    status: str
+    execution_mode: str
+    tasks: List[TaskResponse] = Field(default_factory=list)
+    created_at: str
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+
+
+# =============================================================================
+# Scheduler Control Schemas (unchanged)
+# =============================================================================
 
 class SchedulerStartRequest(BaseModel):
-    """Request to start the scheduler."""
-
-    run_recovery: bool = Field(
-        default=True,
-        description="Whether to run crash recovery on startup"
-    )
-
+    run_recovery: bool = Field(default=True)
 
 class SchedulerStartResponse(BaseModel):
-    """Response from scheduler start."""
-
     success: bool
     message: str
-    recovery_stats: Optional[dict] = Field(
-        default=None,
-        description="Recovery statistics if recovery was run"
-    )
-
+    recovery_stats: Optional[dict] = None
 
 class SchedulerStopRequest(BaseModel):
-    """Request to stop the scheduler."""
-
-    timeout: float = Field(
-        default=30.0,
-        ge=1.0,
-        le=300.0,
-        description="Maximum wait time for current job to complete (seconds)"
-    )
-
+    timeout: float = Field(default=30.0, ge=1.0, le=300.0)
 
 class SchedulerStopResponse(BaseModel):
-    """Response from scheduler stop."""
-
     success: bool
     message: str
 
-
 class CumulativeStats(BaseModel):
-    """Cumulative execution statistics."""
-
-    total_executed: int = Field(default=0, description="Total JobRuns executed")
-    succeeded: int = Field(default=0, description="COMPLETED JobRuns")
-    failed: int = Field(default=0, description="FAILED JobRuns")
-    cancelled: int = Field(default=0, description="CANCELLED Jobs")
-    skipped: int = Field(default=0, description="SKIPPED JobRuns")
-
+    total_executed: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    cancelled: int = 0
+    skipped: int = 0
 
 class SchedulerStatusResponse(BaseModel):
-    """Response from scheduler status endpoint."""
+    scheduler_running: bool
+    current_task_id: Optional[str] = None
+    queue_length: int = 0
+    cumulative_stats: CumulativeStats = Field(default_factory=CumulativeStats)
+    has_active_reservation: bool = False
 
-    scheduler_running: bool = Field(..., description="Whether scheduler dispatch loop is running")
-    current_job_id: Optional[str] = Field(
-        default=None,
-        description="Currently executing job ID (null if none)"
-    )
-    queue_length: int = Field(default=0, description="Number of QUEUED jobs")
-    cumulative_stats: CumulativeStats = Field(
-        default_factory=CumulativeStats,
-        description="Cumulative execution statistics"
-    )
-    has_active_reservation: bool = Field(
-        default=False,
-        description="Whether a Direct API reservation is active"
-    )
+
+# Backward compatibility aliases
+JobCreateRequest = TaskCreateRequest
+JobUpdateRequest = TaskUpdateRequest
+JobResponse = TaskResponse
+JobListResponse = TaskListResponse
+JobDeleteResponse = TaskDeleteResponse
+JobRunResponse = TaskRunResponse
+JobRunListResponse = TaskRunListResponse

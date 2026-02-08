@@ -11,18 +11,18 @@
 ## Overview
 
 The Horror Story Generator API provides:
-- **Scheduler Control** - Scheduler-based job queue management (Phase 3)
-- **Jobs CRUD** - Scheduler-based job creation, listing, and management
-- **Story Generation** - Direct (blocking) and job-based (non-blocking) story creation
+- **Scheduler Control** - Scheduler-based task queue management (Phase 3)
+- **Tasks CRUD** - Scheduler-based task creation, listing, and management
+- **Story Generation** - Direct (blocking) and task-based (non-blocking) story creation
 - **Research Generation** - Ollama/Gemini-based research card creation
 - **Deduplication** - Semantic and canonical similarity checking
-- **Job Management** - Background job execution and monitoring (Legacy)
+- **Job Management** - Background job execution and monitoring (Legacy, Deprecated)
 
 ### Design Principle
 
-> **Scheduler = Job Execution Engine** (Phase 3)
+> **Scheduler = Task Execution Engine** (Phase 3)
 
-The Scheduler controls job execution timing and order. Jobs are enqueued via API and processed by the dispatch loop when running.
+The Scheduler controls task execution timing and order. Tasks are enqueued via API and processed by the dispatch loop when running.
 
 > **CLI = Source of Truth** (Legacy)
 
@@ -44,13 +44,26 @@ curl -X POST http://localhost:8000/story/generate \
   -H "Content-Type: application/json" \
   -d '{"topic": "Korean apartment horror"}'
 
-# Generate research with Gemini Deep Research
-curl -X POST http://localhost:8000/jobs/research/trigger \
+# Create task(s) via scheduler (recommended, always array input)
+curl -X POST http://localhost:8000/tasks \
   -H "Content-Type: application/json" \
-  -d '{"topic": "Korean apartment horror", "model": "deep-research", "timeout": 300}'
+  -d '[{"type": "research", "params": {"topic": "Korean apartment horror", "model": "deep-research", "timeout": 300}}]'
 
-# Check job status
-curl http://localhost:8000/jobs/{job_id}
+# Create multiple tasks at once (mixed types)
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"type": "story", "params": {"topic": "Apartment horror"}, "priority": 0},
+    {"type": "research", "params": {"topic": "Urban legends"}, "priority": 10}
+  ]'
+
+# (Deprecated) Generate research via legacy trigger
+# curl -X POST http://localhost:8000/jobs/research/trigger \
+#   -H "Content-Type: application/json" \
+#   -d '{"topic": "Korean apartment horror", "model": "deep-research", "timeout": 300}'
+
+# Check task status
+curl http://localhost:8000/tasks/{task_id}
 ```
 
 ---
@@ -111,14 +124,14 @@ curl -X POST http://localhost:8000/story/generate \
 
 ## Scheduler API (Phase 3)
 
-스케줄러 기반 실행 모델 API입니다. Job은 큐에 등록되고, Scheduler가 실행 시점을 제어합니다.
+스케줄러 기반 실행 모델 API입니다. Task는 큐에 등록되고, Scheduler가 실행 시점을 제어합니다.
 
 ### Architecture Overview
 
 ```
 ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│   POST /jobs    │──────▶│    Job Queue    │──────▶│   Dispatcher    │
-│  (Create Job)   │       │   (SQLite DB)   │       │  (Background)   │
+│  POST /tasks    │──────▶│   Task Queue    │──────▶│   Dispatcher    │
+│ (Create Task)   │       │   (SQLite DB)   │       │  (Background)   │
 └─────────────────┘       └─────────────────┘       └────────┬────────┘
                                                               │
                           ┌─────────────────┐                 │
@@ -131,9 +144,9 @@ curl -X POST http://localhost:8000/story/generate \
 
 | 개념 | 설명 |
 |------|------|
-| **Job** | 수행할 작업의 정의 (QUEUED → RUNNING → CANCELLED) |
-| **JobRun** | Job의 단일 실행 시도 (COMPLETED/FAILED/SKIPPED) |
-| **Scheduler** | Job을 JobRun으로 변환하는 백그라운드 실행 엔진 |
+| **Task** | 수행할 작업의 정의 (QUEUED → RUNNING → CANCELLED) |
+| **TaskRun** | Task의 단일 실행 시도 (COMPLETED/FAILED/SKIPPED) |
+| **Scheduler** | Task를 TaskRun으로 변환하는 백그라운드 실행 엔진 |
 
 ### Scheduler Control Endpoints
 
@@ -178,7 +191,7 @@ curl -X POST http://localhost:8000/story/generate \
 스케줄러 디스패치 루프를 gracefully 중지합니다.
 
 **특징:**
-- 현재 실행 중인 Job 완료 대기 (preemption 없음)
+- 현재 실행 중인 Task 완료 대기 (preemption 없음)
 - Idempotent: 이미 중지되어 있으면 성공 메시지 반환
 
 **Request Body:**
@@ -191,7 +204,7 @@ curl -X POST http://localhost:8000/story/generate \
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `timeout` | float | 30.0 | 현재 Job 완료 대기 최대 시간 (초, 1-300) |
+| `timeout` | float | 30.0 | 현재 Task 완료 대기 최대 시간 (초, 1-300) |
 
 **Response:** `200 OK`
 
@@ -213,7 +226,7 @@ curl -X POST http://localhost:8000/story/generate \
 ```json
 {
   "scheduler_running": true,
-  "current_job_id": "job-550e8400-e29b-41d4-a716-446655440000",
+  "current_task_id": "task-550e8400-e29b-41d4-a716-446655440000",
   "queue_length": 5,
   "cumulative_stats": {
     "total_executed": 42,
@@ -229,54 +242,68 @@ curl -X POST http://localhost:8000/story/generate \
 | Field | Type | Description |
 |-------|------|-------------|
 | `scheduler_running` | boolean | 디스패치 루프 실행 여부 |
-| `current_job_id` | string | 현재 실행 중인 Job ID (없으면 null) |
-| `queue_length` | integer | QUEUED 상태 Job 수 |
+| `current_task_id` | string | 현재 실행 중인 Task ID (없으면 null) |
+| `queue_length` | integer | QUEUED 상태 Task 수 |
 | `cumulative_stats` | object | 누적 실행 통계 |
 | `has_active_reservation` | boolean | Direct API 예약 활성화 여부 |
 
-### Jobs CRUD Endpoints (Scheduler-based)
+### Tasks CRUD Endpoints (Scheduler-based)
 
-#### POST /jobs
+#### POST /tasks
 
-새로운 Job을 생성하고 스케줄러 큐에 등록합니다.
+Task를 생성하고 스케줄러 큐에 등록합니다. **항상 배열 `[]` 형식**으로 입력합니다.
+1개든 여러 개든 story/research 혼합이든 모두 배열로 전송합니다.
 
-**Request Body:**
+**Request Body (배열):**
 
 ```json
-{
-  "type": "story",
-  "params": {
-    "max_stories": 1,
-    "enable_dedup": true,
-    "model": "ollama:qwen3:30b"
+[
+  {
+    "type": "story",
+    "params": {
+      "topic": "한국 아파트 호러",
+      "tags": ["수면공포", "청각공포"],
+      "auto_research": true,
+      "research_model": "deep-research",
+      "thumbnail_provider": "local_sd"
+    },
+    "priority": 10
   },
-  "priority": 10
-}
+  {
+    "type": "research",
+    "params": {
+      "topic": "도시전설 연구",
+      "model": "deep-research",
+      "timeout": 300
+    },
+    "priority": 5
+  }
+]
 ```
 
-**Topic-based story example (v1.6.1):**
+**단일 Task 등록 예시:**
 
 ```json
-{
-  "type": "story",
-  "params": {
-    "topic": "한국 아파트 호러",
-    "tags": ["수면공포", "청각공포"],
-    "auto_research": true,
-    "research_model": "deep-research",
-    "thumbnail_provider": "local_sd"
-  },
-  "priority": 10
-}
+[
+  {
+    "type": "story",
+    "params": {
+      "max_stories": 1,
+      "enable_dedup": true,
+      "model": "ollama:qwen3:30b"
+    },
+    "priority": 10
+  }
+]
 ```
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `type` | string | **Yes** | - | Job 타입: `"story"` 또는 `"research"` |
-| `params` | object | No | {} | Job 파라미터 (타입별 상이) |
+| `type` | string | **Yes** | - | Task 타입: `"story"` 또는 `"research"` |
+| `params` | object | No | {} | Task 파라미터 (타입별 상이) |
 | `priority` | integer | No | 0 | 우선순위 (0-100, 높을수록 먼저 실행) |
 
-**Story Job params:**
+**Story Task params:**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -291,7 +318,7 @@ curl -X POST http://localhost:8000/story/generate \
 | `model` | string | 모델 선택 |
 | `target_length` | integer | 목표 스토리 길이 (300-10000자) |
 
-**Research Job params:**
+**Research Task params:**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -302,22 +329,77 @@ curl -X POST http://localhost:8000/story/generate \
 
 **Response:** `201 Created`
 
+응답은 항상 `TaskBatchResponse` 형식입니다.
+
 ```json
 {
-  "job_id": "job-550e8400-e29b-41d4-a716-446655440000",
-  "job_type": "story",
-  "status": "QUEUED",
-  "params": {
-    "max_stories": 1,
-    "enable_dedup": true
-  },
-  "priority": 10,
-  "position": 3,
-  "template_id": null,
-  "group_id": null,
-  "retry_of": null,
-  "created_at": "2026-01-18T10:00:00",
-  "queued_at": "2026-01-18T10:00:00",
+  "tasks": [
+    {
+      "task_id": "task-550e8400-e29b-41d4-a716-446655440000",
+      "task_type": "story",
+      "status": "QUEUED",
+      "params": {
+        "topic": "한국 아파트 호러",
+        "tags": ["수면공포", "청각공포"]
+      },
+      "priority": 10,
+      "position": 3,
+      "template_id": null,
+      "group_id": null,
+      "retry_of": null,
+      "created_at": "2026-01-18T10:00:00",
+      "queued_at": "2026-01-18T10:00:00",
+      "started_at": null,
+      "finished_at": null
+    },
+    {
+      "task_id": "task-661f9500-f30c-52e5-b827-557766551111",
+      "task_type": "research",
+      "status": "QUEUED",
+      "params": {
+        "topic": "도시전설 연구"
+      },
+      "priority": 5,
+      "position": 4,
+      "template_id": null,
+      "group_id": null,
+      "retry_of": null,
+      "created_at": "2026-01-18T10:00:00",
+      "queued_at": "2026-01-18T10:00:00",
+      "started_at": null,
+      "finished_at": null
+    }
+  ],
+  "total": 2
+}
+```
+
+---
+
+#### POST /tasks/group
+
+기존 QUEUED 상태 Task들을 동시실행 그룹으로 묶습니다.
+
+**Request Body:**
+
+```json
+{
+  "task_ids": ["task-id-3", "task-id-4"],
+  "mode": "concurrent",
+  "name": "병렬 생성"
+}
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "group_id": "grp-xxx",
+  "name": "병렬 생성",
+  "status": "CREATED",
+  "execution_mode": "concurrent",
+  "tasks": [...],
+  "created_at": "...",
   "started_at": null,
   "finished_at": null
 }
@@ -325,9 +407,9 @@ curl -X POST http://localhost:8000/story/generate \
 
 ---
 
-#### GET /jobs
+#### GET /tasks
 
-스케줄러의 모든 Job 목록을 조회합니다.
+스케줄러의 모든 Task 목록을 조회합니다.
 
 **Query Parameters:**
 
@@ -339,10 +421,10 @@ curl -X POST http://localhost:8000/story/generate \
 
 ```json
 {
-  "jobs": [
+  "tasks": [
     {
-      "job_id": "job-1",
-      "job_type": "story",
+      "task_id": "task-1",
+      "task_type": "story",
       "status": "RUNNING",
       "params": {...},
       "priority": 10,
@@ -361,16 +443,16 @@ curl -X POST http://localhost:8000/story/generate \
 
 ---
 
-#### GET /jobs/{job_id}
+#### GET /tasks/{task_id}
 
-특정 Job의 상세 정보를 조회합니다.
+특정 Task의 상세 정보를 조회합니다.
 
 **Response:** `200 OK`
 
 ```json
 {
-  "job_id": "job-550e8400-e29b-41d4-a716-446655440000",
-  "job_type": "research",
+  "task_id": "task-550e8400-e29b-41d4-a716-446655440000",
+  "task_type": "research",
   "status": "QUEUED",
   "params": {
     "topic": "Korean apartment horror",
@@ -391,14 +473,14 @@ curl -X POST http://localhost:8000/story/generate \
 **Error Response:** `404 Not Found`
 
 ```json
-{"detail": "Job not found: nonexistent-id"}
+{"detail": "Task not found: nonexistent-id"}
 ```
 
 ---
 
-#### PATCH /jobs/{job_id}
+#### PATCH /tasks/{task_id}
 
-Job의 우선순위를 업데이트합니다 (QUEUED 상태만 가능).
+Task의 우선순위를 업데이트합니다 (QUEUED 상태만 가능).
 
 **Request Body:**
 
@@ -416,7 +498,7 @@ Job의 우선순위를 업데이트합니다 (QUEUED 상태만 가능).
 
 ```json
 {
-  "job_id": "job-550e8400...",
+  "task_id": "task-550e8400...",
   "status": "QUEUED",
   "priority": 50,
   ...
@@ -426,40 +508,40 @@ Job의 우선순위를 업데이트합니다 (QUEUED 상태만 가능).
 **Error Response:** `400 Bad Request`
 
 ```json
-{"detail": "Cannot update job: only QUEUED jobs can be updated"}
+{"detail": "Cannot update task: only QUEUED tasks can be updated"}
 ```
 
 ---
 
-#### DELETE /jobs/{job_id}
+#### DELETE /tasks/{task_id}
 
-Job을 취소/삭제합니다 (QUEUED 상태만 가능).
+Task를 취소/삭제합니다 (QUEUED 상태만 가능).
 
 **Response:** `200 OK`
 
 ```json
 {
-  "job_id": "job-550e8400...",
+  "task_id": "task-550e8400...",
   "success": true,
-  "message": "Job cancelled successfully (status: CANCELLED)"
+  "message": "Task cancelled successfully (status: CANCELLED)"
 }
 ```
 
 **Error Response:** `400 Bad Request`
 
 ```json
-{"detail": "Cannot cancel job: only QUEUED jobs can be cancelled"}
+{"detail": "Cannot cancel task: only QUEUED tasks can be cancelled"}
 ```
 
 ---
 
-#### GET /jobs/{job_id}/runs
+#### GET /tasks/{task_id}/runs
 
-Job의 실행 이력 (JobRun)을 조회합니다.
+Task의 실행 이력 (TaskRun)을 조회합니다.
 
 **특징:**
-- 각 Job당 최대 1개의 JobRun (1:1 관계)
-- 재시도 시 새로운 Job이 생성됨 (retry_of 필드 참조)
+- 각 Task당 최대 1개의 TaskRun (1:1 관계)
+- 재시도 시 새로운 Task가 생성됨 (retry_of 필드 참조)
 
 **Response:** `200 OK`
 
@@ -468,7 +550,7 @@ Job의 실행 이력 (JobRun)을 조회합니다.
   "runs": [
     {
       "run_id": "run-123",
-      "job_id": "job-550e8400...",
+      "task_id": "task-550e8400...",
       "status": "COMPLETED",
       "params_snapshot": {...},
       "template_id": null,
@@ -477,23 +559,23 @@ Job의 실행 이력 (JobRun)을 조회합니다.
       "exit_code": 0,
       "error": null,
       "artifacts": ["data/novel/horror_story_20260118.md"],
-      "log_path": "logs/job-550e8400.log"
+      "log_path": "logs/task-550e8400.log"
     }
   ],
   "total": 1
 }
 ```
 
-### Job Status Values (Scheduler)
+### Task Status Values (Scheduler)
 
 | Status | Entity | Description |
 |--------|--------|-------------|
-| `QUEUED` | Job | 큐에서 대기 중 |
-| `RUNNING` | Job | 현재 실행 중 |
-| `CANCELLED` | Job | 사용자에 의해 취소됨 |
-| `COMPLETED` | JobRun | 실행 성공 |
-| `FAILED` | JobRun | 실행 실패 |
-| `SKIPPED` | JobRun | 의도적으로 건너뜀 |
+| `QUEUED` | Task | 큐에서 대기 중 |
+| `RUNNING` | Task | 현재 실행 중 |
+| `CANCELLED` | Task | 사용자에 의해 취소됨 |
+| `COMPLETED` | TaskRun | 실행 성공 |
+| `FAILED` | TaskRun | 실행 실패 |
+| `SKIPPED` | TaskRun | 의도적으로 건너뜀 |
 
 ---
 
@@ -550,14 +632,14 @@ Job의 실행 이력 (JobRun)을 조회합니다.
 | 용도 | 권장 API | 특징 |
 |------|---------|------|
 | **topic/tags 지정 스토리 생성** | `POST /story/generate` | Blocking. topic, tags, webhook_url 모두 지원 |
-| **대량/주기적 스토리 생성** | `POST /jobs` + Scheduler | Async, 큐 기반. topic/tags 지원 (v1.6.1) |
+| **대량/주기적 스토리 생성** | `POST /tasks` + Scheduler | Async, 큐 기반. topic/tags 지원 (v1.6.1) |
 | **topic 지정 연구 생성 (blocking)** | `POST /research/run` | Blocking. Ollama/Gemini 직접 실행 |
-| **연구 생성 (async)** | `POST /jobs` (type: research) | Scheduler 큐 기반 비동기 실행 |
+| **연구 생성 (async)** | `POST /tasks` (type: research) | Scheduler 큐 기반 비동기 실행 |
 | **하위 호환 (legacy)** | `POST /jobs/story/trigger` | ⚠️ Deprecated. 신규 클라이언트 비권장 |
 
 **요약:**
-- **topic/tags가 필요하면** → `POST /story/generate` (blocking) 또는 `POST /jobs` (async, v1.6.1)
-- **스케줄러 큐가 필요하면** → `POST /jobs` + Scheduler API
+- **topic/tags가 필요하면** → `POST /story/generate` (blocking) 또는 `POST /tasks` (async, v1.6.1)
+- **스케줄러 큐가 필요하면** → `POST /tasks` + Scheduler API
 - **Legacy trigger** → 하위 호환용으로만 유지, 신규 사용 비권장
 
 ---
@@ -728,7 +810,7 @@ Get detailed information about a specific story.
 
 ### Job Trigger Endpoints (Legacy - Deprecated)
 
-> **⚠️ Deprecated:** Phase 3부터 `POST /jobs` 사용을 권장합니다.
+> **⚠️ Deprecated:** Phase 3부터 `POST /tasks` 사용을 권장합니다.
 > Legacy trigger 엔드포인트는 하위 호환성을 위해 유지되지만, 신규 클라이언트는 Scheduler 기반 API를 사용해야 합니다.
 
 #### POST /jobs/story/trigger [DEPRECATED]
@@ -1399,18 +1481,18 @@ Only available for research jobs with completed artifacts.
 
 ## Data Schemas
 
-### Job Status Values
+### Task Status Values (Legacy)
 
 | Status | Description |
 |--------|-------------|
-| `queued` | Job created, not yet started |
+| `queued` | Task created, not yet started |
 | `running` | Process is executing |
 | `succeeded` | Process completed with no errors |
 | `failed` | Process exited with errors |
-| `cancelled` | User cancelled the job |
+| `cancelled` | User cancelled the task |
 | `skipped` | Expected skip (e.g., duplicate detection) - NOT a failure (v1.3.0) |
 
-### Job Types
+### Task Types
 
 | Type | Description |
 |------|-------------|

@@ -15,11 +15,11 @@ This document defines the canonical domain model for the Job Scheduler system. T
 
 ## Entity Definitions
 
-### 1. JobTemplate
+### 1. TaskTemplate
 
 #### Purpose
 
-A JobTemplate represents a **reusable specification** for work that can be executed. It captures the "what" and "how" of a task without committing to "when" or "how many times."
+A TaskTemplate represents a **reusable specification** for work that can be executed. It captures the "what" and "how" of a task without committing to "when" or "how many times."
 
 #### Responsibilities
 
@@ -34,7 +34,7 @@ A JobTemplate represents a **reusable specification** for work that can be execu
 |-------|-------------|
 | `template_id` | Unique identifier |
 | `name` | Human-readable label |
-| `job_type` | Type of work (e.g., `research`, `story`) |
+| `task_type` | Type of work (e.g., `research`, `story`) |
 | `default_params` | Default execution parameters |
 | `description` | Optional documentation |
 | `created_at` | Creation timestamp |
@@ -50,12 +50,12 @@ CREATED → ACTIVE → [ARCHIVED]
 - **ACTIVE**: Normal operational state
 - **ARCHIVED**: Soft-deleted, not available for new Jobs
 
-#### What JobTemplate is NOT
+#### What TaskTemplate is NOT
 
-- JobTemplate is NOT an execution record
-- JobTemplate does NOT track run history
-- JobTemplate does NOT store runtime state
-- JobTemplate does NOT enforce scheduling
+- TaskTemplate is NOT an execution record
+- TaskTemplate does NOT track run history
+- TaskTemplate does NOT store runtime state
+- TaskTemplate does NOT enforce scheduling
 
 ---
 
@@ -63,12 +63,12 @@ CREATED → ACTIVE → [ARCHIVED]
 
 #### Purpose
 
-A Schedule defines **when** work should be executed. It binds a JobTemplate to a temporal pattern, enabling automated, recurring execution.
+A Schedule defines **when** work should be executed. It binds a TaskTemplate to a temporal pattern, enabling automated, recurring execution.
 
 #### Responsibilities
 
 - Define execution timing (cron expression or interval)
-- Reference the JobTemplate to execute
+- Reference the TaskTemplate to execute
 - Track next execution time
 - Enable/disable automated execution
 
@@ -78,7 +78,7 @@ A Schedule defines **when** work should be executed. It binds a JobTemplate to a
 |-------|-------------|
 | `schedule_id` | Unique identifier |
 | `name` | Human-readable label |
-| `template_id` | Reference to JobTemplate |
+| `template_id` | Reference to TaskTemplate |
 | `cron_expression` | Temporal pattern (e.g., `0 9 * * *`) |
 | `timezone` | Timezone for cron interpretation |
 | `enabled` | Whether schedule is active |
@@ -124,11 +124,11 @@ A Job represents a **single unit of work** that has been queued for execution. I
 
 | Field | Description |
 |-------|-------------|
-| `job_id` | Unique identifier |
-| `template_id` | Reference to source JobTemplate (nullable for ad-hoc jobs) |
+| `task_id` | Unique identifier |
+| `template_id` | Reference to source TaskTemplate (nullable for ad-hoc jobs) |
 | `schedule_id` | Reference to triggering Schedule (nullable) |
-| `group_id` | Reference to JobGroup (nullable) |
-| `job_type` | Type of work |
+| `group_id` | Reference to TaskGroup (nullable) |
+| `task_type` | Type of work |
 | `params` | Resolved execution parameters |
 | `priority` | Execution priority |
 | `position` | Queue position (for ordered execution) |
@@ -153,22 +153,22 @@ QUEUED → RUNNING → CANCELLED
 - `PENDING`: Job created but not yet queued (e.g., awaiting group)
 - `DISPATCHED`: Job assigned to worker (brief transition state)
 
-> Note: Execution outcome (success/failure) is recorded in JobRun, not Job.
+> Note: Execution outcome (success/failure) is recorded in TaskRun, not Job.
 
 #### What Job is NOT
 
-- Job is NOT a historical record (that is JobRun)
+- Job is NOT a historical record (that is TaskRun)
 - Job does NOT persist after completion indefinitely
-- Job does NOT define what work to do (that is JobTemplate)
+- Job does NOT define what work to do (that is TaskTemplate)
 - Job does NOT define when to execute (that is Schedule)
 
 ---
 
-### 4. JobRun
+### 4. TaskRun
 
 #### Purpose
 
-A JobRun represents a **historical record** of a single execution attempt. It is the immutable audit trail of what happened when a Job was executed.
+A TaskRun represents a **historical record** of a single execution attempt. It is the immutable audit trail of what happened when a Job was executed.
 
 #### Responsibilities
 
@@ -183,7 +183,7 @@ A JobRun represents a **historical record** of a single execution attempt. It is
 | Field | Description |
 |-------|-------------|
 | `run_id` | Unique identifier |
-| `job_id` | Reference to the Job |
+| `task_id` | Reference to the Job |
 | `template_id` | Snapshot of template used |
 | `params_snapshot` | Snapshot of parameters used |
 | `status` | Execution result |
@@ -212,20 +212,20 @@ COMPLETED | FAILED | SKIPPED
 **Internal only:**
 - `STARTED`: Execution began (brief transition, recorded as timestamp)
 
-#### What JobRun is NOT
+#### What TaskRun is NOT
 
-- JobRun is NOT mutable after creation
-- JobRun does NOT control execution
-- JobRun does NOT affect queue state
-- JobRun does NOT store configuration (only snapshots)
+- TaskRun is NOT mutable after creation
+- TaskRun does NOT control execution
+- TaskRun does NOT affect queue state
+- TaskRun does NOT store configuration (only snapshots)
 
 ---
 
-### 5. JobGroup
+### 5. TaskGroup
 
 #### Purpose
 
-A JobGroup represents a **logical collection** of Jobs that share execution constraints. It enables batch operations and coordinated execution.
+A TaskGroup represents a **logical collection** of Jobs that share execution constraints. It enables batch operations and coordinated execution.
 
 #### Responsibilities
 
@@ -241,7 +241,7 @@ A JobGroup represents a **logical collection** of Jobs that share execution cons
 | `group_id` | Unique identifier |
 | `name` | Human-readable label (optional) |
 | `mode` | Execution mode (`parallel` or `sequential`) |
-| `job_ids` | Ordered list of Job references |
+| `task_ids` | Ordered list of Job references |
 | `status` | Aggregate status |
 | `created_at` | Creation timestamp |
 | `started_at` | When first job started |
@@ -265,38 +265,38 @@ Terminal states:
 - **PARTIAL**: Some jobs succeeded, some failed
 - **CANCELLED**: Group cancelled
 
-#### What JobGroup is NOT
+#### What TaskGroup is NOT
 
-- JobGroup is NOT a JobTemplate (it does not define work)
-- JobGroup is NOT a Schedule (it does not define timing)
-- JobGroup does NOT execute work (Jobs do)
-- JobGroup does NOT persist execution history (JobRuns do)
+- TaskGroup is NOT a TaskTemplate (it does not define work)
+- TaskGroup is NOT a Schedule (it does not define timing)
+- TaskGroup does NOT execute work (Jobs do)
+- TaskGroup does NOT persist execution history (TaskRuns do)
 
 ---
 
 ## Key Distinctions
 
-### JobTemplate vs Job
+### TaskTemplate vs Job
 
-| Aspect | JobTemplate | Job |
+| Aspect | TaskTemplate | Job |
 |--------|-------------|-----|
 | Lifespan | Long-lived | Ephemeral |
 | Purpose | Define work | Request execution |
 | Mutability | Mutable | Immutable after queued |
 | Cardinality | One template → Many jobs | One job → One execution |
 
-### Job vs JobRun
+### Job vs TaskRun
 
-| Aspect | Job | JobRun |
+| Aspect | Job | TaskRun |
 |--------|-----|--------|
 | Temporal scope | Future/present | Past |
 | Purpose | Queue management | Audit trail |
 | Mutability | State changes | Immutable |
 | Retention | Temporary | Permanent |
 
-### Schedule vs JobGroup
+### Schedule vs TaskGroup
 
-| Aspect | Schedule | JobGroup |
+| Aspect | Schedule | TaskGroup |
 |--------|----------|----------|
 | Trigger | Time-based | Explicit |
 | Scope | Single template | Multiple jobs |
@@ -307,15 +307,15 @@ Terminal states:
 ## Design Principles
 
 1. **Separation of Concerns**
-   - Configuration (JobTemplate) is separate from execution (Job/JobRun)
-   - Timing (Schedule) is separate from grouping (JobGroup)
+   - Configuration (TaskTemplate) is separate from execution (Job/TaskRun)
+   - Timing (Schedule) is separate from grouping (TaskGroup)
 
 2. **Single Responsibility**
    - Each entity has one clear purpose
    - No entity handles both configuration and execution
 
 3. **Immutability Where Appropriate**
-   - JobRun is immutable (audit integrity)
+   - TaskRun is immutable (audit integrity)
    - Job is immutable after dispatch (execution consistency)
 
 4. **Explicit Over Implicit**
