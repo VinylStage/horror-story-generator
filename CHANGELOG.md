@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0](https://github.com/VinylStage/horror-story-generator/compare/v1.6.0...v1.7.0) (2026-02-08)
+
+
+### Features
+
+* v1.7.0 release — thumbnail generation, Job→Task rename, scheduler webhooks ([#137](https://github.com/VinylStage/horror-story-generator/issues/137)) ([04ce272](https://github.com/VinylStage/horror-story-generator/commit/04ce272e37d2740bc258d0dedb7598a2d230c5eb))
+
 ## [1.6.0](https://github.com/VinylStage/horror-story-generator/compare/v1.5.0...v1.6.0) (2026-01-30)
 
 
