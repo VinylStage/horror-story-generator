@@ -16,7 +16,9 @@ Usage:
     service.stop()
 """
 
+import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Callable
 
@@ -37,6 +39,85 @@ from .recovery import RecoveryManager
 
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_rich_webhook_result(
+    task_type: str,
+    task_run: "TaskRun",
+    project_root: Path,
+) -> dict:
+    """
+    Extract rich result data from generated output files for webhook notification.
+
+    Reads the newest output file created during task execution and parses
+    metadata to build a webhook payload matching direct API endpoints
+    (/story/generate, /research/run).
+    """
+    try:
+        started_ts = datetime.fromisoformat(
+            task_run.started_at.replace("Z", "+00:00")
+        ).timestamp()
+
+        if task_type == "story":
+            return _extract_story_result(started_ts, project_root)
+        elif task_type == "research":
+            return _extract_research_result(started_ts, project_root)
+    except Exception as e:
+        logger.warning(f"Failed to extract rich webhook result: {e}")
+    return {}
+
+
+def _extract_story_result(started_ts: float, project_root: Path) -> dict:
+    """Extract story metadata from the newest metadata JSON file."""
+    novel_dir = project_root / "data" / "novel"
+    if not novel_dir.exists():
+        return {}
+
+    candidates = [
+        f for f in novel_dir.glob("*_metadata.json")
+        if f.stat().st_mtime >= started_ts - 1  # 1s tolerance
+    ]
+    if not candidates:
+        return {}
+
+    newest = max(candidates, key=lambda f: f.stat().st_mtime)
+    with open(newest) as fh:
+        meta = json.load(fh)
+
+    story_file = str(newest).replace("_metadata.json", ".md")
+
+    return {
+        "story_id": meta.get("story_id"),
+        "title": meta.get("title"),
+        "file_path": story_file,
+        "word_count": meta.get("word_count"),
+        "thumbnail_url": meta.get("thumbnail_url"),
+        "thumbnail_provider": meta.get("thumbnail_provider"),
+    }
+
+
+def _extract_research_result(started_ts: float, project_root: Path) -> dict:
+    """Extract research card data from the newest research JSON file."""
+    research_dir = project_root / "data" / "research"
+    if not research_dir.exists():
+        return {}
+
+    candidates = [
+        f for f in research_dir.rglob("RC-*.json")
+        if f.stat().st_mtime >= started_ts - 1
+    ]
+    if not candidates:
+        return {}
+
+    newest = max(candidates, key=lambda f: f.stat().st_mtime)
+    with open(newest) as fh:
+        card = json.load(fh)
+
+    return {
+        "card_id": card.get("card_id", ""),
+        "output_path": str(newest),
+        "message": f"Research completed: {card.get('output', {}).get('title', '')}",
+    }
 
 
 class SchedulerService:
@@ -143,19 +224,38 @@ class SchedulerService:
             webhook_url = resolve_webhook_url()
             if webhook_url and task_run.is_terminal():
                 status = "success" if task_run.status == TaskRunStatus.COMPLETED else "error"
+
+                # Map task type to endpoint for correct Discord embed title
+                endpoint_map = {
+                    "story": "/story/generate",
+                    "research": "/research/run",
+                }
+                endpoint = endpoint_map.get(
+                    task.task_type, f"/tasks/{task.task_id}"
+                )
+
+                # Build result with base fields
+                result = {
+                    "task_id": task.task_id,
+                    "task_type": task.task_type,
+                    "run_id": task_run.run_id,
+                    "status": task_run.status.value,
+                    "exit_code": task_run.exit_code,
+                    "error": task_run.error,
+                }
+
+                # Enrich with output file metadata for success cases
+                if status == "success":
+                    rich = _extract_rich_webhook_result(
+                        task.task_type, task_run, project_root,
+                    )
+                    result.update(rich)
+
                 fire_and_forget_webhook(
                     url=webhook_url,
-                    endpoint=f"/tasks/{task.task_id}",
+                    endpoint=endpoint,
                     status=status,
-                    result={
-                        "task_id": task.task_id,
-                        "task_type": task.task_type,
-                        "run_id": task_run.run_id,
-                        "status": task_run.status.value,
-                        "exit_code": task_run.exit_code,
-                        "error": task_run.error,
-                        "artifacts": task_run.artifacts,
-                    },
+                    result=result,
                 )
 
         dispatcher.set_on_job_completed(on_task_completed)

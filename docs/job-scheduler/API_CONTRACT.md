@@ -301,20 +301,46 @@ Rules:
 ### Delivery Semantics
 - **At-least-once**
 - Max 3 retries
-- Identical schema to API responses
+- Discord webhook URLs auto-detected for embed format
+- Scheduler task completions enrich payloads with output file metadata
 
-### Example Payload
-```json
-{
-  "event": "job.run.completed",
-  "run_id": "run_456",
-  "task_id": "job_123",
-  "status": "COMPLETED",
-  "started_at": "...",
-  "finished_at": "...",
-  "artifacts": {}
-}
-```
+### Scheduler Webhook Payload
+
+On task completion, the scheduler sends a webhook with base fields plus
+task-type-specific rich metadata extracted from the generated output files.
+
+**Base fields** (always present):
+| Field | Description |
+|-------|-------------|
+| `task_id` | Task UUID |
+| `task_type` | `"story"` or `"research"` |
+| `run_id` | TaskRun UUID |
+| `status` | TaskRunStatus value |
+| `exit_code` | Process exit code |
+| `error` | Error message (null on success) |
+
+**Story task** (`task_type: "story"`) — additional fields on success:
+| Field | Description |
+|-------|-------------|
+| `story_id` | Story identifier (timestamp-based) |
+| `title` | Generated story title |
+| `file_path` | Path to story markdown file |
+| `word_count` | Character count |
+| `thumbnail_url` | Thumbnail URL (if generated) |
+| `thumbnail_provider` | Thumbnail provider name |
+
+**Research task** (`task_type: "research"`) — additional fields on success:
+| Field | Description |
+|-------|-------------|
+| `card_id` | Research card identifier |
+| `output_path` | Path to research card JSON |
+| `message` | Descriptive completion message |
+
+### Endpoint Mapping for Discord Embeds
+
+Scheduler maps `task_type` to API endpoint for Discord embed title rendering:
+- `"story"` → `/story/generate` → "Story Generation Completed/Failed"
+- `"research"` → `/research/run` → "Research Completed/Failed"
 
 ---
 

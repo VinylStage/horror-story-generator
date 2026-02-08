@@ -13,14 +13,21 @@ Note: Full delivery tests (WH-DELIV-*) require external HTTP endpoints
 and are optional per TEST_STRATEGY.md Section 7.3.
 """
 
+import json
 import pytest
 from datetime import datetime
+from pathlib import Path
 
 from src.scheduler import (
     Task,
     TaskRun,
     TaskStatus,
     TaskRunStatus,
+)
+from src.scheduler.service import (
+    _extract_rich_webhook_result,
+    _extract_story_result,
+    _extract_research_result,
 )
 
 
@@ -428,3 +435,120 @@ class TestWebhookPayloadBuilder:
         assert payload["data"]["status"] == "FAILED"
         assert payload["data"]["error"] == "Story generation failed: API timeout"
         assert payload["data"]["exit_code"] == 1
+
+
+# =============================================================================
+# Rich Webhook Result Extraction (#132)
+# =============================================================================
+
+
+class TestRichWebhookExtraction:
+    """
+    Tests for _extract_rich_webhook_result and helper functions.
+
+    Verifies that output file metadata is correctly extracted
+    for enriched Discord webhook payloads.
+    """
+
+    def test_extract_story_result(self, tmp_path):
+        """Story metadata JSON is parsed into webhook result fields."""
+        novel_dir = tmp_path / "data" / "novel"
+        novel_dir.mkdir(parents=True)
+
+        meta = {
+            "story_id": "20260208_100000",
+            "title": "테스트 이야기",
+            "word_count": 3000,
+            "thumbnail_url": "http://example.com/thumb.png",
+            "thumbnail_provider": "local_sd",
+        }
+        meta_file = novel_dir / "story-20260208-100000_metadata.json"
+        meta_file.write_text(json.dumps(meta))
+
+        result = _extract_story_result(0, tmp_path)
+
+        assert result["story_id"] == "20260208_100000"
+        assert result["title"] == "테스트 이야기"
+        assert result["word_count"] == 3000
+        assert result["thumbnail_url"] == "http://example.com/thumb.png"
+        assert result["thumbnail_provider"] == "local_sd"
+        assert result["file_path"].endswith(".md")
+
+    def test_extract_research_result(self, tmp_path):
+        """Research card JSON is parsed into webhook result fields."""
+        research_dir = tmp_path / "data" / "research" / "2026" / "02"
+        research_dir.mkdir(parents=True)
+
+        card = {
+            "card_id": "RC-20260208-100000",
+            "output": {"title": "Test Card"},
+        }
+        card_file = research_dir / "RC-20260208-100000.json"
+        card_file.write_text(json.dumps(card))
+
+        result = _extract_research_result(0, tmp_path)
+
+        assert result["card_id"] == "RC-20260208-100000"
+        assert "RC-20260208-100000.json" in result["output_path"]
+        assert "Test Card" in result["message"]
+
+    def test_extract_returns_empty_when_no_dir(self, tmp_path):
+        """Returns empty dict when data directory doesn't exist."""
+        assert _extract_story_result(0, tmp_path) == {}
+        assert _extract_research_result(0, tmp_path) == {}
+
+    def test_extract_returns_empty_when_no_matching_files(self, tmp_path):
+        """Returns empty dict when no files match the time filter."""
+        novel_dir = tmp_path / "data" / "novel"
+        novel_dir.mkdir(parents=True)
+
+        # Create a file but use a very future started_ts so it won't match
+        meta = {"story_id": "old"}
+        (novel_dir / "story-20260101-000000_metadata.json").write_text(
+            json.dumps(meta)
+        )
+
+        # started_ts far in the future — no files will match
+        result = _extract_story_result(9999999999, tmp_path)
+        assert result == {}
+
+    def test_extract_rich_dispatches_by_task_type(self, tmp_path):
+        """_extract_rich_webhook_result dispatches to correct extractor."""
+        novel_dir = tmp_path / "data" / "novel"
+        novel_dir.mkdir(parents=True)
+        meta = {"story_id": "dispatch_test", "title": "T"}
+        (novel_dir / "story-20260208-120000_metadata.json").write_text(
+            json.dumps(meta)
+        )
+
+        task_run = TaskRun(
+            run_id="r1",
+            task_id="t1",
+            params_snapshot={},
+            started_at="2000-01-01T00:00:00Z",
+        )
+
+        result = _extract_rich_webhook_result("story", task_run, tmp_path)
+        assert result.get("story_id") == "dispatch_test"
+
+        # Unknown task type returns empty
+        result = _extract_rich_webhook_result("unknown", task_run, tmp_path)
+        assert result == {}
+
+    def test_extract_graceful_on_bad_json(self, tmp_path):
+        """Returns empty dict when JSON file is malformed."""
+        novel_dir = tmp_path / "data" / "novel"
+        novel_dir.mkdir(parents=True)
+        (novel_dir / "story-20260208-130000_metadata.json").write_text(
+            "not valid json{{"
+        )
+
+        task_run = TaskRun(
+            run_id="r1",
+            task_id="t1",
+            params_snapshot={},
+            started_at="2000-01-01T00:00:00Z",
+        )
+
+        result = _extract_rich_webhook_result("story", task_run, tmp_path)
+        assert result == {}
