@@ -11,6 +11,11 @@ import pytest
 from pydantic import ValidationError
 
 
+# Target length range boundaries
+TARGET_LENGTH_MIN = 300
+TARGET_LENGTH_MAX = 10000
+
+
 class TestStoryGenerateRequestSchema:
     """Tests for StoryGenerateRequest target_length validation."""
 
@@ -27,34 +32,34 @@ class TestStoryGenerateRequestSchema:
         from src.api.schemas.story import StoryGenerateRequest
 
         # Minimum
-        request = StoryGenerateRequest(target_length=300)
-        assert request.target_length == 300
+        request = StoryGenerateRequest(target_length=TARGET_LENGTH_MIN)
+        assert request.target_length == TARGET_LENGTH_MIN
 
         # Maximum
-        request = StoryGenerateRequest(target_length=10000)
-        assert request.target_length == 10000
+        request = StoryGenerateRequest(target_length=TARGET_LENGTH_MAX)
+        assert request.target_length == TARGET_LENGTH_MAX
 
         # Middle value
         request = StoryGenerateRequest(target_length=2500)
         assert request.target_length == 2500
 
     def test_target_length_below_minimum(self):
-        """Should reject target_length below 300."""
+        """Should reject target_length below minimum."""
         from src.api.schemas.story import StoryGenerateRequest
 
         with pytest.raises(ValidationError) as exc_info:
-            StoryGenerateRequest(target_length=299)
+            StoryGenerateRequest(target_length=TARGET_LENGTH_MIN - 1)
 
-        assert "greater than or equal to 300" in str(exc_info.value)
+        assert f"greater than or equal to {TARGET_LENGTH_MIN}" in str(exc_info.value)
 
     def test_target_length_above_maximum(self):
-        """Should reject target_length above 10000."""
+        """Should reject target_length above maximum."""
         from src.api.schemas.story import StoryGenerateRequest
 
         with pytest.raises(ValidationError) as exc_info:
-            StoryGenerateRequest(target_length=10001)
+            StoryGenerateRequest(target_length=TARGET_LENGTH_MAX + 1)
 
-        assert "less than or equal to 10000" in str(exc_info.value)
+        assert f"less than or equal to {TARGET_LENGTH_MAX}" in str(exc_info.value)
 
     def test_target_length_with_other_params(self):
         """Should work with other parameters."""

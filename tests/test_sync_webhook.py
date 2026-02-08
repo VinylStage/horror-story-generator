@@ -25,6 +25,13 @@ from src.infra.webhook import (
 )
 
 
+# Webhook URL constants
+WEBHOOK_URL = "https://example.com/webhook"
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/123456/abcdef"
+DISCORDAPP_WEBHOOK_URL = "https://discordapp.com/api/webhooks/123456/abcdef"
+DISCORD_WEBHOOK_URL_SHORT = "https://discord.com/api/webhooks/123/abc"
+
+
 class TestBuildSyncWebhookPayload:
     """Tests for build_sync_webhook_payload function."""
 
@@ -101,7 +108,7 @@ class TestFireAndForgetWebhook:
         mock_thread_class.return_value = mock_thread
 
         result = fire_and_forget_webhook(
-            url="https://example.com/webhook",
+            url=WEBHOOK_URL,
             endpoint="/research/run",
             status="success",
             result={"card_id": "RC-123"},
@@ -118,7 +125,7 @@ class TestFireAndForgetWebhook:
         mock_thread_class.return_value = mock_thread
 
         fire_and_forget_webhook(
-            url="https://example.com/webhook",
+            url=WEBHOOK_URL,
             endpoint="/test",
             status="success",
             result={},
@@ -145,7 +152,7 @@ class TestSendWebhookInThread:
 
         payload = {"event": "completed", "endpoint": "/test"}
         _send_webhook_in_thread(
-            url="https://example.com/webhook",
+            url=WEBHOOK_URL,
             payload=payload,
             max_retries=1,
         )
@@ -168,7 +175,7 @@ class TestSendWebhookInThread:
 
         payload = {"event": "completed"}
         _send_webhook_in_thread(
-            url="https://example.com/webhook",
+            url=WEBHOOK_URL,
             payload=payload,
             max_retries=2,
         )
@@ -189,7 +196,7 @@ class TestSendWebhookInThread:
 
         payload = {"event": "completed", "endpoint": "/research/run"}
         _send_webhook_in_thread(
-            url="https://example.com/webhook",
+            url=WEBHOOK_URL,
             payload=payload,
             max_retries=1,
         )
@@ -265,18 +272,15 @@ class TestDiscordWebhookDetection:
 
     def test_detects_discord_webhook_url(self):
         """Test detection of discord.com webhook URL."""
-        url = "https://discord.com/api/webhooks/123456/abcdef"
-        assert is_discord_webhook_url(url) is True
+        assert is_discord_webhook_url(DISCORD_WEBHOOK_URL) is True
 
     def test_detects_discordapp_webhook_url(self):
         """Test detection of discordapp.com webhook URL."""
-        url = "https://discordapp.com/api/webhooks/123456/abcdef"
-        assert is_discord_webhook_url(url) is True
+        assert is_discord_webhook_url(DISCORDAPP_WEBHOOK_URL) is True
 
     def test_rejects_non_discord_url(self):
         """Test that non-Discord URLs are not detected."""
-        url = "https://example.com/webhook"
-        assert is_discord_webhook_url(url) is False
+        assert is_discord_webhook_url(WEBHOOK_URL) is False
 
     def test_rejects_empty_url(self):
         """Test that empty URL returns False."""
@@ -288,8 +292,8 @@ class TestDiscordWebhookDetection:
 
     def test_rejects_partial_match(self):
         """Test that partial matches are rejected."""
-        url = "https://notdiscord.com/api/webhooks/123"
-        assert is_discord_webhook_url(url) is False
+        non_discord_url = "https://notdiscord.com/api/webhooks/123"
+        assert is_discord_webhook_url(non_discord_url) is False
 
 
 class TestBuildDiscordEmbedPayload:
@@ -447,7 +451,7 @@ class TestDiscordWebhookIntegration:
         mock_thread_class.return_value = mock_thread
 
         fire_and_forget_webhook(
-            url="https://discord.com/api/webhooks/123/abc",
+            url=DISCORD_WEBHOOK_URL_SHORT,
             endpoint="/research/run",
             status="success",
             result={"card_id": "RC-123"},
@@ -469,7 +473,7 @@ class TestDiscordWebhookIntegration:
         mock_thread_class.return_value = mock_thread
 
         fire_and_forget_webhook(
-            url="https://example.com/webhook",
+            url=WEBHOOK_URL,
             endpoint="/research/run",
             status="success",
             result={"card_id": "RC-123"},
@@ -497,7 +501,7 @@ class TestDiscordWebhookIntegration:
 
         payload = {"embeds": [{"title": "Test"}]}
         _send_webhook_in_thread(
-            url="https://discord.com/api/webhooks/123/abc",
+            url=DISCORD_WEBHOOK_URL_SHORT,
             payload=payload,
             max_retries=1,
         )
