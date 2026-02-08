@@ -29,6 +29,7 @@ from src.scheduler.service import (
     _extract_story_result,
     _extract_research_result,
 )
+from src.infra.webhook import build_task_discord_embed_payload
 
 
 # =============================================================================
@@ -552,3 +553,98 @@ class TestRichWebhookExtraction:
 
         result = _extract_rich_webhook_result("story", task_run, tmp_path)
         assert result == {}
+
+
+# =============================================================================
+# Task Discord Embed Builder (#132)
+# =============================================================================
+
+
+class TestTaskDiscordEmbedPayload:
+    """Tests for build_task_discord_embed_payload (scheduler-specific embed)."""
+
+    def test_success_story_embed(self):
+        """Story task success embed has task context and story metadata."""
+        payload = build_task_discord_embed_payload(
+            task_id="abc-123",
+            task_type="story",
+            status="success",
+            result={
+                "status": "COMPLETED",
+                "title": "공포 이야기",
+                "word_count": 3000,
+                "thumbnail_url": "http://example.com/thumb.png",
+            },
+        )
+
+        embed = payload["embeds"][0]
+        assert "Task Completed" in embed["title"]
+        assert "Story" in embed["title"]
+        assert "📋" in embed["title"]
+
+        field_names = [f["name"] for f in embed["fields"]]
+        assert "Task ID" in field_names
+        assert "Type" in field_names
+        assert "Title" in field_names
+        assert "Word Count" in field_names
+        assert "Endpoint" in field_names
+
+        # Endpoint should be /tasks/{task_id}, not /story/generate
+        endpoint_field = next(f for f in embed["fields"] if f["name"] == "Endpoint")
+        assert "/tasks/abc-123" in endpoint_field["value"]
+        assert "/story/generate" not in endpoint_field["value"]
+
+    def test_success_research_embed(self):
+        """Research task success embed has task context and card metadata."""
+        payload = build_task_discord_embed_payload(
+            task_id="def-456",
+            task_type="research",
+            status="success",
+            result={
+                "status": "COMPLETED",
+                "card_id": "RC-20260208-100000",
+                "output_path": "data/research/2026/02/RC-20260208-100000.json",
+            },
+        )
+
+        embed = payload["embeds"][0]
+        assert "Task Completed" in embed["title"]
+        assert "Research" in embed["title"]
+
+        field_names = [f["name"] for f in embed["fields"]]
+        assert "Task ID" in field_names
+        assert "Card ID" in field_names
+        assert "Output" in field_names
+
+    def test_failed_embed(self):
+        """Failed task embed shows error message."""
+        payload = build_task_discord_embed_payload(
+            task_id="fail-789",
+            task_type="story",
+            status="error",
+            result={
+                "status": "FAILED",
+                "error": "Process exited with code 1",
+            },
+        )
+
+        embed = payload["embeds"][0]
+        assert "Task Failed" in embed["title"]
+
+        field_names = [f["name"] for f in embed["fields"]]
+        assert "Error" in field_names
+
+    def test_footer_has_dynamic_version(self):
+        """Footer uses current __version__, not hardcoded."""
+        from src import __version__
+
+        payload = build_task_discord_embed_payload(
+            task_id="ver-test",
+            task_type="research",
+            status="success",
+            result={"status": "COMPLETED"},
+        )
+
+        embed = payload["embeds"][0]
+        assert __version__ in embed["footer"]["text"]
+        assert "v1.4" not in embed["footer"]["text"]

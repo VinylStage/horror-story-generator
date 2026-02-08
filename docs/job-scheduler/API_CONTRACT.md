@@ -336,11 +336,16 @@ task-type-specific rich metadata extracted from the generated output files.
 | `output_path` | Path to research card JSON |
 | `message` | Descriptive completion message |
 
-### Endpoint Mapping for Discord Embeds
+### Discord Embed Format (Scheduler-specific)
 
-Scheduler maps `task_type` to API endpoint for Discord embed title rendering:
-- `"story"` → `/story/generate` → "Story Generation Completed/Failed"
-- `"research"` → `/research/run` → "Research Completed/Failed"
+Scheduler task webhooks use a **dedicated Discord embed format** (`build_task_discord_embed_payload`)
+distinct from direct API endpoint webhooks (`build_discord_embed_payload`):
+
+- **Title**: `📋 Task Completed: Story` / `📋 Task Failed: Research`
+- **Context fields**: Task ID, Type, Status (always present)
+- **Rich fields**: Task-type-specific metadata (title, word_count, card_id, etc.)
+- **Endpoint**: `/tasks/{task_id}` (not `/story/generate` or `/research/run`)
+- **Footer**: Dynamic version from `src.__version__`
 
 ---
 

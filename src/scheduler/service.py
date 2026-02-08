@@ -30,7 +30,13 @@ from .entities import (
     TaskTemplate,
 )
 from .persistence import PersistenceAdapter
-from src.infra.webhook import fire_and_forget_webhook, resolve_webhook_url
+from src.infra.webhook import (
+    resolve_webhook_url,
+    is_discord_webhook_url,
+    build_task_discord_embed_payload,
+    build_sync_webhook_payload,
+    _send_webhook_in_thread,
+)
 from .queue_manager import QueueManager
 from .dispatcher import Dispatcher
 from .executor import Executor, SubprocessTaskHandler
@@ -223,16 +229,9 @@ class SchedulerService:
             # Send webhook notification if configured
             webhook_url = resolve_webhook_url()
             if webhook_url and task_run.is_terminal():
-                status = "success" if task_run.status == TaskRunStatus.COMPLETED else "error"
+                import threading
 
-                # Map task type to endpoint for correct Discord embed title
-                endpoint_map = {
-                    "story": "/story/generate",
-                    "research": "/research/run",
-                }
-                endpoint = endpoint_map.get(
-                    task.task_type, f"/tasks/{task.task_id}"
-                )
+                status = "success" if task_run.status == TaskRunStatus.COMPLETED else "error"
 
                 # Build result with base fields
                 result = {
@@ -251,12 +250,30 @@ class SchedulerService:
                     )
                     result.update(rich)
 
-                fire_and_forget_webhook(
-                    url=webhook_url,
-                    endpoint=endpoint,
-                    status=status,
-                    result=result,
+                # Build payload: scheduler-specific format for Discord
+                if is_discord_webhook_url(webhook_url):
+                    payload = build_task_discord_embed_payload(
+                        task_id=task.task_id,
+                        task_type=task.task_type,
+                        status=status,
+                        result=result,
+                    )
+                else:
+                    payload = build_sync_webhook_payload(
+                        endpoint=f"/tasks/{task.task_id}",
+                        status=status,
+                        result=result,
+                    )
+
+                logger.info(
+                    f"Triggering task webhook for {task.task_id} ({task.task_type})"
                 )
+                thread = threading.Thread(
+                    target=_send_webhook_in_thread,
+                    args=(webhook_url, payload),
+                    daemon=True,
+                )
+                thread.start()
 
         dispatcher.set_on_job_completed(on_task_completed)
 
