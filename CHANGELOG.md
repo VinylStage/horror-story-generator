@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0](https://github.com/VinylStage/horror-story-generator/compare/v1.7.0...v2.0.0) (2026-02-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* Remove all deprecated /jobs/* endpoints, CLI entry points (main.py, story/cli.py, research/executor/cli.py), and legacy job management infrastructure (job_manager, job_monitor).
+
+### Features
+
+* remove legacy trigger endpoints and CLI ([#113](https://github.com/VinylStage/horror-story-generator/issues/113), [#114](https://github.com/VinylStage/horror-story-generator/issues/114)) ([#139](https://github.com/VinylStage/horror-story-generator/issues/139)) ([ab5c209](https://github.com/VinylStage/horror-story-generator/commit/ab5c2090cc772c395127ff37612105a9f7b08021))
+* v2.0.0 release — remove legacy endpoints, fix webhook version, improve test quality ([#144](https://github.com/VinylStage/horror-story-generator/issues/144)) ([2b2d460](https://github.com/VinylStage/horror-story-generator/commit/2b2d4605d37ec79e884d767647d10403e6d5e426))
+
+
+### Bug Fixes
+
+* replace hardcoded version in webhook with __version__ ([#141](https://github.com/VinylStage/horror-story-generator/issues/141)) ([#142](https://github.com/VinylStage/horror-story-generator/issues/142)) ([87664bb](https://github.com/VinylStage/horror-story-generator/commit/87664bb796d662d14030dfd3799a90e6e616135a))
+
+
+### Technical Improvements
+
+* improve test quality — reduce hardcoding, fix flaky patterns, add coverage ([#140](https://github.com/VinylStage/horror-story-generator/issues/140)) ([#143](https://github.com/VinylStage/horror-story-generator/issues/143)) ([12681fd](https://github.com/VinylStage/horror-story-generator/commit/12681fd6e050f7d6e0d5d223c00454b72a9d6268))
+
 ## [1.7.0](https://github.com/VinylStage/horror-story-generator/compare/v1.6.0...v1.7.0) (2026-02-08)
 
 

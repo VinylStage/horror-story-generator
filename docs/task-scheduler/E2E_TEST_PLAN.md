@@ -1,7 +1,7 @@
 # Task Scheduler End-to-End Test Plan
 
 **Document Version:** 1.1.0
-**Application Version:** 1.7.0 <!-- x-release-please-version -->
+**Application Version:** 2.0.0 <!-- x-release-please-version -->
 **Phase:** 6-B Real Pipeline Validation
 **Last Updated:** 2026-01-18
 
@@ -251,7 +251,7 @@ python -m pytest tests/scheduler/test_pipeline_e2e.py -v --run-pipeline
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-| Application | 1.7.0 <!-- x-release-please-version --> | Managed by release-please |
+| Application | 2.0.0 <!-- x-release-please-version --> | Managed by release-please |
 | This Document | 1.0.0 | Independent versioning |
 | Test Framework | pytest 9.0+ | With asyncio plugin |
 | Python | 3.11+ | Required |
