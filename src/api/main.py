@@ -8,8 +8,17 @@ Phase C: Optional API key authentication.
 Phase 3: Scheduler-based task execution model.
 """
 
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 from fastapi import Depends, FastAPI
 

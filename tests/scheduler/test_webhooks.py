@@ -13,8 +13,10 @@ Note: Full delivery tests (WH-DELIV-*) require external HTTP endpoints
 and are optional per TEST_STRATEGY.md Section 7.3.
 """
 
+import json
 import pytest
 from datetime import datetime
+from pathlib import Path
 
 from src.scheduler import (
     Task,
@@ -22,6 +24,12 @@ from src.scheduler import (
     TaskStatus,
     TaskRunStatus,
 )
+from src.scheduler.service import (
+    _extract_rich_webhook_result,
+    _extract_story_result,
+    _extract_research_result,
+)
+from src.infra.webhook import build_task_discord_embed_payload
 
 
 # =============================================================================
@@ -428,3 +436,215 @@ class TestWebhookPayloadBuilder:
         assert payload["data"]["status"] == "FAILED"
         assert payload["data"]["error"] == "Story generation failed: API timeout"
         assert payload["data"]["exit_code"] == 1
+
+
+# =============================================================================
+# Rich Webhook Result Extraction (#132)
+# =============================================================================
+
+
+class TestRichWebhookExtraction:
+    """
+    Tests for _extract_rich_webhook_result and helper functions.
+
+    Verifies that output file metadata is correctly extracted
+    for enriched Discord webhook payloads.
+    """
+
+    def test_extract_story_result(self, tmp_path):
+        """Story metadata JSON is parsed into webhook result fields."""
+        novel_dir = tmp_path / "data" / "novel"
+        novel_dir.mkdir(parents=True)
+
+        meta = {
+            "story_id": "20260208_100000",
+            "title": "테스트 이야기",
+            "word_count": 3000,
+            "thumbnail_url": "http://example.com/thumb.png",
+            "thumbnail_provider": "local_sd",
+        }
+        meta_file = novel_dir / "story-20260208-100000_metadata.json"
+        meta_file.write_text(json.dumps(meta))
+
+        result = _extract_story_result(0, tmp_path)
+
+        assert result["story_id"] == "20260208_100000"
+        assert result["title"] == "테스트 이야기"
+        assert result["word_count"] == 3000
+        assert result["thumbnail_url"] == "http://example.com/thumb.png"
+        assert result["thumbnail_provider"] == "local_sd"
+        assert result["file_path"].endswith(".md")
+
+    def test_extract_research_result(self, tmp_path):
+        """Research card JSON is parsed into webhook result fields."""
+        research_dir = tmp_path / "data" / "research" / "2026" / "02"
+        research_dir.mkdir(parents=True)
+
+        card = {
+            "card_id": "RC-20260208-100000",
+            "output": {"title": "Test Card"},
+        }
+        card_file = research_dir / "RC-20260208-100000.json"
+        card_file.write_text(json.dumps(card))
+
+        result = _extract_research_result(0, tmp_path)
+
+        assert result["card_id"] == "RC-20260208-100000"
+        assert "RC-20260208-100000.json" in result["output_path"]
+        assert "Test Card" in result["message"]
+
+    def test_extract_returns_empty_when_no_dir(self, tmp_path):
+        """Returns empty dict when data directory doesn't exist."""
+        assert _extract_story_result(0, tmp_path) == {}
+        assert _extract_research_result(0, tmp_path) == {}
+
+    def test_extract_returns_empty_when_no_matching_files(self, tmp_path):
+        """Returns empty dict when no files match the time filter."""
+        novel_dir = tmp_path / "data" / "novel"
+        novel_dir.mkdir(parents=True)
+
+        # Create a file but use a very future started_ts so it won't match
+        meta = {"story_id": "old"}
+        (novel_dir / "story-20260101-000000_metadata.json").write_text(
+            json.dumps(meta)
+        )
+
+        # started_ts far in the future — no files will match
+        result = _extract_story_result(9999999999, tmp_path)
+        assert result == {}
+
+    def test_extract_rich_dispatches_by_task_type(self, tmp_path):
+        """_extract_rich_webhook_result dispatches to correct extractor."""
+        novel_dir = tmp_path / "data" / "novel"
+        novel_dir.mkdir(parents=True)
+        meta = {"story_id": "dispatch_test", "title": "T"}
+        (novel_dir / "story-20260208-120000_metadata.json").write_text(
+            json.dumps(meta)
+        )
+
+        task_run = TaskRun(
+            run_id="r1",
+            task_id="t1",
+            params_snapshot={},
+            started_at="2000-01-01T00:00:00Z",
+        )
+
+        result = _extract_rich_webhook_result("story", task_run, tmp_path)
+        assert result.get("story_id") == "dispatch_test"
+
+        # Unknown task type returns empty
+        result = _extract_rich_webhook_result("unknown", task_run, tmp_path)
+        assert result == {}
+
+    def test_extract_graceful_on_bad_json(self, tmp_path):
+        """Returns empty dict when JSON file is malformed."""
+        novel_dir = tmp_path / "data" / "novel"
+        novel_dir.mkdir(parents=True)
+        (novel_dir / "story-20260208-130000_metadata.json").write_text(
+            "not valid json{{"
+        )
+
+        task_run = TaskRun(
+            run_id="r1",
+            task_id="t1",
+            params_snapshot={},
+            started_at="2000-01-01T00:00:00Z",
+        )
+
+        result = _extract_rich_webhook_result("story", task_run, tmp_path)
+        assert result == {}
+
+
+# =============================================================================
+# Task Discord Embed Builder (#132)
+# =============================================================================
+
+
+class TestTaskDiscordEmbedPayload:
+    """Tests for build_task_discord_embed_payload (scheduler-specific embed)."""
+
+    def test_success_story_embed(self):
+        """Story task success embed has task context and story metadata."""
+        payload = build_task_discord_embed_payload(
+            task_id="abc-123",
+            task_type="story",
+            status="success",
+            result={
+                "status": "COMPLETED",
+                "title": "공포 이야기",
+                "word_count": 3000,
+                "thumbnail_url": "http://example.com/thumb.png",
+            },
+        )
+
+        embed = payload["embeds"][0]
+        assert "Task Completed" in embed["title"]
+        assert "Story" in embed["title"]
+        assert "📋" in embed["title"]
+
+        field_names = [f["name"] for f in embed["fields"]]
+        assert "Task ID" in field_names
+        assert "Type" in field_names
+        assert "Title" in field_names
+        assert "Word Count" in field_names
+        assert "Endpoint" in field_names
+
+        # Endpoint should be /tasks/{task_id}, not /story/generate
+        endpoint_field = next(f for f in embed["fields"] if f["name"] == "Endpoint")
+        assert "/tasks/abc-123" in endpoint_field["value"]
+        assert "/story/generate" not in endpoint_field["value"]
+
+    def test_success_research_embed(self):
+        """Research task success embed has task context and card metadata."""
+        payload = build_task_discord_embed_payload(
+            task_id="def-456",
+            task_type="research",
+            status="success",
+            result={
+                "status": "COMPLETED",
+                "card_id": "RC-20260208-100000",
+                "output_path": "data/research/2026/02/RC-20260208-100000.json",
+            },
+        )
+
+        embed = payload["embeds"][0]
+        assert "Task Completed" in embed["title"]
+        assert "Research" in embed["title"]
+
+        field_names = [f["name"] for f in embed["fields"]]
+        assert "Task ID" in field_names
+        assert "Card ID" in field_names
+        assert "Output" in field_names
+
+    def test_failed_embed(self):
+        """Failed task embed shows error message."""
+        payload = build_task_discord_embed_payload(
+            task_id="fail-789",
+            task_type="story",
+            status="error",
+            result={
+                "status": "FAILED",
+                "error": "Process exited with code 1",
+            },
+        )
+
+        embed = payload["embeds"][0]
+        assert "Task Failed" in embed["title"]
+
+        field_names = [f["name"] for f in embed["fields"]]
+        assert "Error" in field_names
+
+    def test_footer_has_dynamic_version(self):
+        """Footer uses current __version__, not hardcoded."""
+        from src import __version__
+
+        payload = build_task_discord_embed_payload(
+            task_id="ver-test",
+            task_type="research",
+            status="success",
+            result={"status": "COMPLETED"},
+        )
+
+        embed = payload["embeds"][0]
+        assert __version__ in embed["footer"]["text"]
+        assert "v1.4" not in embed["footer"]["text"]

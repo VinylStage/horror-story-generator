@@ -301,20 +301,51 @@ Rules:
 ### Delivery Semantics
 - **At-least-once**
 - Max 3 retries
-- Identical schema to API responses
+- Discord webhook URLs auto-detected for embed format
+- Scheduler task completions enrich payloads with output file metadata
 
-### Example Payload
-```json
-{
-  "event": "job.run.completed",
-  "run_id": "run_456",
-  "task_id": "job_123",
-  "status": "COMPLETED",
-  "started_at": "...",
-  "finished_at": "...",
-  "artifacts": {}
-}
-```
+### Scheduler Webhook Payload
+
+On task completion, the scheduler sends a webhook with base fields plus
+task-type-specific rich metadata extracted from the generated output files.
+
+**Base fields** (always present):
+| Field | Description |
+|-------|-------------|
+| `task_id` | Task UUID |
+| `task_type` | `"story"` or `"research"` |
+| `run_id` | TaskRun UUID |
+| `status` | TaskRunStatus value |
+| `exit_code` | Process exit code |
+| `error` | Error message (null on success) |
+
+**Story task** (`task_type: "story"`) — additional fields on success:
+| Field | Description |
+|-------|-------------|
+| `story_id` | Story identifier (timestamp-based) |
+| `title` | Generated story title |
+| `file_path` | Path to story markdown file |
+| `word_count` | Character count |
+| `thumbnail_url` | Thumbnail URL (if generated) |
+| `thumbnail_provider` | Thumbnail provider name |
+
+**Research task** (`task_type: "research"`) — additional fields on success:
+| Field | Description |
+|-------|-------------|
+| `card_id` | Research card identifier |
+| `output_path` | Path to research card JSON |
+| `message` | Descriptive completion message |
+
+### Discord Embed Format (Scheduler-specific)
+
+Scheduler task webhooks use a **dedicated Discord embed format** (`build_task_discord_embed_payload`)
+distinct from direct API endpoint webhooks (`build_discord_embed_payload`):
+
+- **Title**: `📋 Task Completed: Story` / `📋 Task Failed: Research`
+- **Context fields**: Task ID, Type, Status (always present)
+- **Rich fields**: Task-type-specific metadata (title, word_count, card_id, etc.)
+- **Endpoint**: `/tasks/{task_id}` (not `/story/generate` or `/research/run`)
+- **Footer**: Dynamic version from `src.__version__`
 
 ---
 
