@@ -28,6 +28,7 @@ from .entities import (
     TaskTemplate,
 )
 from .persistence import PersistenceAdapter
+from src.infra.webhook import fire_and_forget_webhook, resolve_webhook_url
 from .queue_manager import QueueManager
 from .dispatcher import Dispatcher
 from .executor import Executor, SubprocessTaskHandler
@@ -137,6 +138,25 @@ class SchedulerService:
             # Handle TaskGroup completion (DEC-012)
             # This checks for stop-on-failure and updates group status
             queue_manager.handle_group_job_completion(task, task_run)
+
+            # Send webhook notification if configured
+            webhook_url = resolve_webhook_url()
+            if webhook_url and task_run.is_terminal():
+                status = "success" if task_run.status == TaskRunStatus.COMPLETED else "error"
+                fire_and_forget_webhook(
+                    url=webhook_url,
+                    endpoint=f"/tasks/{task.task_id}",
+                    status=status,
+                    result={
+                        "task_id": task.task_id,
+                        "task_type": task.task_type,
+                        "run_id": task_run.run_id,
+                        "status": task_run.status.value,
+                        "exit_code": task_run.exit_code,
+                        "error": task_run.error,
+                        "artifacts": task_run.artifacts,
+                    },
+                )
 
         dispatcher.set_on_job_completed(on_task_completed)
 
