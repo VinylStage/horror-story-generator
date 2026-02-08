@@ -58,6 +58,7 @@
 
 | 환경 변수 | 기본값 | 설명 |
 |-----------|--------|------|
+| `DISCORD_WEBHOOK_URL` | (없음) | Webhook URL 기본값. 요청에 `webhook_url` 미지정 시 자동 사용 (v1.6.1) |
 | `AUTO_INJECT_RESEARCH` | `true` | 연구 카드 자동 주입 |
 | `RESEARCH_INJECT_TOP_K` | `1` | 주입할 연구 카드 수 |
 | `RESEARCH_INJECT_REQUIRE` | `false` | 연구 카드 필수 여부 |
@@ -106,11 +107,20 @@
 > `init_vector_backend()`, `generate_embedding()`, `vector_search_research_cards()`,
 > `compute_semantic_affinity()`, `cluster_research_cards()` 함수를 제공합니다.
 
+### Ollama 설정
+
+| 환경 변수 | 기본값 | 설명 |
+|-----------|--------|------|
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API 기본 URL |
+| `OLLAMA_IDLE_TIMEOUT_SECONDS` | `300` | Ollama 모델 유휴 시 자동 언로드 타임아웃 (초). `0`으로 설정 시 자동 언로드 비활성화 |
+
 ### 경로 설정 (v1.3.1)
 
 | 환경 변수 | 기본값 | 설명 |
 |-----------|--------|------|
 | `NOVEL_OUTPUT_DIR` | `data/novel` | 스토리 출력 디렉토리 |
+| `OUTPUT_DIR` | (없음) | 스토리 출력 디렉토리 오버라이드. 설정 시 `NOVEL_OUTPUT_DIR`보다 우선 적용 (레거시 호환) |
+| `STORY_REGISTRY_DB_PATH` | `./data/story_registry.db` | 스토리 레지스트리 SQLite DB 경로 |
 | `JOB_DIR` | `jobs/` | 작업 파일 디렉토리 |
 
 ### 작업 정리 설정 (v1.3.1)

@@ -23,7 +23,7 @@ from ..schemas.story import (
     StoryListResponse,
     StoryDetailResponse,
 )
-from src.infra.webhook import fire_and_forget_webhook
+from src.infra.webhook import fire_and_forget_webhook, resolve_webhook_url
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,9 @@ async def generate_story(request: StoryGenerateRequest):
     - Selects a random template
     - Uses existing research cards based on template affinity
     """
+    # Resolve webhook URL: request value > DISCORD_WEBHOOK_URL env > None
+    webhook_url = resolve_webhook_url(request.webhook_url)
+
     try:
         from src.story.generator import generate_with_topic
         from src.registry.story_registry import StoryRegistry
@@ -75,15 +78,16 @@ async def generate_story(request: StoryGenerateRequest):
             research_model_spec=request.research_model,
             save_output=request.save_output,
             registry=registry,
-            target_length=request.target_length
+            target_length=request.target_length,
+            custom_tags=request.tags,  # v1.6.0: Custom tags support (Issue #109)
         )
 
         if not result.get("success", True):
             # v1.4.3: Fire webhook for failure case
             webhook_triggered = False
-            if request.webhook_url:
+            if webhook_url:
                 webhook_triggered = fire_and_forget_webhook(
-                    url=request.webhook_url,
+                    url=webhook_url,
                     endpoint="/story/generate",
                     status="error",
                     result={"error": result.get("error", "Generation failed")},
@@ -106,11 +110,15 @@ async def generate_story(request: StoryGenerateRequest):
             if lines and lines[0].startswith("#"):
                 title = lines[0].lstrip("#").strip()
 
+        # Extract thumbnail info from metadata
+        thumbnail_url = metadata.get("thumbnail_url")
+        thumbnail_provider = metadata.get("thumbnail_provider")
+
         # v1.4.3: Fire webhook for success case
         webhook_triggered = False
-        if request.webhook_url:
+        if webhook_url:
             webhook_triggered = fire_and_forget_webhook(
-                url=request.webhook_url,
+                url=webhook_url,
                 endpoint="/story/generate",
                 status="success",
                 result={
@@ -118,6 +126,8 @@ async def generate_story(request: StoryGenerateRequest):
                     "title": title or extract_title_from_metadata(metadata),
                     "file_path": result.get("file_path"),
                     "word_count": metadata.get("word_count"),
+                    "thumbnail_url": thumbnail_url,
+                    "thumbnail_provider": thumbnail_provider,
                 },
             )
 
@@ -130,15 +140,17 @@ async def generate_story(request: StoryGenerateRequest):
             word_count=metadata.get("word_count"),
             metadata=metadata,
             webhook_triggered=webhook_triggered,
+            thumbnail_url=thumbnail_url,
+            thumbnail_provider=thumbnail_provider,
         )
 
     except Exception as e:
         logger.error(f"[StoryAPI] Generation error: {e}", exc_info=True)
         # v1.4.3: Fire webhook for exception case
         webhook_triggered = False
-        if request.webhook_url:
+        if webhook_url:
             webhook_triggered = fire_and_forget_webhook(
-                url=request.webhook_url,
+                url=webhook_url,
                 endpoint="/story/generate",
                 status="error",
                 result={"error": str(e)},

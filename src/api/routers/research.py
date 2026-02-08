@@ -30,7 +30,7 @@ from ..schemas.research import (
     MatchingTemplateItem,
 )
 from ..services import research_service
-from src.infra.webhook import fire_and_forget_webhook
+from src.infra.webhook import fire_and_forget_webhook, resolve_webhook_url
 
 router = APIRouter()
 
@@ -54,13 +54,16 @@ async def run_research(request: ResearchRunRequest):
         timeout=request.timeout,
     )
 
+    # Resolve webhook URL: request value > DISCORD_WEBHOOK_URL env > None
+    webhook_url = resolve_webhook_url(request.webhook_url)
+
     # Propagate errors as HTTP errors (Issue #2)
     status = result.get("status", "error")
     if status == "error":
         # v1.4.3: Fire webhook for error case before raising
-        if request.webhook_url:
+        if webhook_url:
             fire_and_forget_webhook(
-                url=request.webhook_url,
+                url=webhook_url,
                 endpoint="/research/run",
                 status="error",
                 result={"error": result.get("message") or "Research generation failed"},
@@ -71,9 +74,9 @@ async def run_research(request: ResearchRunRequest):
         )
     elif status == "timeout":
         # v1.4.3: Fire webhook for timeout case before raising
-        if request.webhook_url:
+        if webhook_url:
             fire_and_forget_webhook(
-                url=request.webhook_url,
+                url=webhook_url,
                 endpoint="/research/run",
                 status="error",
                 result={"error": result.get("message") or "Research generation timed out"},
@@ -85,9 +88,9 @@ async def run_research(request: ResearchRunRequest):
 
     # v1.4.3: Fire webhook for success case
     webhook_triggered = False
-    if request.webhook_url:
+    if webhook_url:
         webhook_triggered = fire_and_forget_webhook(
-            url=request.webhook_url,
+            url=webhook_url,
             endpoint="/research/run",
             status="success",
             result={

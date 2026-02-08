@@ -2,7 +2,7 @@
 
 > **Status:** RESOLVED → DEC-011
 > **Document Version:** 1.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 >
 > **Decision**: Option A selected — Global single concurrency.
@@ -13,7 +13,7 @@
 ## Problem Statement
 
 **Why This Matters Now**:
-- CON-002 (Ollama Resource Exclusivity) requires single-job execution for local LLM
+- CON-002 (Ollama Resource Exclusivity) requires single-task execution for local LLM
 - Future use cases may need parallel execution for remote APIs
 - Dispatcher implementation is blocked until concurrency model is chosen
 - Test strategy (TEST_STRATEGY.md) needs to know which tests to add
@@ -26,7 +26,7 @@
 
 ### Option A: Global Single Concurrency (Baseline)
 
-**Description**: Maximum 1 job running at any time, regardless of type or resource.
+**Description**: Maximum 1 task running at any time, regardless of type or resource.
 
 | Aspect | Assessment |
 |--------|------------|
@@ -41,7 +41,7 @@
 
 ### Option B: Per-Type Concurrency
 
-**Description**: Separate concurrency limits per job_type (e.g., max 1 story, max 2 research).
+**Description**: Separate concurrency limits per task_type (e.g., max 1 story, max 2 research).
 
 | Aspect | Assessment |
 |--------|------------|
@@ -62,15 +62,15 @@ research: 2     # Can use remote API, parallelizable
 
 ### Option C: Resource-Based Concurrency
 
-**Description**: Tag jobs with resource requirements; limit by resource pool.
+**Description**: Tag tasks with resource requirements; limit by resource pool.
 
 | Aspect | Assessment |
 |--------|------------|
 | **Pros** | Most flexible; Handles mixed models (ollama vs claude vs cpu-bound) |
 | **Cons** | Complex tagging; More config; Harder to reason about |
 | **Operational Risk** | High — misconfigured tags cause resource conflicts |
-| **Components Affected** | Dispatcher, JobTemplate, Job entity, Config |
-| **Persistence Impact** | Add `resource_tags` to Job/JobTemplate; Add `resource_pools` config |
+| **Components Affected** | Dispatcher, TaskTemplate, Task entity, Config |
+| **Persistence Impact** | Add `resource_tags` to Task/TaskTemplate; Add `resource_pools` config |
 | **Test Impact** | Significant new test surface; Must test tag inheritance and pool limits |
 
 **Example Config**:
@@ -110,7 +110,7 @@ resources:
 ```
 Phase 4: Ship with Option A (global=1)
 Phase 5+: When remote API parallelization needed:
-  1. Add job_type or resource_tags field (already placeholder in schema)
+  1. Add task_type or resource_tags field (already placeholder in schema)
   2. Update Dispatcher to count by type/resource
   3. Add configuration
   4. Existing tests remain valid (single-worker is subset)
@@ -122,8 +122,17 @@ Phase 5+: When remote API parallelization needed:
 
 ## Decision Checklist
 
-- [ ] Confirm Option A as Phase 4 default
-- [ ] Defer Option B/C to future phase
-- [ ] Update DESIGN_GUARDS.md to promote OQ-001 → DEC-011
-- [ ] No persistence schema changes needed for Phase 4
+- [x] Confirm Option A as Phase 4 default
+- [x] Defer Option B/C to future phase
+- [x] Update DESIGN_GUARDS.md to promote OQ-001 → DEC-011
+- [x] No persistence schema changes needed for Phase 4
+
+---
+
+## Related Documents
+
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일 (DEC-011 참조)
+- [EXECUTION_FLOW.md](./EXECUTION_FLOW.md) - 실행 흐름 다이어그램
+- [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

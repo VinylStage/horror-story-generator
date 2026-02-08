@@ -2,10 +2,10 @@
 Scheduler Domain Entities.
 
 Follows DOMAIN_MODEL.md exactly:
-- JobTemplate: Reusable specification for work
+- TaskTemplate: Reusable specification for work (was JobTemplate)
 - Schedule: Temporal pattern for automated execution
-- Job: Single unit of work queued for execution
-- JobRun: Historical record of a single execution attempt
+- Task: Single unit of work queued for execution (was Job)
+- TaskRun: Historical record of a single execution attempt (was JobRun)
 - DirectReservation: Next-slot reservation for Direct API (DEC-004)
 
 Status values follow API_CONTRACT.md Section 2 (Canonical Status Model).
@@ -19,24 +19,28 @@ import json
 import uuid
 
 
-class JobStatus(str, Enum):
+class TaskStatus(str, Enum):
     """
-    Job status values (queue-level, external).
+    Task status values (queue-level, external).
 
     From API_CONTRACT.md Section 2.1:
     - QUEUED: Waiting in queue
     - RUNNING: Currently executing
+    - COMPLETED: Execution finished successfully
+    - FAILED: Execution failed
     - CANCELLED: Cancelled before completion
     """
 
     QUEUED = "QUEUED"
     RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
     CANCELLED = "CANCELLED"
 
 
-class JobRunStatus(str, Enum):
+class TaskRunStatus(str, Enum):
     """
-    JobRun status values (execution result, external).
+    TaskRun status values (execution result, external).
 
     From API_CONTRACT.md Section 2.2:
     - COMPLETED: Execution finished successfully
@@ -64,16 +68,16 @@ class ReservationStatus(str, Enum):
     EXPIRED = "EXPIRED"
 
 
-class JobGroupStatus(str, Enum):
+class TaskGroupStatus(str, Enum):
     """
-    JobGroup aggregate status.
+    TaskGroup aggregate status.
 
     From DOMAIN_MODEL.md Section 5:
-    - CREATED: Group defined, jobs being added
+    - CREATED: Group defined, tasks being added
     - QUEUED: Group in queue, awaiting execution
-    - RUNNING: At least one job in group is executing
-    - COMPLETED: All jobs finished successfully
-    - PARTIAL: Some jobs failed (stop-on-failure triggered per DEC-012)
+    - RUNNING: At least one task in group is executing
+    - COMPLETED: All tasks finished successfully
+    - PARTIAL: Some tasks failed (stop-on-failure triggered per DEC-012)
     - CANCELLED: Group cancelled
     """
 
@@ -96,7 +100,7 @@ def now_iso() -> str:
 
 
 @dataclass
-class JobTemplate:
+class TaskTemplate:
     """
     Reusable specification for work that can be executed.
 
@@ -106,7 +110,7 @@ class JobTemplate:
 
     template_id: str
     name: str
-    job_type: str  # "story" | "research"
+    task_type: str  # "story" | "research"
     default_params: dict = field(default_factory=dict)
     retry_policy: dict = field(default_factory=lambda: {"max_attempts": 3})
     description: Optional[str] = None
@@ -117,16 +121,16 @@ class JobTemplate:
     def create(
         cls,
         name: str,
-        job_type: str,
+        task_type: str,
         default_params: Optional[dict] = None,
         retry_policy: Optional[dict] = None,
         description: Optional[str] = None,
-    ) -> "JobTemplate":
-        """Create a new JobTemplate with generated ID."""
+    ) -> "TaskTemplate":
+        """Create a new TaskTemplate with generated ID."""
         return cls(
             template_id=generate_uuid(),
             name=name,
-            job_type=job_type,
+            task_type=task_type,
             default_params=default_params or {},
             retry_policy=retry_policy or {"max_attempts": 3},
             description=description,
@@ -139,7 +143,7 @@ class Schedule:
     Defines when work should be executed.
 
     From DOMAIN_MODEL.md Section 2.
-    Binds a JobTemplate to a temporal pattern.
+    Binds a TaskTemplate to a temporal pattern.
     """
 
     schedule_id: str
@@ -176,7 +180,7 @@ class Schedule:
 
 
 @dataclass
-class Job:
+class Task:
     """
     Single unit of work queued for execution.
 
@@ -184,22 +188,22 @@ class Job:
     Ephemeral entity from request to completion.
 
     Mutability rules (from PERSISTENCE_SCHEMA.md Section 2.1):
-    - job_id, template_id, schedule_id, group_id, job_type, retry_of, created_at, queued_at: Immutable
+    - task_id, template_id, schedule_id, group_id, task_type, retry_of, created_at, queued_at: Immutable
     - params: Immutable after RUNNING (INV-001)
     - status, priority, position: Mutable while QUEUED
     - started_at, finished_at: Write-once
     """
 
-    job_id: str
-    job_type: str
+    task_id: str
+    task_type: str
     params: dict
-    status: JobStatus
+    status: TaskStatus
     priority: int = 0
     position: int = 0
     template_id: Optional[str] = None
     schedule_id: Optional[str] = None
     group_id: Optional[str] = None
-    sequence_number: Optional[int] = None  # Order within JobGroup (0-indexed)
+    sequence_number: Optional[int] = None  # Order within TaskGroup (0-indexed)
     retry_of: Optional[str] = None
     created_at: str = field(default_factory=now_iso)
     queued_at: str = field(default_factory=now_iso)
@@ -209,7 +213,7 @@ class Job:
     @classmethod
     def create(
         cls,
-        job_type: str,
+        task_type: str,
         params: dict,
         priority: int = 0,
         position: int = 0,
@@ -218,14 +222,14 @@ class Job:
         group_id: Optional[str] = None,
         sequence_number: Optional[int] = None,
         retry_of: Optional[str] = None,
-    ) -> "Job":
-        """Create a new Job with generated ID and QUEUED status."""
+    ) -> "Task":
+        """Create a new Task with generated ID and QUEUED status."""
         now = now_iso()
         return cls(
-            job_id=generate_uuid(),
-            job_type=job_type,
+            task_id=generate_uuid(),
+            task_type=task_type,
             params=params,
-            status=JobStatus.QUEUED,
+            status=TaskStatus.QUEUED,
             priority=priority,
             position=position,
             template_id=template_id,
@@ -238,15 +242,12 @@ class Job:
         )
 
     def is_terminal(self) -> bool:
-        """Check if job is in a terminal state."""
-        # CANCELLED is terminal; QUEUED and RUNNING are not
-        # Note: Job completion is indicated by finished_at being set,
-        # with actual outcome in JobRun
-        return self.status == JobStatus.CANCELLED or self.finished_at is not None
+        """Check if task is in a terminal state."""
+        return self.status == TaskStatus.CANCELLED or self.finished_at is not None
 
 
 @dataclass
-class JobRun:
+class TaskRun:
     """
     Historical record of a single execution attempt.
 
@@ -254,16 +255,16 @@ class JobRun:
     Immutable audit trail of what happened.
 
     Mutability rules (from PERSISTENCE_SCHEMA.md Section 2.2, INV-002):
-    - run_id, job_id, template_id, params_snapshot, started_at: Immutable
+    - run_id, task_id, template_id, params_snapshot, started_at: Immutable
     - status, finished_at, exit_code, error, artifacts, log_path: Write-once after creation
     """
 
     run_id: str
-    job_id: str
+    task_id: str
     params_snapshot: dict
     started_at: str
     template_id: Optional[str] = None
-    status: Optional[JobRunStatus] = None
+    status: Optional[TaskRunStatus] = None
     finished_at: Optional[str] = None
     exit_code: Optional[int] = None
     error: Optional[str] = None
@@ -273,15 +274,15 @@ class JobRun:
     @classmethod
     def create(
         cls,
-        job_id: str,
+        task_id: str,
         params_snapshot: dict,
         template_id: Optional[str] = None,
         log_path: Optional[str] = None,
-    ) -> "JobRun":
-        """Create a new JobRun with generated ID."""
+    ) -> "TaskRun":
+        """Create a new TaskRun with generated ID."""
         return cls(
             run_id=generate_uuid(),
-            job_id=job_id,
+            task_id=task_id,
             params_snapshot=params_snapshot,
             started_at=now_iso(),
             template_id=template_id,
@@ -291,9 +292,9 @@ class JobRun:
     def is_terminal(self) -> bool:
         """Check if run has a terminal status."""
         return self.status in (
-            JobRunStatus.COMPLETED,
-            JobRunStatus.FAILED,
-            JobRunStatus.SKIPPED,
+            TaskRunStatus.COMPLETED,
+            TaskRunStatus.FAILED,
+            TaskRunStatus.SKIPPED,
         )
 
 
@@ -331,27 +332,26 @@ class DirectReservation:
 
 
 @dataclass
-class JobGroup:
+class TaskGroup:
     """
-    Logical collection of Jobs that execute sequentially.
+    Logical collection of Tasks that execute together.
 
     From DOMAIN_MODEL.md Section 5 and DEC-012:
-    - Groups related Jobs together
-    - Enforces sequential execution order
-    - Implements stop-on-failure: if any job fails after retry exhaustion,
-      remaining jobs are marked SKIPPED and group becomes PARTIAL
+    - Groups related Tasks together
+    - Enforces execution order based on execution_mode
+    - Implements stop-on-failure: if any task fails after retry exhaustion,
+      remaining tasks are marked SKIPPED and group becomes PARTIAL
     - Tracks aggregate completion status (INV-006)
 
-    Sequential Execution Rules:
-    1. Jobs execute in order by their sequence_number
-    2. Next job starts only after previous job completes
-    3. On FAILED JobRun (after retries exhausted), stop group execution
-    4. Remaining jobs get Job.status=CANCELLED and JobRun.status=SKIPPED
+    Execution Modes:
+    - "sequential" (default): Tasks execute in order by sequence_number
+    - "concurrent": Tasks execute simultaneously via ThreadPoolExecutor
     """
 
     group_id: str
     name: Optional[str] = None
-    status: JobGroupStatus = JobGroupStatus.CREATED
+    status: TaskGroupStatus = TaskGroupStatus.CREATED
+    execution_mode: str = "sequential"  # "sequential" | "concurrent"
     created_at: str = field(default_factory=now_iso)
     started_at: Optional[str] = None
     finished_at: Optional[str] = None
@@ -360,18 +360,30 @@ class JobGroup:
     def create(
         cls,
         name: Optional[str] = None,
-    ) -> "JobGroup":
-        """Create a new JobGroup with generated ID."""
+        execution_mode: str = "sequential",
+    ) -> "TaskGroup":
+        """Create a new TaskGroup with generated ID."""
         return cls(
             group_id=generate_uuid(),
             name=name,
-            status=JobGroupStatus.CREATED,
+            status=TaskGroupStatus.CREATED,
+            execution_mode=execution_mode,
         )
 
     def is_terminal(self) -> bool:
         """Check if group is in a terminal state."""
         return self.status in (
-            JobGroupStatus.COMPLETED,
-            JobGroupStatus.PARTIAL,
-            JobGroupStatus.CANCELLED,
+            TaskGroupStatus.COMPLETED,
+            TaskGroupStatus.PARTIAL,
+            TaskGroupStatus.CANCELLED,
         )
+
+
+# Backward compatibility aliases
+JobStatus = TaskStatus
+JobRunStatus = TaskRunStatus
+JobGroupStatus = TaskGroupStatus
+Job = Task
+JobRun = TaskRun
+JobTemplate = TaskTemplate
+JobGroup = TaskGroup

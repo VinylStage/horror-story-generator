@@ -67,6 +67,96 @@
           "type": "generic",
           "path": "docs/audit/IMPLEMENTATION_AUDIT.md",
           "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/DOCUMENT_MAP.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/core/RELEASE_GUIDE.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/TASK_SCHEDULER_DESIGN.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/technical/task-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/API_CONTRACT.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/API_IMPACT.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/CONCURRENCY_OPTIONS.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/DESIGN_GUARDS.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/DOMAIN_MODEL.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/E2E_TEST_PLAN.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/E2E_TEST_REPORT.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/ENTITY_RELATIONSHIPS.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/EXECUTION_FLOW.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/IMPLEMENTATION_PLAN.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/TASKGROUP_BEHAVIOR_OPTIONS.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/PERSISTENCE_SCHEMA.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/RECOVERY_SCENARIOS.md",
+          "glob": false
+        },
+        {
+          "type": "generic",
+          "path": "docs/task-scheduler/TEST_STRATEGY.md",
+          "glob": false
         }
       ]
     }

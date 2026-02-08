@@ -1,15 +1,15 @@
-# Job Scheduler Execution Flow
+# Task Scheduler Execution Flow
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 
 ---
 
 ## Purpose
 
-This document provides visual representations of the Job Scheduler execution flows.
+This document provides visual representations of the Task Scheduler execution flows.
 Each diagram is accompanied by a text explanation.
 
 ---
@@ -397,4 +397,14 @@ on_failure: skip     # → Skip remaining without CANCELLED status
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1.0 | 2026-01-18 | - | Initial execution flow diagrams |
+
+---
+
+## Related Documents
+
+- [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
+- [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
+- [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) - 구현 계획
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

@@ -21,7 +21,7 @@ from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from src.story.generator import (
     generate_horror_story, customize_template,
-    generate_with_dedup_control
+    generate_with_dedup_control, generate_with_topic
 )
 from src.infra.logging_config import setup_logging
 from src.dedup.similarity import load_past_stories_into_memory
@@ -279,6 +279,37 @@ def parse_args():
         default=None,
         help="목표 스토리 길이(자). 300-10000 범위. 미지정시 기본값 (~3000-4000자) 사용"
     )
+    # Topic-based generation (Issue #123)
+    parser.add_argument(
+        "--topic",
+        type=str,
+        default=None,
+        help="스토리 주제. 지정 시 topic 기반 생성 (generate_with_topic 사용)"
+    )
+    parser.add_argument(
+        "--tags",
+        nargs='*',
+        default=None,
+        help="커스텀 태그. 예: --tags 수면공포 청각공포"
+    )
+    parser.add_argument(
+        "--auto-research",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="연구 카드 자동 생성 (기본: True). --no-auto-research로 비활성화"
+    )
+    parser.add_argument(
+        "--research-model",
+        type=str,
+        default=None,
+        help="연구 생성 모델 선택"
+    )
+    parser.add_argument(
+        "--thumbnail-provider",
+        type=str,
+        default=None,
+        help="썸네일 생성 프로바이더. openai_dalle3, stability_ai, flux, local_sd"
+    )
     return parser.parse_args()
 
 
@@ -329,8 +360,8 @@ def run_research_stub() -> None:
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(stub_card, f, ensure_ascii=False, indent=2)
 
-    logger.info(f"[Phase2C] 연구 카드 스텁 생성 완료: {card_id}")
-    logger.info(f"[Phase2C] 저장 위치: {output_path}")
+    logger.info(f"연구 카드 스텁 생성 완료: {card_id}")
+    logger.info(f"저장 위치: {output_path}")
     logger.warning("[DEPRECATED] research_cards.jsonl is deprecated. Use src.research.executor instead.")
 
 
@@ -353,6 +384,10 @@ def main() -> None:
     # CLI 인자 파싱
     args = parse_args()
 
+    # Issue #123: Set thumbnail provider env if specified
+    if args.thumbnail_provider:
+        os.environ["THUMBNAIL_PROVIDER"] = args.thumbnail_provider
+
     # Phase 2C: 연구 스텁 명령 처리
     if args.run_research_stub:
         run_research_stub()
@@ -365,7 +400,7 @@ def main() -> None:
     # Phase 2C: Story Registry 초기화
     registry = None
     if args.enable_dedup:
-        logger.info("[Phase2C][CONTROL] 중복 제어 모드 활성화")
+        logger.info("중복 제어 모드 활성화")
         registry = init_registry(db_path=args.db_path)
 
         # 과거 스토리 로드
@@ -374,7 +409,7 @@ def main() -> None:
             load_past_stories_into_memory(past_stories)
 
         counts = registry.get_total_count()
-        logger.info(f"[Phase2C][CONTROL] Registry 상태: 수락={counts['accepted']}, 스킵={counts['skipped']}")
+        logger.info(f"Registry 상태: 수락={counts['accepted']}, 스킵={counts['skipped']}")
 
     # 실행 시작
     logger.info("=" * 80)
@@ -387,6 +422,14 @@ def main() -> None:
     logger.info(f"  - 중복 제어: {'활성화 (HIGH만 거부)' if args.enable_dedup else '비활성화'}")
     logger.info(f"  - 모델: {args.model or '기본 Claude Sonnet'}")
     logger.info(f"  - 목표 길이: {args.target_length or '기본값 (~3000-4000자)'}자")
+    if args.topic:
+        logger.info(f"  - 주제: {args.topic}")
+    if args.tags:
+        logger.info(f"  - 태그: {args.tags}")
+    if args.research_model:
+        logger.info(f"  - 연구 모델: {args.research_model}")
+    if args.thumbnail_provider:
+        logger.info(f"  - 썸네일 프로바이더: {args.thumbnail_provider}")
     logger.info("=" * 80)
 
     # 통계 추적
@@ -422,8 +465,20 @@ def main() -> None:
             logger.info(f"[{stories_generated + 1}] 소설 생성 시작")
             logger.info("=" * 80)
 
+            # Issue #123: Topic-based generation takes priority
+            if args.topic is not None:
+                result = generate_with_topic(
+                    topic=args.topic,
+                    auto_research=args.auto_research,
+                    model_spec=args.model,
+                    research_model_spec=args.research_model,
+                    save_output=True,
+                    registry=registry,
+                    target_length=args.target_length,
+                    custom_tags=args.tags,
+                )
             # Phase 2C: 중복 제어 모드에 따른 생성
-            if args.enable_dedup and registry:
+            elif args.enable_dedup and registry:
                 result = generate_with_dedup_control(registry=registry, model_spec=args.model, target_length=args.target_length)
                 if result is None:
                     # SKIP - story was too similar after all attempts
@@ -509,7 +564,7 @@ def main() -> None:
         # Phase 2C: Registry 정리
         if registry:
             close_registry()
-            logger.info("[Phase2C][CONTROL] Registry 연결 종료")
+            logger.info("Registry 연결 종료")
 
 
 if __name__ == "__main__":

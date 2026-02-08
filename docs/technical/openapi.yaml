@@ -32,7 +32,7 @@ info:
 
     ## Note
     This API is designed for **local use only**. All operations connect to local Ollama instance.
-  version: 1.5.0
+  version: 1.6.0
   contact:
     name: VinylStage
     email: mcpe9869@gmail.com
@@ -44,6 +44,12 @@ servers:
     description: Local development server
 
 tags:
+  - name: story
+    description: Story generation and registry operations - direct story generation, listing, and details
+  - name: scheduler
+    description: Scheduler control operations - start, stop, and status monitoring
+  - name: jobs
+    description: Job management - create, list, update, and monitor story/research jobs
   - name: research
     description: Research card operations - generate, validate, and list research cards via Ollama LLM
   - name: dedup
@@ -83,6 +89,757 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResourceStatusResponse'
+
+  /story/generate:
+    post:
+      tags:
+        - story
+      summary: Generate story directly (blocking)
+      description: |
+        Generates a story synchronously and returns the result.
+
+        **v1.4.3**: Supports webhook_url for fire-and-forget completion notification.
+        **v1.6.0**: Supports custom tags field for user-defined tags.
+        **v1.6.1**: Supports thumbnail_provider for automatic thumbnail generation.
+
+        If topic is provided:
+        - Searches for existing research cards matching the topic
+        - If not found and auto_research=True, generates new research
+        - Uses the research card for story context
+
+        If topic is not provided:
+        - Selects a random template
+        - Uses existing research cards based on template affinity
+      operationId: generateStory
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryGenerateRequest'
+            examples:
+              withTopic:
+                summary: With topic and custom tags
+                value:
+                  topic: "Korean apartment horror"
+                  tags: ["수면공포", "청각공포"]
+                  auto_research: true
+                  save_output: true
+              withModel:
+                summary: With specific model
+                value:
+                  model: "ollama:qwen3:30b"
+                  target_length: 3000
+                  save_output: true
+              withWebhook:
+                summary: With webhook notification
+                value:
+                  topic: "Subway late night encounter"
+                  webhook_url: "https://example.com/webhook"
+                  thumbnail_provider: "openai_dalle3"
+      responses:
+        '200':
+          description: Story generation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryGenerateResponse'
+              examples:
+                success:
+                  summary: Successful generation
+                  value:
+                    success: true
+                    story_id: "20260113_120000"
+                    story: "# The Floor Above\n\n..."
+                    title: "The Floor Above"
+                    file_path: "./data/novel/horror_story_20260113_120000.md"
+                    word_count: 3500
+                    metadata:
+                      model: "claude-sonnet-4-5-20250929"
+                      provider: "anthropic"
+                    webhook_triggered: false
+                    thumbnail_url: "https://oaidalleapiprodscus.blob.core.windows.net/..."
+                    thumbnail_provider: "openai_dalle3"
+                error:
+                  summary: Generation failed
+                  value:
+                    success: false
+                    error: "Generation failed"
+                    webhook_triggered: false
+
+  /story/list:
+    get:
+      tags:
+        - story
+      summary: List stories from registry
+      description: |
+        Lists stories from the registry with optional filtering and pagination.
+
+        Stories are sorted by creation time (newest first).
+      operationId: listStories
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum stories to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+        - name: offset
+          in: query
+          description: Offset for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: accepted_only
+          in: query
+          description: Only return accepted stories
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of stories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryListResponse'
+        '500':
+          description: Failed to list stories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+  /story/{story_id}:
+    get:
+      tags:
+        - story
+      summary: Get story details
+      description: Get detailed information about a specific story from the registry.
+      operationId: getStoryDetail
+      parameters:
+        - name: story_id
+          in: path
+          required: true
+          description: Story identifier
+          schema:
+            type: string
+            example: "20260113_120000"
+      responses:
+        '200':
+          description: Story details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryDetailResponse'
+        '404':
+          description: Story not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Story not found: 20260113_120000"
+        '500':
+          description: Failed to get story
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+  /scheduler/start:
+    post:
+      tags:
+        - scheduler
+      summary: Start scheduler dispatch loop
+      description: |
+        Starts the scheduler dispatch loop to process queued jobs.
+
+        **Features:**
+        - Idempotent: Returns success if already running
+        - Not auto-started on server boot (explicit call required)
+        - Supports crash recovery on startup
+
+        **Note:** Scheduler must be started before jobs will execute.
+      operationId: startScheduler
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchedulerStartRequest'
+            example:
+              run_recovery: true
+      responses:
+        '200':
+          description: Scheduler started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerStartResponse'
+              examples:
+                withRecovery:
+                  summary: Started with recovery
+                  value:
+                    success: true
+                    message: "Scheduler started successfully"
+                    recovery_stats:
+                      recovered_jobs: 2
+                      failed_jobs: 0
+                alreadyRunning:
+                  summary: Already running
+                  value:
+                    success: true
+                    message: "Scheduler is already running"
+
+  /scheduler/stop:
+    post:
+      tags:
+        - scheduler
+      summary: Stop scheduler dispatch loop
+      description: |
+        Gracefully stops the scheduler dispatch loop.
+
+        **Features:**
+        - Waits for current job to complete (no preemption)
+        - Idempotent: Returns success if already stopped
+        - Configurable timeout for job completion
+
+        **Note:** Queued jobs remain in queue; restart scheduler to continue.
+      operationId: stopScheduler
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchedulerStopRequest'
+            example:
+              timeout: 30.0
+      responses:
+        '200':
+          description: Scheduler stopped successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerStopResponse'
+              examples:
+                stopped:
+                  summary: Successfully stopped
+                  value:
+                    success: true
+                    message: "Scheduler stopped successfully"
+                alreadyStopped:
+                  summary: Already stopped
+                  value:
+                    success: true
+                    message: "Scheduler is not running"
+
+  /scheduler/status:
+    get:
+      tags:
+        - scheduler
+      summary: Get scheduler status
+      description: |
+        Returns scheduler status and cumulative execution statistics.
+
+        Includes:
+        - Whether dispatch loop is running
+        - Currently executing job (if any)
+        - Number of queued jobs
+        - Cumulative stats (total executed, succeeded, failed, etc.)
+        - Direct API reservation status
+      operationId: getSchedulerStatus
+      responses:
+        '200':
+          description: Scheduler status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerStatusResponse'
+              examples:
+                running:
+                  summary: Scheduler running with active job
+                  value:
+                    scheduler_running: true
+                    current_job_id: "job-550e8400-e29b-41d4-a716-446655440000"
+                    queue_length: 5
+                    cumulative_stats:
+                      total_executed: 42
+                      succeeded: 38
+                      failed: 3
+                      cancelled: 1
+                      skipped: 0
+                    has_active_reservation: false
+                idle:
+                  summary: Scheduler idle
+                  value:
+                    scheduler_running: true
+                    current_job_id: null
+                    queue_length: 0
+                    cumulative_stats:
+                      total_executed: 10
+                      succeeded: 10
+                      failed: 0
+                      cancelled: 0
+                      skipped: 0
+                    has_active_reservation: false
+
+  /jobs:
+    post:
+      tags:
+        - jobs
+      summary: Create a new job
+      description: |
+        Creates a new job and adds it to the scheduler queue.
+
+        **Job Types:**
+        - **story**: Story generation job
+        - **research**: Research card generation job
+
+        **Priority:** Higher values execute sooner (0-100).
+        **Status:** New jobs start in QUEUED status.
+
+        **Note:** Scheduler must be running for job to execute.
+      operationId: createJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobCreateRequest'
+            examples:
+              storyJob:
+                summary: Story generation job
+                value:
+                  type: "story"
+                  params:
+                    max_stories: 1
+                    enable_dedup: true
+                    model: "ollama:qwen3:30b"
+                  priority: 10
+              researchJob:
+                summary: Research generation job
+                value:
+                  type: "research"
+                  params:
+                    topic: "Korean apartment horror"
+                    tags: ["urban", "isolation"]
+                    model: "gemini"
+                    timeout: 120
+                  priority: 5
+      responses:
+        '201':
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+
+    get:
+      tags:
+        - jobs
+      summary: List all jobs
+      description: |
+        Lists all jobs in the scheduler with optional limit.
+
+        Jobs are returned sorted by priority (descending) and queue position.
+      operationId: listJobs
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of jobs to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
+
+  /jobs/{job_id}:
+    get:
+      tags:
+        - jobs
+      summary: Get job details
+      description: Returns detailed information about a specific job.
+      operationId: getJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job identifier
+          schema:
+            type: string
+            example: "job-550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Job not found: nonexistent-id"
+
+    patch:
+      tags:
+        - jobs
+      summary: Update job priority
+      description: |
+        Updates the priority of a job (QUEUED status only).
+
+        **Constraints:** Only QUEUED jobs can be updated.
+        Running or finished jobs cannot be modified.
+      operationId: updateJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobUpdateRequest'
+            example:
+              priority: 50
+      responses:
+        '200':
+          description: Job updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '400':
+          description: Cannot update job (not QUEUED)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Cannot update job: only QUEUED jobs can be updated"
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+    delete:
+      tags:
+        - jobs
+      summary: Cancel/delete job
+      description: |
+        Cancels a job (QUEUED status only).
+
+        **Constraints:** Only QUEUED jobs can be cancelled.
+        Sets job status to CANCELLED.
+
+        **Note:** Running jobs cannot be cancelled via this endpoint.
+      operationId: deleteJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDeleteResponse'
+        '400':
+          description: Cannot cancel job (not QUEUED)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Cannot cancel job: only QUEUED jobs can be cancelled"
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+  /jobs/{job_id}/runs:
+    get:
+      tags:
+        - jobs
+      summary: Get job execution runs
+      description: |
+        Returns the execution history (JobRuns) for a specific job.
+
+        **Note:** Each Job has at most 1 JobRun (1:1 relationship).
+        Retries create new Jobs with retry_of field set.
+      operationId: getJobRuns
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of job runs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRunListResponse'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+  /jobs/story/trigger:
+    post:
+      tags:
+        - jobs
+      summary: "[DEPRECATED] Trigger story generation job"
+      deprecated: true
+      description: |
+        **DEPRECATED:** Use `POST /jobs` with type="story" instead.
+
+        Legacy endpoint for triggering story generation jobs.
+        Maintained for backward compatibility.
+      operationId: triggerStoryJob
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryTriggerRequest'
+      responses:
+        '202':
+          description: Job triggered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobTriggerResponse'
+
+  /jobs/research/trigger:
+    post:
+      tags:
+        - jobs
+      summary: "[DEPRECATED] Trigger research job"
+      deprecated: true
+      description: |
+        **DEPRECATED:** Use `POST /jobs` with type="research" instead.
+
+        Legacy endpoint for triggering research jobs.
+        Maintained for backward compatibility.
+      operationId: triggerResearchJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchTriggerRequest'
+      responses:
+        '202':
+          description: Job triggered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobTriggerResponse'
+
+  /jobs/batch/trigger:
+    post:
+      tags:
+        - jobs
+      summary: Trigger batch jobs
+      description: |
+        Triggers multiple jobs as a single batch operation.
+
+        **Features:**
+        - Submit 1-50 jobs in a single request
+        - Mix story and research jobs
+        - Single webhook notification when all jobs complete
+        - Track batch progress via batch_id
+      operationId: triggerBatchJobs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchTriggerRequest'
+      responses:
+        '202':
+          description: Batch triggered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchTriggerResponse'
+
+  /jobs/batch/{batch_id}:
+    get:
+      tags:
+        - jobs
+      summary: Get batch status
+      description: Returns status of all jobs in a batch.
+      operationId: getBatchStatus
+      parameters:
+        - name: batch_id
+          in: path
+          required: true
+          description: Batch identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Batch status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchStatusResponse'
+        '404':
+          description: Batch not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+  /jobs/{job_id}/cancel:
+    post:
+      tags:
+        - jobs
+      summary: Cancel running job
+      description: |
+        Cancels a running job by sending SIGTERM to the process.
+
+        **Note:** This only works for legacy trigger jobs (running as subprocesses).
+        For scheduler-based jobs, use `DELETE /jobs/{job_id}` instead.
+      operationId: cancelJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cancel result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobCancelResponse'
+
+  /jobs/monitor:
+    post:
+      tags:
+        - jobs
+      summary: Monitor all running jobs
+      description: |
+        Monitors all running jobs and updates their status.
+
+        Checks if processes are still running, collects artifacts,
+        and updates job status to succeeded/failed.
+      operationId: monitorAllJobs
+      responses:
+        '200':
+          description: Monitor results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobMonitorResponse'
+
+  /jobs/{job_id}/monitor:
+    post:
+      tags:
+        - jobs
+      summary: Monitor single job
+      description: Monitors a single job and updates its status.
+      operationId: monitorJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Monitor result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobMonitorResult'
+
+  /jobs/{job_id}/dedup_check:
+    post:
+      tags:
+        - jobs
+      summary: Check deduplication signal
+      description: |
+        Checks deduplication signal for a research job's artifact.
+
+        Only available for research jobs with completed artifacts.
+      operationId: checkJobDedup
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dedup check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDedupCheckResponse'
 
   /research/run:
     post:
@@ -225,6 +982,116 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResearchListResponse'
+
+  /research/dedup:
+    post:
+      tags:
+        - research
+      summary: Check research card for semantic duplicates
+      description: |
+        Checks a research card against existing cards using FAISS semantic similarity.
+
+        **Similarity Thresholds:**
+        - **LOW** (< 0.70): Unique content
+        - **MEDIUM** (0.70-0.85): Some overlap
+        - **HIGH** (≥ 0.85): High similarity (potential duplicate)
+
+        Uses nomic-embed-text model via Ollama (768 dimensions).
+      operationId: checkResearchDedup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchDedupCheckRequest'
+            example:
+              card_id: "RC-20260113-120000"
+      responses:
+        '200':
+          description: Dedup check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchDedupCheckResponse'
+              examples:
+                low:
+                  summary: Low similarity (unique)
+                  value:
+                    card_id: "RC-20260113-120000"
+                    signal: "LOW"
+                    similarity_score: 0.45
+                    nearest_card_id: "RC-20260112-090000"
+                    similar_cards:
+                      - card_id: "RC-20260112-090000"
+                        similarity_score: 0.45
+                        title: "Urban Horror Research"
+                    index_size: 52
+                    message: "Card is sufficiently unique"
+                high:
+                  summary: High similarity (duplicate)
+                  value:
+                    card_id: "RC-20260113-120000"
+                    signal: "HIGH"
+                    similarity_score: 0.92
+                    nearest_card_id: "RC-20260112-143000"
+                    similar_cards:
+                      - card_id: "RC-20260112-143000"
+                        similarity_score: 0.92
+                        title: "Korean Apartment Horror"
+                    index_size: 52
+                    message: "High similarity detected"
+
+  /research/matching-templates:
+    post:
+      tags:
+        - research
+      summary: Find matching templates for research card
+      description: |
+        Finds story templates that match a research card's canonical affinity.
+
+        **Cross-pipeline CK matching** (Issue #21):
+        - Research cards have canonical_affinity (extracted from content)
+        - Templates have canonical_core (defined in template config)
+        - This endpoint matches them to suggest suitable templates
+
+        Returns templates sorted by match score (highest first).
+      operationId: matchResearchTemplates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchMatchingTemplatesRequest'
+            examples:
+              default:
+                summary: Default matching
+                value:
+                  card_id: "RC-20260115-143052"
+                  max_templates: 5
+                  min_score: 0.5
+              strict:
+                summary: Strict matching (higher threshold)
+                value:
+                  card_id: "RC-20260115-143052"
+                  max_templates: 3
+                  min_score: 0.7
+      responses:
+        '200':
+          description: Matching templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchMatchingTemplatesResponse'
+        '404':
+          description: Research card not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Research card not found: RC-20260115-143052"
 
   /dedup/evaluate:
     post:
@@ -570,6 +1437,1097 @@ components:
           type: string
           nullable: true
           description: Advisory message
+
+    # Story Schemas
+    StoryGenerateRequest:
+      type: object
+      properties:
+        topic:
+          type: string
+          nullable: true
+          description: Story topic. If provided, searches for matching research card or auto-generates one.
+          example: "Korean apartment horror"
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: "Custom tags to include. Merged with auto-generated tags (default: ['호러', 'horror'])"
+          example: ["수면공포", "청각공포", "일상공포"]
+        auto_research:
+          type: boolean
+          default: true
+          description: Auto-generate research if no matching card found for topic
+        model:
+          type: string
+          nullable: true
+          description: "Story model. Options: null (Claude Sonnet default), 'claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101', 'ollama:qwen3:30b' (local Ollama)"
+          example: "ollama:qwen3:30b"
+        research_model:
+          type: string
+          nullable: true
+          description: "Research model for auto-research. Options: null/'qwen3:30b' (Ollama), 'gemini', 'deep-research' (Gemini Deep Research)"
+          example: "deep-research"
+        save_output:
+          type: boolean
+          default: true
+          description: Save generated story to file
+        target_length:
+          type: integer
+          nullable: true
+          minimum: 300
+          maximum: 10000
+          description: "Target story length in characters (soft limit, ±10%). If not provided, uses default (~3000-4000 chars)."
+          example: 3000
+        webhook_url:
+          type: string
+          nullable: true
+          description: Webhook URL for completion notification (fire-and-forget)
+          example: "https://example.com/webhook"
+        thumbnail_provider:
+          type: string
+          nullable: true
+          description: "Image provider for thumbnail. Options: 'openai_dalle3' (default), 'stability_ai', 'flux', 'local_sd'. Requires ENABLE_THUMBNAIL_GENERATION=true."
+          example: "openai_dalle3"
+
+    StoryGenerateResponse:
+      type: object
+      required:
+        - success
+        - webhook_triggered
+      properties:
+        success:
+          type: boolean
+          description: Whether generation succeeded
+        story_id:
+          type: string
+          nullable: true
+          description: Generated story identifier
+          example: "20260113_120000"
+        story:
+          type: string
+          nullable: true
+          description: Full story text in markdown format
+        title:
+          type: string
+          nullable: true
+          description: Story title
+        file_path:
+          type: string
+          nullable: true
+          description: Path to saved story file
+          example: "./data/novel/horror_story_20260113_120000.md"
+        word_count:
+          type: integer
+          nullable: true
+          description: Story word count
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata (model, provider, research_used, etc.)
+        error:
+          type: string
+          nullable: true
+          description: Error message if generation failed
+        webhook_triggered:
+          type: boolean
+          default: false
+          description: Whether a webhook notification was triggered
+        thumbnail_url:
+          type: string
+          nullable: true
+          description: URL of generated thumbnail image (empty if disabled or failed)
+        thumbnail_provider:
+          type: string
+          nullable: true
+          description: Image provider used for thumbnail generation
+
+    StoryListItem:
+      type: object
+      required:
+        - story_id
+        - created_at
+        - accepted
+      properties:
+        story_id:
+          type: string
+          description: Story identifier
+          example: "20260113_120000"
+        title:
+          type: string
+          nullable: true
+          description: Story title
+        template_id:
+          type: string
+          nullable: true
+          description: Template used for generation
+        template_name:
+          type: string
+          nullable: true
+          description: Template display name
+        created_at:
+          type: string
+          description: Creation timestamp (ISO format)
+          example: "2026-01-13T12:00:00"
+        accepted:
+          type: boolean
+          description: Whether story was accepted by quality filter
+        decision_reason:
+          type: string
+          nullable: true
+          description: Quality decision reason
+        story_signature:
+          type: string
+          nullable: true
+          description: Story deduplication signature
+        research_used:
+          type: array
+          items:
+            type: string
+          description: List of research card IDs used
+          default: []
+
+    StoryListResponse:
+      type: object
+      required:
+        - stories
+        - total
+      properties:
+        stories:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoryListItem'
+          description: List of stories
+        total:
+          type: integer
+          description: Total number of stories
+        message:
+          type: string
+          nullable: true
+          description: Status message
+
+    StoryDetailResponse:
+      type: object
+      required:
+        - story_id
+        - created_at
+        - accepted
+      properties:
+        story_id:
+          type: string
+          description: Story identifier
+        title:
+          type: string
+          nullable: true
+          description: Story title
+        template_id:
+          type: string
+          nullable: true
+          description: Template used for generation
+        template_name:
+          type: string
+          nullable: true
+          description: Template display name
+        semantic_summary:
+          type: string
+          nullable: true
+          description: Semantic summary of the story
+        created_at:
+          type: string
+          description: Creation timestamp (ISO format)
+        accepted:
+          type: boolean
+          description: Whether story was accepted
+        decision_reason:
+          type: string
+          nullable: true
+          description: Quality decision reason
+        story_signature:
+          type: string
+          nullable: true
+          description: Story deduplication signature
+        canonical_core:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+          description: Canonical dimensions for deduplication
+        research_used:
+          type: array
+          items:
+            type: string
+          description: List of research card IDs used
+          default: []
+
+    # Scheduler Schemas
+    SchedulerStartRequest:
+      type: object
+      properties:
+        run_recovery:
+          type: boolean
+          default: true
+          description: Whether to run crash recovery on startup
+
+    SchedulerStartResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Whether scheduler started successfully
+        message:
+          type: string
+          description: Status message
+        recovery_stats:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Recovery statistics if recovery was run
+
+    SchedulerStopRequest:
+      type: object
+      properties:
+        timeout:
+          type: number
+          format: float
+          minimum: 1.0
+          maximum: 300.0
+          default: 30.0
+          description: Maximum wait time for current job to complete (seconds)
+
+    SchedulerStopResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Whether scheduler stopped successfully
+        message:
+          type: string
+          description: Status message
+
+    CumulativeStats:
+      type: object
+      properties:
+        total_executed:
+          type: integer
+          default: 0
+          description: Total JobRuns executed
+        succeeded:
+          type: integer
+          default: 0
+          description: COMPLETED JobRuns
+        failed:
+          type: integer
+          default: 0
+          description: FAILED JobRuns
+        cancelled:
+          type: integer
+          default: 0
+          description: CANCELLED Jobs
+        skipped:
+          type: integer
+          default: 0
+          description: SKIPPED JobRuns
+
+    SchedulerStatusResponse:
+      type: object
+      required:
+        - scheduler_running
+        - queue_length
+        - cumulative_stats
+        - has_active_reservation
+      properties:
+        scheduler_running:
+          type: boolean
+          description: Whether scheduler dispatch loop is running
+        current_job_id:
+          type: string
+          nullable: true
+          description: Currently executing job ID (null if none)
+        queue_length:
+          type: integer
+          default: 0
+          description: Number of QUEUED jobs
+        cumulative_stats:
+          $ref: '#/components/schemas/CumulativeStats'
+        has_active_reservation:
+          type: boolean
+          default: false
+          description: Whether a Direct API reservation is active
+
+    # Jobs Schemas
+    JobCreateRequest:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - story
+            - research
+          description: "Job type: 'story' for story generation, 'research' for research generation"
+        params:
+          type: object
+          additionalProperties: true
+          description: Job parameters (type-specific)
+          default: {}
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 0
+          description: Job priority (higher = dispatched sooner)
+
+    JobUpdateRequest:
+      type: object
+      properties:
+        priority:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+          description: New priority value
+
+    JobResponse:
+      type: object
+      required:
+        - job_id
+        - job_type
+        - status
+        - created_at
+        - queued_at
+      properties:
+        job_id:
+          type: string
+          description: Unique job identifier
+        job_type:
+          type: string
+          description: Job type (story/research)
+        status:
+          type: string
+          description: Job status (QUEUED/RUNNING/CANCELLED)
+          enum:
+            - QUEUED
+            - RUNNING
+            - CANCELLED
+        params:
+          type: object
+          additionalProperties: true
+          description: Job parameters
+          default: {}
+        priority:
+          type: integer
+          default: 0
+          description: Job priority
+        position:
+          type: integer
+          default: 0
+          description: Queue position
+        template_id:
+          type: string
+          nullable: true
+          description: Source template ID
+        group_id:
+          type: string
+          nullable: true
+          description: Job group ID
+        retry_of:
+          type: string
+          nullable: true
+          description: Original job ID if retry
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp (ISO format)
+        queued_at:
+          type: string
+          format: date-time
+          description: Queue entry timestamp (ISO format)
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Execution start timestamp
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Completion timestamp
+
+    JobListResponse:
+      type: object
+      required:
+        - jobs
+        - total
+        - queued_count
+        - running_count
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobResponse'
+          description: List of jobs
+        total:
+          type: integer
+          description: Total number of jobs
+        queued_count:
+          type: integer
+          default: 0
+          description: Number of QUEUED jobs
+        running_count:
+          type: integer
+          default: 0
+          description: Number of RUNNING jobs
+
+    JobDeleteResponse:
+      type: object
+      required:
+        - job_id
+        - success
+      properties:
+        job_id:
+          type: string
+          description: Job identifier
+        success:
+          type: boolean
+          description: Whether deletion succeeded
+        message:
+          type: string
+          nullable: true
+          description: Status message
+
+    JobRunResponse:
+      type: object
+      required:
+        - run_id
+        - job_id
+        - started_at
+      properties:
+        run_id:
+          type: string
+          description: Unique run identifier
+        job_id:
+          type: string
+          description: Associated job ID
+        status:
+          type: string
+          nullable: true
+          description: Run status (COMPLETED/FAILED/SKIPPED)
+          enum:
+            - COMPLETED
+            - FAILED
+            - SKIPPED
+        params_snapshot:
+          type: object
+          additionalProperties: true
+          description: Parameters at execution time
+          default: {}
+        template_id:
+          type: string
+          nullable: true
+          description: Source template ID
+        started_at:
+          type: string
+          format: date-time
+          description: Execution start timestamp
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Completion timestamp
+        exit_code:
+          type: integer
+          nullable: true
+          description: Process exit code
+        error:
+          type: string
+          nullable: true
+          description: Error message if failed
+        artifacts:
+          type: array
+          items:
+            type: string
+          description: Output artifact paths
+          default: []
+        log_path:
+          type: string
+          nullable: true
+          description: Execution log path
+
+    JobRunListResponse:
+      type: object
+      required:
+        - runs
+        - total
+      properties:
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobRunResponse'
+          description: List of job runs
+        total:
+          type: integer
+          description: Total number of runs
+
+    # Legacy Jobs Schemas
+    StoryTriggerRequest:
+      type: object
+      properties:
+        max_stories:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 1
+          description: Maximum stories to generate
+        duration_seconds:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Duration limit in seconds
+        interval_seconds:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Interval between stories
+        enable_dedup:
+          type: boolean
+          default: false
+          description: Enable deduplication check
+        db_path:
+          type: string
+          nullable: true
+          description: Custom database path
+        load_history:
+          type: boolean
+          default: false
+          description: Load story history on startup
+        model:
+          type: string
+          nullable: true
+          description: Model selection
+        target_length:
+          type: integer
+          nullable: true
+          minimum: 300
+          maximum: 10000
+          description: Target story length
+        webhook_url:
+          type: string
+          nullable: true
+          description: Webhook URL for completion notification
+        webhook_events:
+          type: array
+          items:
+            type: string
+          default: ["succeeded", "failed", "skipped"]
+          description: Events that trigger webhook
+
+    ResearchTriggerRequest:
+      type: object
+      required:
+        - topic
+      properties:
+        topic:
+          type: string
+          description: Research topic to analyze
+        tags:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Tags for categorization
+        model:
+          type: string
+          nullable: true
+          description: Model selection
+        timeout:
+          type: integer
+          nullable: true
+          description: Timeout in seconds
+        webhook_url:
+          type: string
+          nullable: true
+          description: Webhook URL for completion notification
+        webhook_events:
+          type: array
+          items:
+            type: string
+          default: ["succeeded", "failed", "skipped"]
+          description: Events that trigger webhook
+
+    JobTriggerResponse:
+      type: object
+      required:
+        - job_id
+        - type
+        - status
+      properties:
+        job_id:
+          type: string
+          description: Created job ID
+        type:
+          type: string
+          description: Job type (story_generation or research)
+        status:
+          type: string
+          description: Initial job status
+        message:
+          type: string
+          default: "Job triggered successfully"
+          description: Status message
+
+    JobCancelResponse:
+      type: object
+      required:
+        - job_id
+        - success
+      properties:
+        job_id:
+          type: string
+          description: Job identifier
+        success:
+          type: boolean
+          description: Whether cancel succeeded
+        message:
+          type: string
+          nullable: true
+          description: Status message
+        error:
+          type: string
+          nullable: true
+          description: Error message if failed
+
+    JobMonitorResult:
+      type: object
+      required:
+        - job_id
+      properties:
+        job_id:
+          type: string
+          description: Job identifier
+        status:
+          type: string
+          nullable: true
+          description: Job status
+        pid:
+          type: integer
+          nullable: true
+          description: Process ID
+        artifacts:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Output artifacts
+        error:
+          type: string
+          nullable: true
+          description: Error message
+        message:
+          type: string
+          nullable: true
+          description: Status message
+        reason:
+          type: string
+          nullable: true
+          description: Skip reason for skipped jobs
+        webhook_processed:
+          type: boolean
+          default: false
+          description: Whether webhook was processed
+
+    JobMonitorResponse:
+      type: object
+      required:
+        - monitored_count
+        - results
+      properties:
+        monitored_count:
+          type: integer
+          description: Number of jobs monitored
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobMonitorResult'
+          description: Monitor results for each job
+
+    JobDedupCheckResponse:
+      type: object
+      required:
+        - job_id
+        - has_artifact
+      properties:
+        job_id:
+          type: string
+          description: Job identifier
+        has_artifact:
+          type: boolean
+          default: false
+          description: Whether job produced an artifact
+        artifact_path:
+          type: string
+          nullable: true
+          description: Path to artifact
+        signal:
+          type: string
+          nullable: true
+          description: Dedup signal (LOW/MEDIUM/HIGH)
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+        similarity_score:
+          type: number
+          format: float
+          nullable: true
+          description: Similarity score
+        message:
+          type: string
+          nullable: true
+          description: Status message
+
+    BatchJobSpec:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - research
+            - story
+          description: Job type
+        topic:
+          type: string
+          nullable: true
+          description: Research topic (required for research jobs)
+        tags:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Tags for research job
+        max_stories:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 1
+          description: Max stories for story job
+        enable_dedup:
+          type: boolean
+          default: false
+          description: Enable dedup for story job
+        target_length:
+          type: integer
+          nullable: true
+          minimum: 300
+          maximum: 10000
+          description: Target story length
+        model:
+          type: string
+          nullable: true
+          description: Model override
+        timeout:
+          type: integer
+          nullable: true
+          description: Timeout in seconds
+
+    BatchTriggerRequest:
+      type: object
+      required:
+        - jobs
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/BatchJobSpec'
+          minItems: 1
+          maxItems: 50
+          description: List of job specifications
+        webhook_url:
+          type: string
+          nullable: true
+          description: Webhook URL when all batch jobs complete
+        webhook_events:
+          type: array
+          items:
+            type: string
+          default: ["succeeded", "failed", "skipped"]
+          description: Events that trigger webhook
+
+    BatchTriggerResponse:
+      type: object
+      required:
+        - batch_id
+        - job_ids
+        - job_count
+      properties:
+        batch_id:
+          type: string
+          description: Created batch ID
+        job_ids:
+          type: array
+          items:
+            type: string
+          description: List of created job IDs
+        job_count:
+          type: integer
+          description: Number of jobs in batch
+        status:
+          type: string
+          default: "queued"
+          description: Initial batch status
+        message:
+          type: string
+          default: "Batch triggered successfully"
+
+    BatchJobStatus:
+      type: object
+      required:
+        - job_id
+        - type
+        - status
+      properties:
+        job_id:
+          type: string
+          description: Job identifier
+        type:
+          type: string
+          description: Job type
+        status:
+          type: string
+          description: Job status
+        error:
+          type: string
+          nullable: true
+          description: Error message if failed
+
+    BatchStatusResponse:
+      type: object
+      required:
+        - batch_id
+        - status
+        - total_jobs
+        - completed_jobs
+        - succeeded_jobs
+        - failed_jobs
+        - running_jobs
+        - queued_jobs
+        - created_at
+      properties:
+        batch_id:
+          type: string
+          description: Batch identifier
+        status:
+          type: string
+          description: Aggregate batch status
+        total_jobs:
+          type: integer
+          description: Total number of jobs
+        completed_jobs:
+          type: integer
+          description: Number of completed jobs
+        succeeded_jobs:
+          type: integer
+          description: Number of succeeded jobs
+        failed_jobs:
+          type: integer
+          description: Number of failed jobs
+        running_jobs:
+          type: integer
+          description: Number of running jobs
+        queued_jobs:
+          type: integer
+          description: Number of queued jobs
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/BatchJobStatus'
+          default: []
+          description: Individual job statuses
+        created_at:
+          type: string
+          format: date-time
+          description: Batch creation timestamp
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Batch completion timestamp
+        webhook_url:
+          type: string
+          nullable: true
+          description: Webhook URL
+        webhook_sent:
+          type: boolean
+          default: false
+          description: Whether webhook was sent
+        message:
+          type: string
+          nullable: true
+          description: Status message
+
+    # Research Additional Schemas
+    ResearchDedupCheckRequest:
+      type: object
+      required:
+        - card_id
+      properties:
+        card_id:
+          type: string
+          description: Card ID to check for duplicates
+          pattern: "^RC-\\d{8}-\\d{6}$"
+
+    SimilarCard:
+      type: object
+      required:
+        - card_id
+        - similarity_score
+      properties:
+        card_id:
+          type: string
+          description: Similar card identifier
+        similarity_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Similarity score (0.0-1.0)
+        title:
+          type: string
+          nullable: true
+          description: Card title
+
+    ResearchDedupCheckResponse:
+      type: object
+      required:
+        - card_id
+        - signal
+        - similarity_score
+        - index_size
+      properties:
+        card_id:
+          type: string
+          description: Checked card ID
+        signal:
+          type: string
+          description: Dedup signal level
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+        similarity_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Highest similarity score (0.0-1.0)
+        nearest_card_id:
+          type: string
+          nullable: true
+          description: Most similar card ID
+        similar_cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimilarCard'
+          default: []
+          description: List of similar cards
+        index_size:
+          type: integer
+          default: 0
+          description: Number of cards in FAISS index
+        message:
+          type: string
+          nullable: true
+          description: Status message
+
+    MatchingTemplateItem:
+      type: object
+      required:
+        - template_id
+        - template_name
+        - match_score
+      properties:
+        template_id:
+          type: string
+          description: Template ID (e.g., T-SYS-001)
+        template_name:
+          type: string
+          description: Human-readable template name
+        match_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Match score (0.0-1.0)
+        canonical_core:
+          type: object
+          additionalProperties: true
+          default: {}
+          description: Template's canonical core values
+        match_details:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Per-dimension match breakdown
+
+    ResearchMatchingTemplatesRequest:
+      type: object
+      required:
+        - card_id
+      properties:
+        card_id:
+          type: string
+          description: Research card ID to match against templates
+          pattern: "^RC-\\d{8}-\\d{6}$"
+        max_templates:
+          type: integer
+          minimum: 1
+          maximum: 15
+          default: 5
+          description: Maximum number of templates to return
+        min_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.5
+          description: Minimum match score threshold (0.0-1.0)
+
+    ResearchMatchingTemplatesResponse:
+      type: object
+      required:
+        - card_id
+        - matching_templates
+        - total_templates
+      properties:
+        card_id:
+          type: string
+          description: Research card ID that was matched
+        matching_templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatchingTemplateItem'
+          default: []
+          description: List of matching templates sorted by score (highest first)
+        total_templates:
+          type: integer
+          description: Total number of templates evaluated
+        card_affinity:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: The research card's canonical affinity used for matching
+        message:
+          type: string
+          nullable: true
+          description: Status message
 
     # FastAPI standard validation error schemas
     HTTPValidationError:

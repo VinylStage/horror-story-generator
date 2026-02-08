@@ -16,6 +16,12 @@ class StoryGenerateRequest(BaseModel):
         description="Story topic. If provided, searches for matching research card or auto-generates one.",
         json_schema_extra={"examples": ["Korean apartment horror", "Subway late night encounter"]}
     )
+    # v1.6.0: Custom tags support (Issue #109)
+    tags: Optional[List[str]] = Field(
+        default=None,
+        description="Custom tags to include. Merged with auto-generated tags (default: ['호러', 'horror']).",
+        json_schema_extra={"examples": [["수면공포", "청각공포", "일상공포"]]}
+    )
     auto_research: bool = Field(
         default=True,
         description="Auto-generate research if no matching card found for topic"
@@ -47,6 +53,12 @@ class StoryGenerateRequest(BaseModel):
         description="Webhook URL for completion notification (fire-and-forget)",
         json_schema_extra={"examples": ["https://example.com/webhook"]}
     )
+    # v1.5.0: Thumbnail generation (Issue #95)
+    thumbnail_provider: Optional[str] = Field(
+        default=None,
+        description="Image provider for thumbnail. Options: 'openai_dalle3' (default), 'stability_ai', 'flux', 'local_sd'. Requires ENABLE_THUMBNAIL_GENERATION=true.",
+        json_schema_extra={"examples": ["openai_dalle3", "stability_ai", "flux", "local_sd"]}
+    )
 
 
 class StoryGenerateResponse(BaseModel):
@@ -64,6 +76,15 @@ class StoryGenerateResponse(BaseModel):
     webhook_triggered: bool = Field(
         default=False,
         description="Whether a webhook notification was triggered"
+    )
+    # v1.5.0: Thumbnail generation (Issue #95)
+    thumbnail_url: Optional[str] = Field(
+        default=None,
+        description="URL of generated thumbnail image (empty if disabled or failed)"
+    )
+    thumbnail_provider: Optional[str] = Field(
+        default=None,
+        description="Image provider used for thumbnail generation"
     )
 
 

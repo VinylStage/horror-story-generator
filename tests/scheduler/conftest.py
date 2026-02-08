@@ -8,8 +8,8 @@ Base fixtures:
   - Clean queue state
 
 Per-test fixtures:
-  - Pre-populated jobs for ordering tests
-  - Pre-populated RUNNING jobs for recovery tests
+  - Pre-populated tasks for ordering tests
+  - Pre-populated RUNNING tasks for recovery tests
   - Pre-created reservations for exclusivity tests
 """
 
@@ -26,11 +26,11 @@ from src.scheduler import (
     Dispatcher,
     Executor,
     RetryController,
-    Job,
-    JobRun,
-    JobTemplate,
-    JobStatus,
-    JobRunStatus,
+    Task,
+    TaskRun,
+    TaskTemplate,
+    TaskStatus,
+    TaskRunStatus,
 )
 from src.scheduler.recovery import RecoveryManager
 from src.scheduler.service import SchedulerService
@@ -68,21 +68,21 @@ class MockClock:
         self._current = time
 
 
-class MockJobHandler:
+class MockTaskHandler:
     """
-    Mock job handler for testing.
+    Mock task handler for testing.
 
     Allows controlling execution outcome without subprocess.
     """
 
     def __init__(self):
-        self.jobs_executed = []
-        self._result = (JobRunStatus.COMPLETED, None, 0, [])
+        self.tasks_executed = []
+        self._result = (TaskRunStatus.COMPLETED, None, 0, [])
         self._cancelled = False
 
     def set_result(
         self,
-        status: JobRunStatus,
+        status: TaskRunStatus,
         error: str = None,
         exit_code: int = 0,
         artifacts: list = None,
@@ -90,14 +90,18 @@ class MockJobHandler:
         """Set the result that execute() will return."""
         self._result = (status, error, exit_code, artifacts or [])
 
-    def execute(self, job: Job, log_path: str = None):
+    def execute(self, task: Task, log_path: str = None):
         """Mock execute that returns configured result."""
-        self.jobs_executed.append(job)
+        self.tasks_executed.append(task)
         return self._result
 
     def cancel(self) -> bool:
         self._cancelled = True
         return True
+
+
+# Backward compatibility alias
+MockJobHandler = MockTaskHandler
 
 
 # =============================================================================
@@ -144,13 +148,13 @@ def queue_manager(persistence: PersistenceAdapter) -> QueueManager:
 
 
 @pytest.fixture
-def mock_handler() -> MockJobHandler:
-    """Create a mock job handler."""
-    return MockJobHandler()
+def mock_handler() -> MockTaskHandler:
+    """Create a mock task handler."""
+    return MockTaskHandler()
 
 
 @pytest.fixture
-def executor(persistence: PersistenceAdapter, mock_handler: MockJobHandler) -> Executor:
+def executor(persistence: PersistenceAdapter, mock_handler: MockTaskHandler) -> Executor:
     """Create an Executor with mock handler."""
     exec = Executor(persistence)
     exec.set_handler(mock_handler)
@@ -199,38 +203,42 @@ def mock_clock() -> MockClock:
 
 
 # =============================================================================
-# Job Factory Fixtures
+# Task Factory Fixtures
 # =============================================================================
 
 
 @pytest.fixture
-def create_job(persistence: PersistenceAdapter) -> Callable:
+def create_task(persistence: PersistenceAdapter) -> Callable:
     """
-    Factory fixture for creating jobs.
+    Factory fixture for creating tasks.
 
-    Returns a function that creates jobs with specified parameters.
+    Returns a function that creates tasks with specified parameters.
     """
 
     def _create(
-        job_type: str = "story",
+        task_type: str = "story",
         params: dict = None,
         priority: int = 0,
-        status: JobStatus = JobStatus.QUEUED,
-    ) -> Job:
-        job = Job.create(
-            job_type=job_type,
+        status: TaskStatus = TaskStatus.QUEUED,
+    ) -> Task:
+        task = Task.create(
+            task_type=task_type,
             params=params or {"test": True},
             priority=priority,
         )
-        job = persistence.create_job(job)
+        task = persistence.create_task(task)
 
         # If not QUEUED, update status
-        if status != JobStatus.QUEUED:
-            job = persistence.update_job(job.job_id, status=status)
+        if status != TaskStatus.QUEUED:
+            task = persistence.update_task(task.task_id, status=status)
 
-        return job
+        return task
 
     return _create
+
+
+# Backward compatibility alias
+create_job = create_task
 
 
 @pytest.fixture
@@ -239,13 +247,13 @@ def create_template(persistence: PersistenceAdapter) -> Callable:
 
     def _create(
         name: str = "test-template",
-        job_type: str = "story",
+        task_type: str = "story",
         default_params: dict = None,
         retry_policy: dict = None,
-    ) -> JobTemplate:
-        template = JobTemplate.create(
+    ) -> TaskTemplate:
+        template = TaskTemplate.create(
             name=name,
-            job_type=job_type,
+            task_type=task_type,
             default_params=default_params or {"default": True},
             retry_policy=retry_policy or {"max_attempts": 3},
         )
@@ -255,33 +263,37 @@ def create_template(persistence: PersistenceAdapter) -> Callable:
 
 
 @pytest.fixture
-def create_job_run(persistence: PersistenceAdapter) -> Callable:
-    """Factory fixture for creating job runs."""
+def create_task_run(persistence: PersistenceAdapter) -> Callable:
+    """Factory fixture for creating task runs."""
 
     def _create(
-        job_id: str,
-        status: JobRunStatus = None,
+        task_id: str,
+        status: TaskRunStatus = None,
         error: str = None,
-    ) -> JobRun:
-        job = persistence.get_job(job_id)
-        job_run = JobRun.create(
-            job_id=job_id,
-            params_snapshot=job.params if job else {},
-            template_id=job.template_id if job else None,
+    ) -> TaskRun:
+        task = persistence.get_task(task_id)
+        task_run = TaskRun.create(
+            task_id=task_id,
+            params_snapshot=task.params if task else {},
+            template_id=task.template_id if task else None,
         )
-        job_run = persistence.create_job_run(job_run)
+        task_run = persistence.create_task_run(task_run)
 
         if status:
-            job_run = persistence.update_job_run(
-                job_run.run_id,
+            task_run = persistence.update_task_run(
+                task_run.run_id,
                 status=status,
                 finished_at=datetime.utcnow().isoformat() + "Z",
                 error=error,
             )
 
-        return job_run
+        return task_run
 
     return _create
+
+
+# Backward compatibility alias
+create_job_run = create_task_run
 
 
 # =============================================================================
@@ -289,28 +301,36 @@ def create_job_run(persistence: PersistenceAdapter) -> Callable:
 # =============================================================================
 
 
-def assert_job_status(persistence: PersistenceAdapter, job_id: str, expected: JobStatus):
-    """Assert a job has the expected status."""
-    job = persistence.get_job(job_id)
-    assert job is not None, f"Job {job_id} not found"
-    assert job.status == expected, f"Expected {expected}, got {job.status}"
+def assert_task_status(persistence: PersistenceAdapter, task_id: str, expected: TaskStatus):
+    """Assert a task has the expected status."""
+    task = persistence.get_task(task_id)
+    assert task is not None, f"Task {task_id} not found"
+    assert task.status == expected, f"Expected {expected}, got {task.status}"
 
 
-def assert_jobrun_status(persistence: PersistenceAdapter, run_id: str, expected: JobRunStatus):
-    """Assert a job run has the expected status."""
-    run = persistence.get_job_run(run_id)
-    assert run is not None, f"JobRun {run_id} not found"
+# Backward compatibility alias
+assert_job_status = assert_task_status
+
+
+def assert_taskrun_status(persistence: PersistenceAdapter, run_id: str, expected: TaskRunStatus):
+    """Assert a task run has the expected status."""
+    run = persistence.get_task_run(run_id)
+    assert run is not None, f"TaskRun {run_id} not found"
     assert run.status == expected, f"Expected {expected}, got {run.status}"
 
 
-def assert_queue_order(persistence: PersistenceAdapter, expected_job_ids: list):
-    """Assert the queue contains jobs in expected order."""
-    queued = persistence.list_jobs_by_status(JobStatus.QUEUED)
-    actual_ids = [j.job_id for j in queued]
-    assert actual_ids == expected_job_ids, f"Expected order {expected_job_ids}, got {actual_ids}"
+# Backward compatibility alias
+assert_jobrun_status = assert_taskrun_status
 
 
-def assert_retry_chain_length(persistence: PersistenceAdapter, job_id: str, expected: int):
+def assert_queue_order(persistence: PersistenceAdapter, expected_task_ids: list):
+    """Assert the queue contains tasks in expected order."""
+    queued = persistence.list_tasks_by_status(TaskStatus.QUEUED)
+    actual_ids = [t.task_id for t in queued]
+    assert actual_ids == expected_task_ids, f"Expected order {expected_task_ids}, got {actual_ids}"
+
+
+def assert_retry_chain_length(persistence: PersistenceAdapter, task_id: str, expected: int):
     """Assert the retry chain has expected length."""
-    actual = persistence.count_retry_chain(job_id)
+    actual = persistence.count_retry_chain(task_id)
     assert actual == expected, f"Expected chain length {expected}, got {actual}"

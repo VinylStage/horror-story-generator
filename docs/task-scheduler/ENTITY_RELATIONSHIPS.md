@@ -1,15 +1,15 @@
-# Job Scheduler Entity Relationships
+# Task Scheduler Entity Relationships
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
-> **Application Version:** 1.5.0 (managed by release-please)
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 
 ---
 
 ## Overview
 
-This document defines the relationships between Job Scheduler entities. It covers cardinality, ownership semantics, creation triggers, and lifecycle dependencies. These relationships form the foundation for API contract design and database schema decisions.
+This document defines the relationships between Task Scheduler entities. It covers cardinality, ownership semantics, creation triggers, and lifecycle dependencies. These relationships form the foundation for API contract design and database schema decisions.
 
 ---
 
@@ -435,4 +435,13 @@ Legend:
 | **Cascade Delete** | Deleting parent automatically deletes children |
 | **Loose Ownership** | Logical grouping without lifecycle dependency |
 | **Derived Status** | Status computed from related entity states |
+
+---
+
+## Related Documents
+
+- [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
+- [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
+- [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

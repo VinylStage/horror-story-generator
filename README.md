@@ -155,7 +155,7 @@ curl -H "X-API-Key: your-key" http://localhost:8000/jobs/story/trigger
 ## 프로그래밍 방식 사용
 
 ```python
-from src.story.generator import generate_horror_story
+from src.story.generator import generate_horror_story, generate_with_topic
 
 # 기본 실행 (템플릿 자동 선택)
 result = generate_horror_story()
@@ -166,9 +166,41 @@ result = generate_horror_story(
     custom_request="1980년대 한국의 시골 마을을 배경으로 한 귀신 이야기를 써주세요."
 )
 
-# 파일 저장 없이 실행
-result = generate_horror_story(save_output=False)
+# Ollama 로컬 모델 + 목표 길이 지정
+result = generate_horror_story(
+    model_spec="ollama:qwen3:30b",
+    target_length=5000,
+    save_output=False
+)
+
+# topic/tags 지정 생성 (auto-research 포함)
+result = generate_with_topic(
+    topic="한국 아파트 호러",
+    custom_tags=["일상공포", "청각공포"],
+    auto_research=True,
+    model_spec="ollama:qwen3:30b",
+    target_length=4000
+)
 ```
+
+**`generate_horror_story` 파라미터:**
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+|---------|------|--------|------|
+| `template_path` | str | None | 커스텀 템플릿 경로 |
+| `custom_request` | str | None | 사용자 요청 텍스트 |
+| `save_output` | bool | True | 파일 저장 여부 |
+| `model_spec` | str | None | 모델 지정 (`ollama:모델명` 또는 Claude 모델명) |
+| `target_length` | int | None | 목표 스토리 길이 (자) |
+
+**`generate_with_topic` 추가 파라미터:**
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+|---------|------|--------|------|
+| `topic` | str | None | 스토리 주제 |
+| `custom_tags` | list | None | 커스텀 태그 (v1.6.0) |
+| `auto_research` | bool | True | 연구 카드 자동 생성 |
+| `research_model_spec` | str | None | 연구 생성용 모델 |
 
 ---
 

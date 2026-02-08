@@ -80,8 +80,8 @@ class StoryRegistry:
         self.run_id = run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
         self._conn: Optional[sqlite3.Connection] = None
 
-        logger.info(f"[Phase2C][CONTROL] Story Registry 초기화: {self.db_path}")
-        logger.info(f"[Phase2C][CONTROL] Run ID: {self.run_id}")
+        logger.info(f"Story Registry 초기화: {self.db_path}")
+        logger.info(f"Run ID: {self.run_id}")
 
         self._ensure_directory()
         self._init_db()
@@ -91,7 +91,7 @@ class StoryRegistry:
         db_dir = Path(self.db_path).parent
         if not db_dir.exists():
             db_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"[Phase2C][CONTROL] 디렉토리 생성: {db_dir}")
+            logger.info(f"디렉토리 생성: {db_dir}")
 
     def _backup_before_migration(self, from_version: str) -> Optional[str]:
         """
@@ -153,7 +153,7 @@ class StoryRegistry:
                 "INSERT INTO meta (key, value) VALUES ('schema_version', ?)",
                 (SCHEMA_VERSION,)
             )
-            logger.info(f"[Phase2C][CONTROL] 스키마 생성 완료 (v{SCHEMA_VERSION})")
+            logger.info(f"스키마 생성 완료 (v{SCHEMA_VERSION})")
         elif current_version != SCHEMA_VERSION:
             # Backup before migration
             self._backup_before_migration(current_version)
@@ -163,9 +163,9 @@ class StoryRegistry:
                 "UPDATE meta SET value = ? WHERE key = 'schema_version'",
                 (SCHEMA_VERSION,)
             )
-            logger.info(f"[Phase2C][CONTROL] 스키마 마이그레이션 완료: {current_version} -> {SCHEMA_VERSION}")
+            logger.info(f"스키마 마이그레이션 완료: {current_version} -> {SCHEMA_VERSION}")
         else:
-            logger.info(f"[Phase2C][CONTROL] 스키마 버전 확인: v{current_version}")
+            logger.info(f"스키마 버전 확인: v{current_version}")
 
         conn.commit()
 
@@ -230,26 +230,26 @@ class StoryRegistry:
             cursor: Database cursor
             from_version: Version to migrate from
         """
-        logger.info(f"[Phase2C][CONTROL] 스키마 마이그레이션 시작: {from_version} -> {SCHEMA_VERSION}")
+        logger.info(f"스키마 마이그레이션 시작: {from_version} -> {SCHEMA_VERSION}")
 
         if from_version == "1.0.0":
             # Migration from 1.0.0 to 1.1.0
             # Add story-level dedup columns
             try:
                 cursor.execute("ALTER TABLE stories ADD COLUMN story_signature TEXT")
-                logger.info("[Phase2C][CONTROL] Added column: story_signature")
+                logger.info("Added column: story_signature")
             except sqlite3.OperationalError:
                 pass  # Column already exists
 
             try:
                 cursor.execute("ALTER TABLE stories ADD COLUMN canonical_core_json TEXT")
-                logger.info("[Phase2C][CONTROL] Added column: canonical_core_json")
+                logger.info("Added column: canonical_core_json")
             except sqlite3.OperationalError:
                 pass  # Column already exists
 
             try:
                 cursor.execute("ALTER TABLE stories ADD COLUMN research_used_json TEXT")
-                logger.info("[Phase2C][CONTROL] Added column: research_used_json")
+                logger.info("Added column: research_used_json")
             except sqlite3.OperationalError:
                 pass  # Column already exists
 
@@ -258,10 +258,10 @@ class StoryRegistry:
                 CREATE INDEX IF NOT EXISTS idx_stories_signature
                 ON stories(story_signature)
             """)
-            logger.info("[Phase2C][CONTROL] Created index: idx_stories_signature")
+            logger.info("Created index: idx_stories_signature")
 
         else:
-            logger.warning(f"[Phase2C][CONTROL] 알 수 없는 버전에서 마이그레이션: {from_version}")
+            logger.warning(f"알 수 없는 버전에서 마이그레이션: {from_version}")
 
     def add_story(
         self,
@@ -322,7 +322,7 @@ class StoryRegistry:
 
         status = "ACCEPTED" if accepted else "SKIPPED"
         sig_short = story_signature[:16] if story_signature else "none"
-        logger.info(f"[Phase2C][CONTROL] Registry 저장: {story_id} ({status}, sig={sig_short}...)")
+        logger.info(f"Registry 저장: {story_id} ({status}, sig={sig_short}...)")
 
     def add_similarity_edge(
         self,
@@ -400,7 +400,7 @@ class StoryRegistry:
                 source_run_id=row["source_run_id"]
             ))
 
-        logger.info(f"[Phase2C][CONTROL] 과거 스토리 {len(records)}개 로드 완료")
+        logger.info(f"과거 스토리 {len(records)}개 로드 완료")
         return records
 
     def get_total_count(self) -> Dict[str, int]:
@@ -455,7 +455,7 @@ class StoryRegistry:
         if self._conn:
             self._conn.close()
             self._conn = None
-            logger.info("[Phase2C][CONTROL] Registry 연결 종료")
+            logger.info("Registry 연결 종료")
 
 
 # =============================================================================

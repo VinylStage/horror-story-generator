@@ -167,7 +167,7 @@ def generate_semantic_summary(
     Returns:
         str: 1-3 sentence summary
     """
-    logger.info("[Phase2B][OBSERVE] 의미적 요약 생성 시작")
+    logger.info("의미적 요약 생성 시작")
 
     try:
         client = anthropic.Anthropic(api_key=config["api_key"])
@@ -187,10 +187,10 @@ def generate_semantic_summary(
         )
 
         summary = message.content[0].text.strip()
-        logger.info(f"[Phase2B][OBSERVE] 의미적 요약 생성 완료: {summary[:100]}...")
+        logger.info(f"의미적 요약 생성 완료: {summary[:100]}...")
         return summary
 
     except Exception as e:
-        logger.warning(f"[Phase2B][OBSERVE] 요약 생성 실패, 폴백 사용: {e}")
+        logger.warning(f"요약 생성 실패, 폴백 사용: {e}")
         # Fallback: use first 200 chars of story
         return story_text[:200].strip()

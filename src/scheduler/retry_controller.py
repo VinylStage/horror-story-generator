@@ -1,15 +1,15 @@
 """
-Retry Controller for Job Scheduler.
+Retry Controller for Task Scheduler.
 
 From IMPLEMENTATION_PLAN.md Section 1.4 and DEC-007:
-- Decides whether to create retry jobs
+- Decides whether to create retry tasks
 - Manages retry chain via retry_of field
 - Automatic retry up to 3 attempts
 - Manual retry always allowed via API
 
 What RetryController MUST NOT do:
-- Execute jobs
-- Modify existing Jobs or JobRuns
+- Execute tasks
+- Modify existing Tasks or TaskRuns
 - Override template's retry_policy
 """
 
@@ -18,14 +18,14 @@ from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
 from .entities import (
-    Job,
-    JobRun,
-    JobRunStatus,
-    JobTemplate,
+    Task,
+    TaskRun,
+    TaskRunStatus,
+    TaskTemplate,
 )
 from .errors import (
-    JobNotFoundError,
-    JobRunNotFoundError,
+    TaskNotFoundError,
+    TaskRunNotFoundError,
 )
 from .persistence import PersistenceAdapter
 from .queue_manager import QueueManager
@@ -44,19 +44,19 @@ class RetryController:
     Manages automatic and manual retry logic.
 
     From DEC-007:
-    - Failed jobs are automatically retried up to 3 attempts
+    - Failed tasks are automatically retried up to 3 attempts
     - Further retries require manual invocation
-    - Retry creates NEW Job with retry_of reference
+    - Retry creates NEW Task with retry_of reference
 
     Retry chain structure:
-        Job1 (original)
-          └── Job2 (retry_of: Job1)
-                └── Job3 (retry_of: Job2)
-                      └── Job4 (retry_of: Job3) ← max reached
+        Task1 (original)
+          +-- Task2 (retry_of: Task1)
+                +-- Task3 (retry_of: Task2)
+                      +-- Task4 (retry_of: Task3) <- max reached
 
     Backoff calculation:
         delay = base_delay * (2 ^ attempt_number)
-        Example with 10s base: 10s → 20s → 40s
+        Example with 10s base: 10s -> 20s -> 40s
     """
 
     def __init__(
@@ -84,42 +84,42 @@ class RetryController:
     # Retry Evaluation
     # =========================================================================
 
-    def on_job_failed(self, job: Job, job_run: JobRun) -> Optional[Job]:
+    def on_task_failed(self, task: Task, task_run: TaskRun) -> Optional[Task]:
         """
-        Handle a failed job and potentially create a retry.
+        Handle a failed task and potentially create a retry.
 
-        Called by Dispatcher after job execution fails.
+        Called by Dispatcher after task execution fails.
 
         From DEC-007:
         1. Count retry attempts in chain
-        2. If attempts < max_attempts: create retry job
+        2. If attempts < max_attempts: create retry task
         3. If attempts >= max_attempts: no auto-retry
 
         Args:
-            job: The failed job
-            job_run: The failed JobRun
+            task: The failed task
+            task_run: The failed TaskRun
 
         Returns:
-            The new retry Job if created, None otherwise
+            The new retry Task if created, None otherwise
         """
-        if job_run.status != JobRunStatus.FAILED:
-            logger.debug(f"Job {job.job_id} is not failed, skipping retry evaluation")
+        if task_run.status != TaskRunStatus.FAILED:
+            logger.debug(f"Task {task.task_id} is not failed, skipping retry evaluation")
             return None
 
         # Get retry policy from template or use default
-        max_attempts = self._get_max_attempts(job)
+        max_attempts = self._get_max_attempts(task)
 
         # Count attempts in retry chain
-        attempt_count = self.persistence.count_retry_chain(job.job_id)
+        attempt_count = self.persistence.count_retry_chain(task.task_id)
 
         logger.info(
-            f"Retry evaluation for job {job.job_id}: "
+            f"Retry evaluation for task {task.task_id}: "
             f"attempt {attempt_count + 1}/{max_attempts}"
         )
 
         if attempt_count >= max_attempts:
             logger.info(
-                f"Job {job.job_id} has reached max retry attempts ({max_attempts}). "
+                f"Task {task.task_id} has reached max retry attempts ({max_attempts}). "
                 "No auto-retry. Manual retry via API still available."
             )
             return None
@@ -127,20 +127,20 @@ class RetryController:
         # Calculate backoff delay
         delay = self._calculate_backoff(attempt_count)
 
-        # Create retry job
-        retry_job = self._create_retry_job(job, delay)
+        # Create retry task
+        retry_task = self._create_retry_task(task, delay)
 
         logger.info(
-            f"Created retry job {retry_job.job_id} for failed job {job.job_id} "
+            f"Created retry task {retry_task.task_id} for failed task {task.task_id} "
             f"(attempt {attempt_count + 2}/{max_attempts}, delay={delay}s)"
         )
 
-        return retry_job
+        return retry_task
 
-    def _get_max_attempts(self, job: Job) -> int:
+    def _get_max_attempts(self, task: Task) -> int:
         """Get max retry attempts from template or default."""
-        if job.template_id is not None:
-            template = self.persistence.get_template(job.template_id)
+        if task.template_id is not None:
+            template = self.persistence.get_template(task.template_id)
             if template is not None:
                 retry_policy = template.retry_policy or {}
                 return retry_policy.get("max_attempts", self.max_attempts)
@@ -155,96 +155,96 @@ class RetryController:
         """
         return self.base_delay_seconds * (2 ** attempt_number)
 
-    def _create_retry_job(self, original_job: Job, delay_seconds: int) -> Job:
+    def _create_retry_task(self, original_task: Task, delay_seconds: int) -> Task:
         """
-        Create a retry job from the original.
+        Create a retry task from the original.
 
-        The new job:
-        - Has same template_id, params, job_type
-        - Has retry_of = original_job_id
+        The new task:
+        - Has same template_id, params, task_type
+        - Has retry_of = original_task_id
         - Is enqueued to QueueManager
         """
-        # Create retry job with same parameters
-        # Note: group_id and sequence_number are preserved for JobGroup retries
-        retry_job = self.queue_manager.enqueue(
-            job_type=original_job.job_type,
-            params=original_job.params,
-            priority=original_job.priority,
-            template_id=original_job.template_id,
-            group_id=original_job.group_id,
-            sequence_number=original_job.sequence_number,
-            retry_of=original_job.job_id,
+        # Create retry task with same parameters
+        # Note: group_id and sequence_number are preserved for TaskGroup retries
+        retry_task = self.queue_manager.enqueue(
+            task_type=original_task.task_type,
+            params=original_task.params,
+            priority=original_task.priority,
+            template_id=original_task.template_id,
+            group_id=original_task.group_id,
+            sequence_number=original_task.sequence_number,
+            retry_of=original_task.task_id,
         )
 
-        return retry_job
+        return retry_task
 
     # =========================================================================
     # Manual Retry
     # =========================================================================
 
-    def manual_retry(self, run_id: str, priority: Optional[int] = None) -> Job:
+    def manual_retry(self, run_id: str, priority: Optional[int] = None) -> Task:
         """
-        Create a manual retry for a failed job run.
+        Create a manual retry for a failed task run.
 
         From DEC-007:
-        - Manual retry always allowed via POST /api/job-runs/{run_id}/retry
-        - Creates new Job regardless of automatic retry count
+        - Manual retry always allowed via POST /api/task-runs/{run_id}/retry
+        - Creates new Task regardless of automatic retry count
 
         Args:
-            run_id: The JobRun ID to retry
-            priority: Optional priority for the retry job
+            run_id: The TaskRun ID to retry
+            priority: Optional priority for the retry task
 
         Returns:
-            The new retry Job
+            The new retry Task
 
         Raises:
-            JobRunNotFoundError: If run_id doesn't exist
-            InvalidOperationError: If JobRun is not FAILED
+            TaskRunNotFoundError: If run_id doesn't exist
+            InvalidOperationError: If TaskRun is not FAILED
         """
-        job_run = self.persistence.get_job_run(run_id)
-        if job_run is None:
-            raise JobRunNotFoundError(run_id)
+        task_run = self.persistence.get_task_run(run_id)
+        if task_run is None:
+            raise TaskRunNotFoundError(run_id)
 
-        if job_run.status != JobRunStatus.FAILED:
+        if task_run.status != TaskRunStatus.FAILED:
             from .errors import InvalidOperationError
             raise InvalidOperationError(
-                f"Cannot retry JobRun in {job_run.status.value} status. "
+                f"Cannot retry TaskRun in {task_run.status.value} status. "
                 "Only FAILED runs can be retried."
             )
 
-        # Get the original job
-        job = self.persistence.get_job(job_run.job_id)
-        if job is None:
-            raise JobNotFoundError(job_run.job_id)
+        # Get the original task
+        task = self.persistence.get_task(task_run.task_id)
+        if task is None:
+            raise TaskNotFoundError(task_run.task_id)
 
-        # Create retry job
-        retry_job = self.queue_manager.enqueue(
-            job_type=job.job_type,
-            params=job_run.params_snapshot,  # Use snapshot from failed run
-            priority=priority if priority is not None else job.priority,
-            template_id=job.template_id,
-            retry_of=job.job_id,
+        # Create retry task
+        retry_task = self.queue_manager.enqueue(
+            task_type=task.task_type,
+            params=task_run.params_snapshot,  # Use snapshot from failed run
+            priority=priority if priority is not None else task.priority,
+            template_id=task.template_id,
+            retry_of=task.task_id,
         )
 
         logger.info(
-            f"Created manual retry job {retry_job.job_id} "
-            f"for failed run {run_id} (job {job.job_id})"
+            f"Created manual retry task {retry_task.task_id} "
+            f"for failed run {run_id} (task {task.task_id})"
         )
 
-        return retry_job
+        return retry_task
 
     # =========================================================================
     # Retry Chain Queries
     # =========================================================================
 
-    def get_retry_chain(self, job_id: str) -> list[Job]:
+    def get_retry_chain(self, task_id: str) -> list[Task]:
         """
-        Get the full retry chain for a job.
+        Get the full retry chain for a task.
 
-        Returns jobs from original to most recent retry.
+        Returns tasks from original to most recent retry.
         """
         chain = []
-        current = self.persistence.get_job(job_id)
+        current = self.persistence.get_task(task_id)
 
         if current is None:
             return chain
@@ -253,80 +253,87 @@ class RetryController:
         while current is not None:
             chain.insert(0, current)
             if current.retry_of is not None:
-                current = self.persistence.get_job(current.retry_of)
+                current = self.persistence.get_task(current.retry_of)
             else:
                 break
 
         return chain
 
-    def get_retry_count(self, job_id: str) -> int:
+    def get_retry_count(self, task_id: str) -> int:
         """
-        Get the number of retries for a job.
+        Get the number of retries for a task.
 
         Returns:
-            Number of previous jobs in the retry chain
+            Number of previous tasks in the retry chain
         """
-        return self.persistence.count_retry_chain(job_id)
+        return self.persistence.count_retry_chain(task_id)
 
-    def is_max_retries_reached(self, job: Job) -> bool:
+    def is_max_retries_reached(self, task: Task) -> bool:
         """
-        Check if a job has reached maximum retry attempts.
+        Check if a task has reached maximum retry attempts.
 
         Args:
-            job: The job to check
+            task: The task to check
 
         Returns:
             True if max retries reached
         """
-        max_attempts = self._get_max_attempts(job)
-        attempt_count = self.persistence.count_retry_chain(job.job_id)
+        max_attempts = self._get_max_attempts(task)
+        attempt_count = self.persistence.count_retry_chain(task.task_id)
         return attempt_count >= max_attempts
 
     # =========================================================================
     # Recovery Support
     # =========================================================================
 
-    def recover_orphaned_retries(self) -> list[Job]:
+    def recover_orphaned_retries(self) -> list[Task]:
         """
-        Create retry jobs for failed runs that don't have one.
+        Create retry tasks for failed runs that don't have one.
 
         From RECOVERY_SCENARIOS.md Scenario 3:
         Used to recover from crash during retry creation.
 
         Returns:
-            List of created retry jobs
+            List of created retry tasks
         """
         created_retries = []
 
-        # Find failed runs without retry jobs
+        # Find failed runs without retry tasks
         orphaned = self.persistence.get_failed_runs_without_retry(
             max_attempts=self.max_attempts
         )
 
-        for job, job_run in orphaned:
+        for task, task_run in orphaned:
             # Check if retry already exists (idempotency check)
-            existing = self.persistence.get_retry_job_for(job.job_id)
+            existing = self.persistence.get_retry_task_for(task.task_id)
             if existing is not None:
                 continue
 
             # Calculate attempt number from chain
-            attempt_count = self.persistence.count_retry_chain(job.job_id)
+            attempt_count = self.persistence.count_retry_chain(task.task_id)
 
             if attempt_count >= self.max_attempts:
                 logger.info(
-                    f"Job {job.job_id} at max retries, skipping recovery retry"
+                    f"Task {task.task_id} at max retries, skipping recovery retry"
                 )
                 continue
 
             # Create recovery retry
             delay = self._calculate_backoff(attempt_count)
-            retry_job = self._create_retry_job(job, delay)
+            retry_task = self._create_retry_task(task, delay)
 
             logger.info(
-                f"Recovery: created retry job {retry_job.job_id} "
-                f"for orphaned failed job {job.job_id}"
+                f"Recovery: created retry task {retry_task.task_id} "
+                f"for orphaned failed task {task.task_id}"
             )
 
-            created_retries.append(retry_job)
+            created_retries.append(retry_task)
 
         return created_retries
+
+    # =========================================================================
+    # Backward Compatibility Aliases
+    # =========================================================================
+
+    on_job_failed = on_task_failed
+    _create_retry_job = _create_retry_task

@@ -5,16 +5,25 @@ Local-only server for research operations.
 
 Phase B+: Includes Ollama resource management with auto-cleanup.
 Phase C: Optional API key authentication.
-Phase 3: Scheduler-based job execution model.
+Phase 3: Scheduler-based task execution model.
 """
 
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 from fastapi import Depends, FastAPI
 
 from src import __version__
-from .routers import research, dedup, jobs, story, scheduler
+from .routers import research, dedup, jobs, tasks, story, scheduler
 from .services.ollama_resource import (
     startup_resource_manager,
     shutdown_resource_manager,
@@ -45,7 +54,7 @@ async def lifespan(app: FastAPI):
     await startup_resource_manager()
 
     # Initialize scheduler service (does NOT start dispatch loop)
-    # Explicit /scheduler/start call required to begin job processing
+    # Explicit /scheduler/start call required to begin task processing
     SCHEDULER_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     SCHEDULER_LOGS_DIR.mkdir(parents=True, exist_ok=True)
     init_scheduler_service(
@@ -64,11 +73,15 @@ async def lifespan(app: FastAPI):
 tags_metadata = [
     {
         "name": "scheduler",
-        "description": "Scheduler control - start, stop, and monitor the job execution engine",
+        "description": "Scheduler control - start, stop, and monitor the task execution engine",
+    },
+    {
+        "name": "tasks",
+        "description": "Task management - CRUD operations for scheduler-based task execution. Supports single and batch creation, concurrent groups.",
     },
     {
         "name": "jobs",
-        "description": "Job management - CRUD operations for scheduler-based job execution. Legacy trigger endpoints are deprecated.",
+        "description": "[DEPRECATED] Legacy job trigger endpoints. Use /tasks for scheduler-based task management.",
     },
     {
         "name": "story",
@@ -156,6 +169,10 @@ auth_dependency = [Depends(verify_api_key)] if API_AUTH_ENABLED else []
 app.include_router(
     scheduler.router, prefix="/scheduler", tags=["scheduler"], dependencies=auth_dependency
 )
+app.include_router(
+    tasks.router, prefix="/tasks", tags=["tasks"], dependencies=auth_dependency
+)
+# /jobs kept as deprecated alias for legacy trigger endpoints
 app.include_router(
     jobs.router, prefix="/jobs", tags=["jobs"], dependencies=auth_dependency
 )

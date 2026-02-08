@@ -1,5 +1,7 @@
 # develop → main 릴리즈 PR 가이드
 
+> **Application Version:** 1.6.0 <!-- x-release-please-version -->
+
 ## 0. main → develop 동기화 (선택사항)
 
 ### 필요한가?

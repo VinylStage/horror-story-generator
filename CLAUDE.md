@@ -177,6 +177,64 @@ Documentation updates are REQUIRED for:
 - Configuration changes
 - Operational impact
 
+### 6.4 Change Impact Checklist (Mandatory)
+
+When making code changes, you MUST verify and update ALL of the following layers.
+Skipping any layer is a common source of bugs (e.g., KeyError from mismatched dict keys, Swagger not rendering schemas).
+
+#### Layer 1: Source Code
+
+| Target | Check |
+|--------|-------|
+| **Function/method signatures** | Parameter names, type hints, return types |
+| **Function/method call sites** | All callers passing renamed keyword arguments |
+| **Dict key access** | `dict["old_key"]` → `dict["new_key"]` across ALL consumers |
+| **Variable names** | Local variables, class attributes, properties |
+| **Error messages / string literals** | User-facing text, log messages, exception messages |
+| **Backward-compat aliases** | Add `old_name = new_name` aliases if needed |
+
+#### Layer 2: API / Swagger (FastAPI)
+
+| Target | Check |
+|--------|-------|
+| **Router endpoint functions** | `response_model`, `status_code`, docstrings |
+| **Pydantic schema classes** | Field names, `Field(description=...)`, class docstrings |
+| **`main.py` tag metadata** | `tags_metadata` descriptions shown in Swagger UI |
+| **Router → Service call mapping** | Ensure dict keys from service match what router reads |
+| **Request body visibility** | Typed Pydantic params (NOT raw `Request`) so Swagger renders body schema |
+
+> **Rule**: NEVER use raw `request: Request` for JSON body parsing. Always use typed Pydantic models so Swagger auto-generates documentation. If multiple input shapes are needed, create separate endpoints (e.g., `POST /tasks` + `POST /tasks/batch`).
+
+#### Layer 3: Tests
+
+| Target | Check |
+|--------|-------|
+| **Test method names** | Reflect new terminology |
+| **Test endpoint paths** | Match actual router paths |
+| **Mock return values** | Dict keys and attribute names match new code |
+| **Auth / integration tests** | Endpoint paths used in cross-cutting tests |
+| **Fixture names** | `create_job` → `create_task` etc. |
+
+#### Layer 4: Documentation Files
+
+| Target | Check |
+|--------|-------|
+| **`docs/core/API.md`** | Endpoint paths, request/response examples, field names |
+| **`docs/task-scheduler/*.md`** | Domain model, design docs, test plans |
+| **Module-level docstrings** | Top-of-file `"""..."""` in every changed module |
+| **Inline comments** | Comments referencing old names |
+| **README / CLAUDE.md** | If conventions or workflows changed |
+
+#### Layer 5: Database / Persistence
+
+| Target | Check |
+|--------|-------|
+| **SQL table/column names** | Migration code for renaming |
+| **Row-to-entity mapping** | `row["old_col"]` → `row["new_col"]` |
+| **DB schema comments** | Document backward-compat decisions |
+
+> **Verification**: After all changes, run `grep -ri "old_term"` across `src/` and `tests/` to catch missed references. Only backward-compat aliases and DB migration code should remain.
+
 ---
 
 ## 7. Testing Rules
@@ -191,7 +249,17 @@ Documentation updates are REQUIRED for:
   - You MUST request explicit user permission
   - BEFORE running real, integration, or long-running tests
 
-### 7.3 Test Reporting
+### 7.3 Resource Cleanup (Mandatory)
+
+- After ANY test that starts a server, background process, or external resource:
+  - You MUST **immediately** terminate the process upon test completion
+  - You MUST verify the process is fully stopped (`ps aux | grep` confirmation)
+  - You MUST NOT proceed to the next task until cleanup is confirmed
+- This applies to: API servers (`uvicorn`), database processes, Docker containers, background workers, etc.
+
+> **Failure to clean up resources can cause system freezing or data corruption.**
+
+### 7.4 Test Reporting
 
 - Test results MUST be summarized in the PR description.
 
@@ -206,6 +274,7 @@ Documentation updates are REQUIRED for:
 | Manual changelog edits | **FORBIDDEN** |
 | Untracked TODO comments | **FORBIDDEN** |
 | Bypassing user confirmation gates | **FORBIDDEN** |
+| Leaving test servers/processes running after tests | **FORBIDDEN** |
 
 ---
 

@@ -7,6 +7,7 @@ v1.4.3: Fire-and-forget webhook support for sync endpoints.
 
 import asyncio
 import logging
+import os
 import threading
 from datetime import datetime
 from typing import Any, Dict, Optional
@@ -15,6 +16,14 @@ import httpx
 from src.infra.job_manager import Job, WebhookEvent, save_job
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_webhook_url(request_url: Optional[str] = None) -> Optional[str]:
+    """Resolve webhook URL: request value > DISCORD_WEBHOOK_URL env > None."""
+    if request_url:
+        return request_url
+    return os.getenv("DISCORD_WEBHOOK_URL")
+
 
 # Webhook configuration
 WEBHOOK_TIMEOUT_SECONDS = 30
@@ -367,6 +376,75 @@ def build_discord_embed_payload(
         "fields": fields,
         "timestamp": datetime.now().isoformat(),
         "footer": {"text": "Horror Story Generator v1.4"},
+    }
+
+    return {
+        "embeds": [embed],
+    }
+
+
+def build_task_discord_embed_payload(
+    task_id: str,
+    task_type: str,
+    status: str,
+    result: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Build Discord-compatible embed payload for scheduler task completions.
+
+    Distinct from build_discord_embed_payload() which is used for direct
+    API endpoint webhooks (/story/generate, /research/run).
+
+    Args:
+        task_id: Scheduler task ID
+        task_type: Task type ("story" or "research")
+        status: Result status ("success" or "error")
+        result: Rich result data including task-type-specific fields
+
+    Returns:
+        Discord-compatible payload with embeds
+    """
+    from src import __version__
+
+    is_success = status == "success"
+    color = DISCORD_COLOR_SUCCESS if is_success else DISCORD_COLOR_ERROR
+    emoji = "📋" if is_success else "📋❌"
+
+    type_label = {"story": "Story", "research": "Research"}.get(task_type, task_type)
+    title = f"{emoji} Task {'Completed' if is_success else 'Failed'}: {type_label}"
+
+    # Task context fields (always present)
+    fields = [
+        {"name": "Task ID", "value": f"`{task_id}`", "inline": True},
+        {"name": "Type", "value": task_type, "inline": True},
+        {"name": "Status", "value": result.get("status", status.upper()), "inline": True},
+    ]
+
+    if is_success:
+        # Story-specific fields
+        if result.get("title"):
+            fields.append({"name": "Title", "value": result["title"], "inline": False})
+        if result.get("word_count"):
+            fields.append({"name": "Word Count", "value": str(result["word_count"]), "inline": True})
+        if result.get("thumbnail_url"):
+            fields.append({"name": "Thumbnail", "value": result["thumbnail_url"], "inline": False})
+        # Research-specific fields
+        if result.get("card_id"):
+            fields.append({"name": "Card ID", "value": result["card_id"], "inline": True})
+        if result.get("output_path"):
+            fields.append({"name": "Output", "value": f"`{result['output_path']}`", "inline": False})
+    else:
+        if result.get("error"):
+            fields.append({"name": "Error", "value": result["error"][:1000], "inline": False})
+
+    fields.append({"name": "Endpoint", "value": f"`/tasks/{task_id}`", "inline": True})
+
+    embed = {
+        "title": title,
+        "color": color,
+        "fields": fields,
+        "timestamp": datetime.now().isoformat(),
+        "footer": {"text": f"Horror Story Generator v{__version__}"},
     }
 
     return {

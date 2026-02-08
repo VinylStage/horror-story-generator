@@ -52,9 +52,9 @@ The system currently supports:
   - Legacy trigger endpoints deprecated
 
 **Documentation:**
-- [Job Scheduler Design](../technical/JOB_SCHEDULER_DESIGN.md)
-- [API Contract](../job-scheduler/API_CONTRACT.md)
-- [As-Is/To-Be API Design](../technical/job-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md)
+- [Task Scheduler Design](../technical/TASK_SCHEDULER_DESIGN.md)
+- [API Contract](../task-scheduler/API_CONTRACT.md)
+- [As-Is/To-Be API Design](../technical/task-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md)
 
 ---
 

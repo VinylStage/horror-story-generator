@@ -210,7 +210,11 @@ def extract_title_from_story(story_text: str) -> str:
     return "무제"
 
 
-def extract_tags_from_story(story_text: str, template: Dict[str, Any]) -> List[str]:
+def extract_tags_from_story(
+    story_text: str,
+    template: Dict[str, Any],
+    custom_tags: Optional[List[str]] = None
+) -> List[str]:
     """
     소설과 템플릿에서 태그를 추출합니다.
 
@@ -220,6 +224,7 @@ def extract_tags_from_story(story_text: str, template: Dict[str, Any]) -> List[s
     Args:
         story_text (str): 생성된 소설 전체 텍스트
         template (Dict[str, Any]): 프롬프트 템플릿
+        custom_tags (Optional[List[str]]): 사용자 지정 커스텀 태그 (v1.6.0, Issue #109)
 
     Returns:
         List[str]: 추출된 태그 리스트
@@ -230,6 +235,10 @@ def extract_tags_from_story(story_text: str, template: Dict[str, Any]) -> List[s
         ['호러', 'horror', '심리스릴러', 'psychological']
     """
     tags = ["호러", "horror"]
+
+    # v1.6.0: 커스텀 태그 먼저 추가 (우선순위 높음)
+    if custom_tags:
+        tags.extend(custom_tags)
 
     # 템플릿에서 장르 태그 추가
     config = template.get("story_config", {})
@@ -300,11 +309,55 @@ def generate_description(story_text: str) -> str:
     return description
 
 
+def generate_slug(story_id: str) -> str:
+    """
+    생성된 스토리의 slug를 생성합니다.
+
+    Args:
+        story_id: 타임스탬프 기반 스토리 ID (예: "20260118_183713")
+
+    Returns:
+        str: URL-friendly slug (예: "story-20260118-183713")
+    """
+    return f"story-{story_id.replace('_', '-')}"
+
+
+def calculate_read_time(word_count: int) -> str:
+    """
+    단어 수를 기반으로 예상 읽기 시간을 계산합니다.
+
+    평균 읽기 속도를 분당 200자로 가정합니다.
+    최소 1분으로 반올림합니다.
+
+    Args:
+        word_count: 스토리 총 글자 수
+
+    Returns:
+        str: 읽기 시간 문자열 (예: "22 min read")
+    """
+    minutes = max(1, round(word_count / 200))
+    return f"{minutes} min read"
+
+
+def generate_story_filename(story_id: str) -> str:
+    """
+    스토리 파일명을 생성합니다.
+
+    Args:
+        story_id: 타임스탬프 기반 스토리 ID (예: "20260118_183713")
+
+    Returns:
+        str: 파일명 (예: "story-20260118-183713.md")
+    """
+    return f"story-{story_id.replace('_', '-')}.md"
+
+
 def save_story(
     story_text: str,
     output_dir: str,
     metadata: Optional[Dict[str, Any]] = None,
-    template: Optional[Dict[str, Any]] = None
+    template: Optional[Dict[str, Any]] = None,
+    custom_tags: Optional[List[str]] = None
 ) -> str:
     """
     생성된 소설을 Astro + GraphQL 블로그용 마크다운 파일로 저장합니다.
@@ -317,6 +370,7 @@ def save_story(
         output_dir (str): 출력 디렉토리 경로
         metadata (Optional[Dict[str, Any]]): 저장할 메타데이터
         template (Optional[Dict[str, Any]]): 프롬프트 템플릿 (태그 추출용)
+        custom_tags (Optional[List[str]]): 사용자 지정 커스텀 태그 (v1.6.0, Issue #109)
 
     Returns:
         str: 저장된 마크다운 파일 경로
@@ -333,21 +387,73 @@ def save_story(
 
     # 타임스탬프 기반 파일명 생성
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    story_filename = f"horror_story_{timestamp}.md"
+    story_filename = generate_story_filename(timestamp)
     story_path = os.path.join(output_dir, story_filename)
 
     # 제목, 태그, 설명 추출
     title = extract_title_from_story(story_text)
-    tags = extract_tags_from_story(story_text, template) if template else ["호러", "horror"]
+    # v1.6.0: custom_tags 지원 (Issue #109)
+    if template:
+        tags = extract_tags_from_story(story_text, template, custom_tags=custom_tags)
+    elif custom_tags:
+        tags = ["호러", "horror"] + custom_tags
+    else:
+        tags = ["호러", "horror"]
     description = generate_description(story_text)
+
+    # Escape quotes in description for YAML compatibility
+    description_escaped = description.replace('"', '\\"')
 
     # YAML frontmatter 생성
     date_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Generate vinylog-specific fields
+    slug = generate_slug(timestamp)
+    read_time = calculate_read_time(len(story_text))
+
+    # Format tags as YAML array
+    tags_yaml = "\n".join([f"  - {tag}" for tag in tags])
+
+    # Generate thumbnail image (Issue #95)
+    thumbnail_url = ""
+    thumbnail_provider = None
+    thumbnail_generated_at = None
+
+    try:
+        from src.image import generate_thumbnail, is_image_generation_available
+
+        if is_image_generation_available():
+            logger.info("Generating thumbnail image...")
+            api_config = metadata.get("config", {}) if metadata else {}
+            thumbnail_result = generate_thumbnail(
+                story_text=story_text,
+                title=title,
+                config=api_config
+            )
+
+            if thumbnail_result.success:
+                thumbnail_url = thumbnail_result.thumbnail_url
+                thumbnail_provider = thumbnail_result.provider
+                thumbnail_generated_at = thumbnail_result.generated_at
+                logger.info(f"Thumbnail generated successfully via {thumbnail_provider}")
+            else:
+                logger.warning(f"Thumbnail generation failed: {thumbnail_result.error}")
+    except ImportError:
+        logger.debug("Image module not available, skipping thumbnail generation")
+    except Exception as e:
+        logger.warning(f"Thumbnail generation failed (non-fatal): {e}")
+
     frontmatter = f"""---
 title: "{title}"
-date: {date_str}
-description: "{description}"
-tags: {json.dumps(tags, ensure_ascii=False)}
+slug: "{slug}"
+category: "Horror"
+date: "{date_str}"
+excerpt: "{description_escaped}"
+tags:
+{tags_yaml}
+readTime: "{read_time}"
+featured: false
+thumbnail: "{thumbnail_url}"
 genre: "호러"
 wordCount: {len(story_text)}
 """
@@ -355,6 +461,14 @@ wordCount: {len(story_text)}
     if metadata:
         frontmatter += f"""model: "{metadata.get('model', 'unknown')}"
 temperature: {metadata.get('config', {}).get('temperature', 0.8)}
+"""
+
+    # Add thumbnail metadata if generated
+    if thumbnail_provider:
+        frontmatter += f"""thumbnailProvider: "{thumbnail_provider}"
+"""
+    if thumbnail_generated_at:
+        frontmatter += f"""thumbnailGeneratedAt: "{thumbnail_generated_at}"
 """
 
     frontmatter += """draft: false
@@ -371,13 +485,19 @@ temperature: {metadata.get('config', {}).get('temperature', 0.8)}
 
     # 메타데이터 JSON 파일 저장
     if metadata:
-        metadata_filename = f"horror_story_{timestamp}_metadata.json"
+        metadata_filename = f"story-{timestamp.replace('_', '-')}_metadata.json"
         metadata_path = os.path.join(output_dir, metadata_filename)
 
         # 메타데이터에 추출된 정보 추가
         metadata["title"] = title
         metadata["tags"] = tags
         metadata["description"] = description
+
+        # Add thumbnail metadata
+        if thumbnail_url:
+            metadata["thumbnail_url"] = thumbnail_url
+            metadata["thumbnail_provider"] = thumbnail_provider
+            metadata["thumbnail_generated_at"] = thumbnail_generated_at
 
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(metadata, f, ensure_ascii=False, indent=2)
@@ -684,16 +804,16 @@ def generate_with_dedup_control(
     Returns:
         Optional[Dict]: 수락된 스토리 결과, SKIP 시 None
     """
-    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info("[Phase2C][CONTROL] 중복 제어 생성 시작")
-    logger.info("[Phase2C][CONTROL] 정책: HIGH만 거부, LOW/MEDIUM 수락")
-    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("중복 제어 생성 시작")
+    logger.info("정책: HIGH만 거부, LOW/MEDIUM 수락")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     config = load_environment()
     used_template_ids: set = set()
 
     for attempt in range(max_attempts):
-        logger.info(f"[Phase2C][CONTROL] Attempt {attempt}/{max_attempts - 1}")
+        logger.info(f"Attempt {attempt}/{max_attempts - 1}")
 
         # Template selection (Phase 3B: pass registry for weighted selection)
         if attempt == 0:
@@ -711,7 +831,7 @@ def generate_with_dedup_control(
         if template_id:
             used_template_ids.add(template_id)
 
-        logger.info(f"[Phase2C][CONTROL]   템플릿: {template_id} - {template_name}")
+        logger.info(f"  템플릿: {template_id} - {template_name}")
 
         # Research context selection (unified pipeline)
         research_context = None
@@ -806,12 +926,12 @@ def generate_with_dedup_control(
 
         # Phase 2C: Determine signal and decision
         signal = get_similarity_signal(similarity_observation)
-        logger.info(f"[Phase2C][CONTROL]   신호: {signal}")
+        logger.info(f"  신호: {signal}")
         logger.info(f"[DedupSignal] Signal={signal}, Template={template_id}")
 
         if should_accept_story(signal):
             # ACCEPT
-            logger.info(f"[Phase2C][CONTROL]   결정: ACCEPT")
+            logger.info(f"  결정: ACCEPT")
             logger.info(f"[DedupSignal] Decision=ACCEPT")
 
             # Add to in-memory
@@ -942,7 +1062,7 @@ def generate_with_dedup_control(
                     None  # template
                 )
                 result["file_path"] = file_path
-                logger.info(f"[Phase2C][CONTROL] 저장 완료: {file_path}")
+                logger.info(f"저장 완료: {file_path}")
 
             # Persist to registry (with story-level dedup fields)
             registry.add_story(
@@ -967,23 +1087,23 @@ def generate_with_dedup_control(
                     signal=signal
                 )
 
-            logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             return result
 
         else:
             # HIGH - need to retry
-            logger.info(f"[Phase2C][CONTROL]   결정: RETRY (HIGH 감지)")
+            logger.info(f"  결정: RETRY (HIGH 감지)")
             logger.info(f"[DedupSignal] Decision=RETRY, Attempt={attempt}")
             if attempt < max_attempts - 1:
-                logger.info(f"[Phase2C][CONTROL]   다음 시도로 진행...")
+                logger.info(f"  다음 시도로 진행...")
             continue
 
     # All attempts exhausted - SKIP
-    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info("[Phase2C][CONTROL] 모든 시도 실패 - SKIP")
-    logger.info("[Phase2C][CONTROL] 파일 저장 안함, 루프 계속")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("모든 시도 실패 - SKIP")
+    logger.info("파일 저장 안함, 루프 계속")
     logger.info("[DedupSignal] Decision=SKIP, Reason=AllAttemptsExhausted")
-    logger.info("[Phase2C][CONTROL] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     # Record skip in registry
     registry.add_story(
@@ -1006,7 +1126,8 @@ def generate_with_topic(
     research_model_spec: Optional[str] = None,
     save_output: bool = True,
     registry: Any = None,
-    target_length: Optional[int] = None
+    target_length: Optional[int] = None,
+    custom_tags: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Topic 기반 스토리 생성 (v1.2.0+)
@@ -1026,6 +1147,7 @@ def generate_with_topic(
         save_output: 파일 저장 여부
         registry: StoryRegistry 인스턴스 (중복 체크용)
         target_length: 목표 스토리 길이 (자). None이면 기본값 사용.
+        custom_tags: 사용자 지정 커스텀 태그 (v1.6.0, Issue #109)
 
     Returns:
         Dict with story, metadata, file_path (if saved)
@@ -1207,7 +1329,9 @@ def generate_with_topic(
             "generation": generation_length_meta,
             **research_metadata,
             "story_signature": story_signature,
-            "generation_mode": "topic_based" if topic else "random"
+            "generation_mode": "topic_based" if topic else "random",
+            # v1.6.0: Custom tags support (Issue #109)
+            "custom_tags": custom_tags
         }
     }
 
@@ -1248,7 +1372,8 @@ def generate_with_topic(
             story_text,
             config["output_dir"],
             result["metadata"],
-            None
+            None,
+            custom_tags=custom_tags  # v1.6.0: Custom tags support (Issue #109)
         )
         result["file_path"] = file_path
         logger.info(f"[TopicGen] Saved: {file_path}")
