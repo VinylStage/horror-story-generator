@@ -11,6 +11,9 @@ Phase 3: Scheduler-based task execution model.
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import Depends, FastAPI
 
 from src import __version__
