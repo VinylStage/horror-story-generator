@@ -1,23 +1,23 @@
 # Task Scheduler API Impact Analysis
 
-> **Status:** FINAL (Phase 5 Complete)
-> **Document Version:** 1.0.0
+> **Status:** FINAL (v2.0.0 — Legacy Removed)
+> **Document Version:** 2.0.0
 > **Application Version:** 1.7.0 <!-- x-release-please-version -->
-> **Last Updated:** 2026-01-18
+> **Last Updated:** 2026-02-08
 
 ---
 
-> **Implementation Note:** Phase 3 implementation is complete. The scheduler task API is available under the `/tasks` prefix. Template and schedule endpoints (`/scheduler/templates`, `/scheduler/schedules`) remain planned for future phases.
+> **v2.0.0 Note:** Legacy `/jobs/*` endpoints have been fully removed. The `POST /tasks` API is the sole interface for asynchronous task creation. Direct APIs (`/story/generate`, `/research/run`) remain unchanged.
 
 ## Overview
 
-This document analyzes how the proposed Task Scheduler system impacts existing API endpoints. It covers endpoint mapping to domain entities, breaking changes, migration strategies, and coexistence patterns.
+This document analyzes how the Task Scheduler system impacts API endpoints. It covers endpoint mapping to domain entities and the current API structure after legacy endpoint removal.
 
 ---
 
 ## Current API Structure
 
-### Existing Endpoints Summary
+### Endpoints Summary
 
 | Router | Endpoint | Method | Behavior |
 |--------|----------|--------|----------|
@@ -29,16 +29,16 @@ This document analyzes how the proposed Task Scheduler system impacts existing A
 | `/research` | `/list` | GET | List research cards |
 | `/research` | `/dedup` | POST | Synchronous |
 | `/research` | `/matching-templates` | POST | Synchronous |
-| `/jobs` | `/story/trigger` | POST | Async, immediate execution |
-| `/jobs` | `/research/trigger` | POST | Async, immediate execution |
-| `/jobs` | `/batch/trigger` | POST | Async, parallel execution |
-| `/jobs` | `/batch/{batch_id}` | GET | Batch status |
-| `/jobs` | `/{task_id}` | GET | Task status |
-| `/jobs` | (list) | GET | List all tasks |
-| `/jobs` | `/{task_id}/cancel` | POST | Cancel task |
-| `/jobs` | `/monitor` | POST | Monitor all tasks |
-| `/jobs` | `/{task_id}/monitor` | POST | Monitor single task |
-| `/jobs` | `/{task_id}/dedup_check` | POST | Check dedup for task |
+| `/tasks` | (create) | POST | Async, queued execution |
+| `/tasks` | (list) | GET | List all tasks |
+| `/tasks` | `/{task_id}` | GET | Task status |
+| `/tasks` | `/{task_id}` | PATCH | Update task priority |
+| `/tasks` | `/{task_id}` | DELETE | Cancel task |
+| `/tasks` | `/{task_id}/runs` | GET | Task execution history |
+| `/tasks` | `/group` | POST | Create task group |
+| `/scheduler` | `/start` | POST | Start scheduler |
+| `/scheduler` | `/stop` | POST | Stop scheduler |
+| `/scheduler` | `/status` | GET | Scheduler status |
 
 ---
 
@@ -62,41 +62,27 @@ POST /research/run        → Blocking research generation
 
 ---
 
-### Category 2: Task Trigger APIs (Current Async)
+### Category 2: Task Scheduler APIs (Async)
 
-These endpoints create tasks that execute **immediately but asynchronously**.
+The `POST /tasks` endpoint creates tasks that are queued and executed asynchronously by the scheduler.
 
 ```
-POST /jobs/story/trigger     → Async story task
-POST /jobs/research/trigger  → Async research task
-POST /jobs/batch/trigger     → Async batch tasks
+POST /tasks                  → Create task(s) (array input)
+GET  /tasks                  → List all tasks
+GET  /tasks/{task_id}        → Task status
+PATCH /tasks/{task_id}       → Update task priority
+DELETE /tasks/{task_id}      → Cancel task
+GET  /tasks/{task_id}/runs   → Task execution history
+POST /tasks/group            → Create task group
 ```
 
-**Current Behavior**:
-- Task created immediately
-- Subprocess spawned immediately
-- No queue, no waiting, no ordering
-
-**Proposed Behavior**:
+**Behavior**:
 - Task created and added to queue
 - Execution controlled by scheduler
 - Supports priority, ordering, grouping
+- Always takes array input (single or batch)
 
----
-
-### Category 3: Task Management APIs
-
-These endpoints query and control tasks.
-
-```
-GET  /jobs/{task_id}          → Task status
-GET  /jobs                   → List tasks
-POST /jobs/{task_id}/cancel   → Cancel task
-POST /jobs/monitor           → Monitor all
-POST /jobs/{task_id}/monitor  → Monitor single
-```
-
-**Impact**: These map directly to scheduler entities and will be enhanced.
+> **Note:** Legacy `/jobs/*` endpoints (trigger, batch, monitor, dedup_check) have been removed in v2.0.0.
 
 ---
 
@@ -289,60 +275,37 @@ These changes break existing clients.
 
 ---
 
-## Coexistence Strategy
+## Migration Complete (v2.0.0)
 
-### Phase 1: Parallel Operation
-
-Run old and new systems in parallel.
+Legacy `/jobs/*` endpoints have been fully removed. The migration is complete:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    API Gateway                       │
+│                    API Server                        │
 ├─────────────────────────────────────────────────────┤
-│  Legacy Path              │  New Path               │
-│  /jobs/story/trigger      │  /tasks                 │
-│  /jobs/research/trigger   │  /scheduler/templates   │
-│  /jobs/batch/trigger      │  /scheduler/schedules   │
-│         │                 │         │               │
-│         ▼                 │         ▼               │
-│  ┌─────────────┐          │  ┌─────────────┐        │
-│  │ Old System  │          │  │ Scheduler   │        │
-│  │ (Immediate) │          │  │ (Queued)    │        │
-│  └─────────────┘          │  └─────────────┘        │
+│  Direct APIs               │  Task Scheduler        │
+│  POST /story/generate      │  POST /tasks           │
+│  POST /research/run        │  GET  /tasks           │
+│         │                  │  GET  /tasks/{id}      │
+│         ▼                  │  POST /tasks/group     │
+│  ┌─────────────┐           │         │              │
+│  │ Synchronous │           │         ▼              │
+│  │ (Blocking)  │           │  ┌─────────────┐       │
+│  └─────────────┘           │  │ Scheduler   │       │
+│                            │  │ (Queued)    │       │
+│                            │  └─────────────┘       │
 └─────────────────────────────────────────────────────┘
 ```
 
-**Implementation**:
-1. Mount scheduler endpoints under `/scheduler/` prefix
-2. Keep existing `/jobs/*` endpoints unchanged
-3. Clients opt-in to new system
-
-### Phase 2: Migration Period
-
-Add compatibility layer.
-
-```python
-# In legacy /jobs/story/trigger endpoint
-@router.post("/story/trigger")
-async def trigger_story_generation(request: StoryTriggerRequest):
-    if config.USE_SCHEDULER:
-        # Route to scheduler with immediate priority
-        return await scheduler.create_task(
-            template_id="story_generation",
-            params=request.model_dump(),
-            priority=Priority.IMMEDIATE,
-        )
-    else:
-        # Legacy behavior
-        return legacy_trigger_story(request)
-```
-
-### Phase 3: Deprecation
-
-1. Log deprecation warnings on legacy endpoints
-2. Provide migration guide
-3. Set sunset date
-4. Remove legacy endpoints
+**Removed endpoints** (previously `/jobs/*`):
+- `POST /jobs/story/trigger` → Use `POST /tasks` with `type: "story"`
+- `POST /jobs/research/trigger` → Use `POST /tasks` with `type: "research"`
+- `POST /jobs/batch/trigger` → Use `POST /tasks` with array input
+- `GET /jobs/{job_id}` → Use `GET /tasks/{task_id}`
+- `POST /jobs/{job_id}/cancel` → Use `DELETE /tasks/{task_id}`
+- `POST /jobs/monitor` → Removed (scheduler handles status tracking)
+- `POST /jobs/{job_id}/monitor` → Removed (use `GET /tasks/{task_id}`)
+- `POST /jobs/{job_id}/dedup_check` → Removed
 
 ---
 
@@ -505,21 +468,20 @@ This guarantees:
 
 ## Summary: Endpoint Mapping Table
 
-| Current Endpoint | Scheduler Entity | Change Type |
-|------------------|------------------|-------------|
+| Endpoint | Scheduler Entity | Status |
+|----------|------------------|--------|
 | `POST /story/generate` | None (Direct) | Unchanged |
 | `POST /research/run` | None (Direct) | Unchanged |
-| `POST /jobs/story/trigger` | Task + TaskTemplate | Enhanced |
-| `POST /jobs/research/trigger` | Task + TaskTemplate | Enhanced |
-| `POST /jobs/batch/trigger` | TaskGroup + Tasks | Enhanced |
-| `GET /jobs/{task_id}` | Task + TaskRun | Enhanced |
-| `GET /jobs` | Task (list) | Enhanced |
-| `POST /jobs/{task_id}/cancel` | Task.status | Unchanged |
-| `POST /jobs/monitor` | TaskRun | Enhanced |
-| NEW: Schedule endpoints | Schedule | Added |
-| NEW: Template endpoints | TaskTemplate | Added |
-| NEW: Queue endpoints | Task (queue view) | Added |
-| NEW: Run endpoints | TaskRun | Added |
+| `POST /tasks` | Task | Active (replaces legacy `/jobs/*`) |
+| `GET /tasks` | Task (list) | Active |
+| `GET /tasks/{task_id}` | Task + TaskRun | Active |
+| `PATCH /tasks/{task_id}` | Task | Active |
+| `DELETE /tasks/{task_id}` | Task.status | Active |
+| `GET /tasks/{task_id}/runs` | TaskRun | Active |
+| `POST /tasks/group` | TaskGroup + Tasks | Active |
+| `POST /scheduler/start` | Scheduler | Active |
+| `POST /scheduler/stop` | Scheduler | Active |
+| `GET /scheduler/status` | Scheduler | Active |
 
 ---
 
@@ -527,10 +489,8 @@ This guarantees:
 
 | Term | Definition |
 |------|------------|
-| **Direct API** | Synchronous endpoint that executes work immediately |
-| **Task API** | Asynchronous endpoint that creates schedulable work |
-| **Legacy System** | Current immediate-execution task system |
-| **Coexistence** | Period where both systems operate in parallel |
+| **Direct API** | Synchronous endpoint that executes work immediately (`/story/generate`, `/research/run`) |
+| **Task API** | Asynchronous endpoint that creates schedulable work (`POST /tasks`) |
 | **Next-Slot Reservation** | Direct API reserving next execution slot without preempting current task |
 
 ---

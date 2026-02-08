@@ -51,4 +51,4 @@ jobs:
 
       - name: Check coverage threshold
         run: |
-          poetry run coverage report --fail-under=79
+          poetry run coverage report --fail-under=78

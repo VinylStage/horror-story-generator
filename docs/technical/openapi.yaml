@@ -48,8 +48,8 @@ tags:
     description: Story generation and registry operations - direct story generation, listing, and details
   - name: scheduler
     description: Scheduler control operations - start, stop, and status monitoring
-  - name: jobs
-    description: Job management - create, list, update, and monitor story/research jobs
+  - name: tasks
+    description: Task management - create, list, update, cancel, and track task execution
   - name: research
     description: Research card operations - generate, validate, and list research cards via Ollama LLM
   - name: dedup
@@ -264,14 +264,14 @@ paths:
         - scheduler
       summary: Start scheduler dispatch loop
       description: |
-        Starts the scheduler dispatch loop to process queued jobs.
+        Starts the scheduler dispatch loop to process queued tasks.
 
         **Features:**
         - Idempotent: Returns success if already running
         - Not auto-started on server boot (explicit call required)
         - Supports crash recovery on startup
 
-        **Note:** Scheduler must be started before jobs will execute.
+        **Note:** Scheduler must be started before tasks will execute.
       operationId: startScheduler
       requestBody:
         required: false
@@ -295,8 +295,8 @@ paths:
                     success: true
                     message: "Scheduler started successfully"
                     recovery_stats:
-                      recovered_jobs: 2
-                      failed_jobs: 0
+                      recovered_tasks: 2
+                      failed_tasks: 0
                 alreadyRunning:
                   summary: Already running
                   value:
@@ -312,11 +312,11 @@ paths:
         Gracefully stops the scheduler dispatch loop.
 
         **Features:**
-        - Waits for current job to complete (no preemption)
+        - Waits for current task to complete (no preemption)
         - Idempotent: Returns success if already stopped
-        - Configurable timeout for job completion
+        - Configurable timeout for task completion
 
-        **Note:** Queued jobs remain in queue; restart scheduler to continue.
+        **Note:** Queued tasks remain in queue; restart scheduler to continue.
       operationId: stopScheduler
       requestBody:
         required: false
@@ -355,8 +355,8 @@ paths:
 
         Includes:
         - Whether dispatch loop is running
-        - Currently executing job (if any)
-        - Number of queued jobs
+        - Currently executing task (if any)
+        - Number of queued tasks
         - Cumulative stats (total executed, succeeded, failed, etc.)
         - Direct API reservation status
       operationId: getSchedulerStatus
@@ -369,10 +369,10 @@ paths:
                 $ref: '#/components/schemas/SchedulerStatusResponse'
               examples:
                 running:
-                  summary: Scheduler running with active job
+                  summary: Scheduler running with active task
                   value:
                     scheduler_running: true
-                    current_job_id: "job-550e8400-e29b-41d4-a716-446655440000"
+                    current_task_id: "task-550e8400-e29b-41d4-a716-446655440000"
                     queue_length: 5
                     cumulative_stats:
                       total_executed: 42
@@ -385,7 +385,7 @@ paths:
                   summary: Scheduler idle
                   value:
                     scheduler_running: true
-                    current_job_id: null
+                    current_task_id: null
                     queue_length: 0
                     cumulative_stats:
                       total_executed: 10
@@ -395,70 +395,79 @@ paths:
                       skipped: 0
                     has_active_reservation: false
 
-  /jobs:
+  /tasks:
     post:
       tags:
-        - jobs
-      summary: Create a new job
+        - tasks
+      summary: Create task(s)
       description: |
-        Creates a new job and adds it to the scheduler queue.
+        Creates one or more tasks and adds them to the scheduler queue.
+        Input is always an array of task specifications.
 
-        **Job Types:**
-        - **story**: Story generation job
-        - **research**: Research card generation job
+        **Task Types:**
+        - **story**: Story generation task
+        - **research**: Research card generation task
 
         **Priority:** Higher values execute sooner (0-100).
-        **Status:** New jobs start in QUEUED status.
+        **Status:** New tasks start in QUEUED status.
 
-        **Note:** Scheduler must be running for job to execute.
-      operationId: createJob
+        **Note:** Scheduler must be running for tasks to execute.
+      operationId: createTasks
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JobCreateRequest'
+              type: array
+              items:
+                $ref: '#/components/schemas/TaskCreateRequest'
+              minItems: 1
+              maxItems: 50
             examples:
-              storyJob:
-                summary: Story generation job
+              singleStory:
+                summary: Single story task
                 value:
-                  type: "story"
-                  params:
-                    max_stories: 1
-                    enable_dedup: true
-                    model: "ollama:qwen3:30b"
-                  priority: 10
-              researchJob:
-                summary: Research generation job
+                  - type: "story"
+                    params:
+                      topic: "Korean apartment horror"
+                      enable_dedup: true
+                    priority: 10
+              multipleResearch:
+                summary: Multiple research tasks
                 value:
-                  type: "research"
-                  params:
-                    topic: "Korean apartment horror"
-                    tags: ["urban", "isolation"]
-                    model: "gemini"
-                    timeout: 120
-                  priority: 5
+                  - type: "research"
+                    params:
+                      topic: "Korean apartment horror"
+                      tags: ["urban", "isolation"]
+                    priority: 5
+                  - type: "research"
+                    params:
+                      topic: "Hospital ghost stories"
+                      tags: ["hospital", "ghost"]
+                    priority: 5
       responses:
         '201':
-          description: Job created successfully
+          description: Task(s) created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskResponse'
 
     get:
       tags:
-        - jobs
-      summary: List all jobs
+        - tasks
+      summary: List all tasks
       description: |
-        Lists all jobs in the scheduler with optional limit.
+        Lists all tasks in the scheduler with optional limit.
 
-        Jobs are returned sorted by priority (descending) and queue position.
-      operationId: listJobs
+        Tasks are returned sorted by priority (descending) and queue position.
+      operationId: listTasks
       parameters:
         - name: limit
           in: query
-          description: Maximum number of jobs to return
+          description: Maximum number of tasks to return
           schema:
             type: integer
             minimum: 1
@@ -466,36 +475,36 @@ paths:
             default: 50
       responses:
         '200':
-          description: List of jobs
+          description: List of tasks
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobListResponse'
+                $ref: '#/components/schemas/TaskListResponse'
 
-  /jobs/{job_id}:
+  /tasks/{task_id}:
     get:
       tags:
-        - jobs
-      summary: Get job details
-      description: Returns detailed information about a specific job.
-      operationId: getJob
+        - tasks
+      summary: Get task details
+      description: Returns detailed information about a specific task.
+      operationId: getTask
       parameters:
-        - name: job_id
+        - name: task_id
           in: path
           required: true
-          description: Job identifier
+          description: Task identifier
           schema:
             type: string
-            example: "job-550e8400-e29b-41d4-a716-446655440000"
+            example: "task-550e8400-e29b-41d4-a716-446655440000"
       responses:
         '200':
-          description: Job details
+          description: Task details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobResponse'
+                $ref: '#/components/schemas/TaskResponse'
         '404':
-          description: Job not found
+          description: Task not found
           content:
             application/json:
               schema:
@@ -503,23 +512,23 @@ paths:
                 properties:
                   detail:
                     type: string
-                    example: "Job not found: nonexistent-id"
+                    example: "Task not found: nonexistent-id"
 
     patch:
       tags:
-        - jobs
-      summary: Update job priority
+        - tasks
+      summary: Update task priority
       description: |
-        Updates the priority of a job (QUEUED status only).
+        Updates the priority of a task (QUEUED status only).
 
-        **Constraints:** Only QUEUED jobs can be updated.
-        Running or finished jobs cannot be modified.
-      operationId: updateJob
+        **Constraints:** Only QUEUED tasks can be updated.
+        Running or finished tasks cannot be modified.
+      operationId: updateTask
       parameters:
-        - name: job_id
+        - name: task_id
           in: path
           required: true
-          description: Job identifier
+          description: Task identifier
           schema:
             type: string
       requestBody:
@@ -527,18 +536,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JobUpdateRequest'
+              $ref: '#/components/schemas/TaskUpdateRequest'
             example:
               priority: 50
       responses:
         '200':
-          description: Job updated successfully
+          description: Task updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobResponse'
+                $ref: '#/components/schemas/TaskResponse'
         '400':
-          description: Cannot update job (not QUEUED)
+          description: Cannot update task (not QUEUED)
           content:
             application/json:
               schema:
@@ -546,9 +555,9 @@ paths:
                 properties:
                   detail:
                     type: string
-                    example: "Cannot update job: only QUEUED jobs can be updated"
+                    example: "Cannot update task: only QUEUED tasks can be updated"
         '404':
-          description: Job not found
+          description: Task not found
           content:
             application/json:
               schema:
@@ -559,32 +568,32 @@ paths:
 
     delete:
       tags:
-        - jobs
-      summary: Cancel/delete job
+        - tasks
+      summary: Cancel task
       description: |
-        Cancels a job (QUEUED status only).
+        Cancels a task (QUEUED status only).
 
-        **Constraints:** Only QUEUED jobs can be cancelled.
-        Sets job status to CANCELLED.
+        **Constraints:** Only QUEUED tasks can be cancelled.
+        Sets task status to CANCELLED.
 
-        **Note:** Running jobs cannot be cancelled via this endpoint.
-      operationId: deleteJob
+        **Note:** Running tasks cannot be cancelled via this endpoint.
+      operationId: deleteTask
       parameters:
-        - name: job_id
+        - name: task_id
           in: path
           required: true
-          description: Job identifier
+          description: Task identifier
           schema:
             type: string
       responses:
         '200':
-          description: Job cancelled successfully
+          description: Task cancelled successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobDeleteResponse'
+                $ref: '#/components/schemas/TaskDeleteResponse'
         '400':
-          description: Cannot cancel job (not QUEUED)
+          description: Cannot cancel task (not QUEUED)
           content:
             application/json:
               schema:
@@ -592,9 +601,9 @@ paths:
                 properties:
                   detail:
                     type: string
-                    example: "Cannot cancel job: only QUEUED jobs can be cancelled"
+                    example: "Cannot cancel task: only QUEUED tasks can be cancelled"
         '404':
-          description: Job not found
+          description: Task not found
           content:
             application/json:
               schema:
@@ -603,33 +612,33 @@ paths:
                   detail:
                     type: string
 
-  /jobs/{job_id}/runs:
+  /tasks/{task_id}/runs:
     get:
       tags:
-        - jobs
-      summary: Get job execution runs
+        - tasks
+      summary: Get task execution runs
       description: |
-        Returns the execution history (JobRuns) for a specific job.
+        Returns the execution history (TaskRuns) for a specific task.
 
-        **Note:** Each Job has at most 1 JobRun (1:1 relationship).
-        Retries create new Jobs with retry_of field set.
-      operationId: getJobRuns
+        **Note:** Each Task has at most 1 TaskRun (1:1 relationship).
+        Retries create new Tasks with retry_of field set.
+      operationId: getTaskRuns
       parameters:
-        - name: job_id
+        - name: task_id
           in: path
           required: true
-          description: Job identifier
+          description: Task identifier
           schema:
             type: string
       responses:
         '200':
-          description: List of job runs
+          description: List of task runs
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobRunListResponse'
+                $ref: '#/components/schemas/TaskRunListResponse'
         '404':
-          description: Job not found
+          description: Task not found
           content:
             application/json:
               schema:
@@ -638,208 +647,32 @@ paths:
                   detail:
                     type: string
 
-  /jobs/story/trigger:
+  /tasks/group:
     post:
       tags:
-        - jobs
-      summary: "[DEPRECATED] Trigger story generation job"
-      deprecated: true
+        - tasks
+      summary: Create task group
       description: |
-        **DEPRECATED:** Use `POST /jobs` with type="story" instead.
-
-        Legacy endpoint for triggering story generation jobs.
-        Maintained for backward compatibility.
-      operationId: triggerStoryJob
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StoryTriggerRequest'
-      responses:
-        '202':
-          description: Job triggered
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JobTriggerResponse'
-
-  /jobs/research/trigger:
-    post:
-      tags:
-        - jobs
-      summary: "[DEPRECATED] Trigger research job"
-      deprecated: true
-      description: |
-        **DEPRECATED:** Use `POST /jobs` with type="research" instead.
-
-        Legacy endpoint for triggering research jobs.
-        Maintained for backward compatibility.
-      operationId: triggerResearchJob
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResearchTriggerRequest'
-      responses:
-        '202':
-          description: Job triggered
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JobTriggerResponse'
-
-  /jobs/batch/trigger:
-    post:
-      tags:
-        - jobs
-      summary: Trigger batch jobs
-      description: |
-        Triggers multiple jobs as a single batch operation.
+        Creates a group of tasks for batch execution.
 
         **Features:**
-        - Submit 1-50 jobs in a single request
-        - Mix story and research jobs
-        - Single webhook notification when all jobs complete
-        - Track batch progress via batch_id
-      operationId: triggerBatchJobs
+        - Submit 1-50 tasks in a single group
+        - Mix story and research tasks
+        - Track group progress via group_id
+      operationId: createTaskGroup
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BatchTriggerRequest'
+              $ref: '#/components/schemas/TaskGroupCreateRequest'
       responses:
-        '202':
-          description: Batch triggered
+        '201':
+          description: Task group created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchTriggerResponse'
-
-  /jobs/batch/{batch_id}:
-    get:
-      tags:
-        - jobs
-      summary: Get batch status
-      description: Returns status of all jobs in a batch.
-      operationId: getBatchStatus
-      parameters:
-        - name: batch_id
-          in: path
-          required: true
-          description: Batch identifier
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Batch status
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BatchStatusResponse'
-        '404':
-          description: Batch not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-
-  /jobs/{job_id}/cancel:
-    post:
-      tags:
-        - jobs
-      summary: Cancel running job
-      description: |
-        Cancels a running job by sending SIGTERM to the process.
-
-        **Note:** This only works for legacy trigger jobs (running as subprocesses).
-        For scheduler-based jobs, use `DELETE /jobs/{job_id}` instead.
-      operationId: cancelJob
-      parameters:
-        - name: job_id
-          in: path
-          required: true
-          description: Job identifier
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Cancel result
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JobCancelResponse'
-
-  /jobs/monitor:
-    post:
-      tags:
-        - jobs
-      summary: Monitor all running jobs
-      description: |
-        Monitors all running jobs and updates their status.
-
-        Checks if processes are still running, collects artifacts,
-        and updates job status to succeeded/failed.
-      operationId: monitorAllJobs
-      responses:
-        '200':
-          description: Monitor results
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JobMonitorResponse'
-
-  /jobs/{job_id}/monitor:
-    post:
-      tags:
-        - jobs
-      summary: Monitor single job
-      description: Monitors a single job and updates its status.
-      operationId: monitorJob
-      parameters:
-        - name: job_id
-          in: path
-          required: true
-          description: Job identifier
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Monitor result
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JobMonitorResult'
-
-  /jobs/{job_id}/dedup_check:
-    post:
-      tags:
-        - jobs
-      summary: Check deduplication signal
-      description: |
-        Checks deduplication signal for a research job's artifact.
-
-        Only available for research jobs with completed artifacts.
-      operationId: checkJobDedup
-      parameters:
-        - name: job_id
-          in: path
-          required: true
-          description: Job identifier
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Dedup check result
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JobDedupCheckResponse'
+                $ref: '#/components/schemas/TaskGroupResponse'
 
   /research/run:
     post:
@@ -1695,7 +1528,7 @@ components:
           minimum: 1.0
           maximum: 300.0
           default: 30.0
-          description: Maximum wait time for current job to complete (seconds)
+          description: Maximum wait time for current task to complete (seconds)
 
     SchedulerStopResponse:
       type: object
@@ -1716,23 +1549,23 @@ components:
         total_executed:
           type: integer
           default: 0
-          description: Total JobRuns executed
+          description: Total TaskRuns executed
         succeeded:
           type: integer
           default: 0
-          description: COMPLETED JobRuns
+          description: COMPLETED TaskRuns
         failed:
           type: integer
           default: 0
-          description: FAILED JobRuns
+          description: FAILED TaskRuns
         cancelled:
           type: integer
           default: 0
-          description: CANCELLED Jobs
+          description: CANCELLED Tasks
         skipped:
           type: integer
           default: 0
-          description: SKIPPED JobRuns
+          description: SKIPPED TaskRuns
 
     SchedulerStatusResponse:
       type: object
@@ -1745,14 +1578,14 @@ components:
         scheduler_running:
           type: boolean
           description: Whether scheduler dispatch loop is running
-        current_job_id:
+        current_task_id:
           type: string
           nullable: true
-          description: Currently executing job ID (null if none)
+          description: Currently executing task ID (null if none)
         queue_length:
           type: integer
           default: 0
-          description: Number of QUEUED jobs
+          description: Number of QUEUED tasks
         cumulative_stats:
           $ref: '#/components/schemas/CumulativeStats'
         has_active_reservation:
@@ -1760,8 +1593,8 @@ components:
           default: false
           description: Whether a Direct API reservation is active
 
-    # Jobs Schemas
-    JobCreateRequest:
+    # Task Schemas
+    TaskCreateRequest:
       type: object
       required:
         - type
@@ -1771,20 +1604,20 @@ components:
           enum:
             - story
             - research
-          description: "Job type: 'story' for story generation, 'research' for research generation"
+          description: "Task type: 'story' for story generation, 'research' for research generation"
         params:
           type: object
           additionalProperties: true
-          description: Job parameters (type-specific)
+          description: Task parameters (type-specific)
           default: {}
         priority:
           type: integer
           minimum: 0
           maximum: 100
           default: 0
-          description: Job priority (higher = dispatched sooner)
+          description: Task priority (higher = dispatched sooner)
 
-    JobUpdateRequest:
+    TaskUpdateRequest:
       type: object
       properties:
         priority:
@@ -1794,24 +1627,24 @@ components:
           maximum: 100
           description: New priority value
 
-    JobResponse:
+    TaskResponse:
       type: object
       required:
-        - job_id
-        - job_type
+        - task_id
+        - task_type
         - status
         - created_at
         - queued_at
       properties:
-        job_id:
+        task_id:
           type: string
-          description: Unique job identifier
-        job_type:
+          description: Unique task identifier
+        task_type:
           type: string
-          description: Job type (story/research)
+          description: Task type (story/research)
         status:
           type: string
-          description: Job status (QUEUED/RUNNING/CANCELLED)
+          description: Task status (QUEUED/RUNNING/CANCELLED)
           enum:
             - QUEUED
             - RUNNING
@@ -1819,12 +1652,12 @@ components:
         params:
           type: object
           additionalProperties: true
-          description: Job parameters
+          description: Task parameters
           default: {}
         priority:
           type: integer
           default: 0
-          description: Job priority
+          description: Task priority
         position:
           type: integer
           default: 0
@@ -1836,11 +1669,11 @@ components:
         group_id:
           type: string
           nullable: true
-          description: Job group ID
+          description: Task group ID
         retry_of:
           type: string
           nullable: true
-          description: Original job ID if retry
+          description: Original task ID if retry
         created_at:
           type: string
           format: date-time
@@ -1860,61 +1693,61 @@ components:
           nullable: true
           description: Completion timestamp
 
-    JobListResponse:
+    TaskListResponse:
       type: object
       required:
-        - jobs
+        - tasks
         - total
         - queued_count
         - running_count
       properties:
-        jobs:
+        tasks:
           type: array
           items:
-            $ref: '#/components/schemas/JobResponse'
-          description: List of jobs
+            $ref: '#/components/schemas/TaskResponse'
+          description: List of tasks
         total:
           type: integer
-          description: Total number of jobs
+          description: Total number of tasks
         queued_count:
           type: integer
           default: 0
-          description: Number of QUEUED jobs
+          description: Number of QUEUED tasks
         running_count:
           type: integer
           default: 0
-          description: Number of RUNNING jobs
+          description: Number of RUNNING tasks
 
-    JobDeleteResponse:
+    TaskDeleteResponse:
       type: object
       required:
-        - job_id
+        - task_id
         - success
       properties:
-        job_id:
+        task_id:
           type: string
-          description: Job identifier
+          description: Task identifier
         success:
           type: boolean
-          description: Whether deletion succeeded
+          description: Whether cancellation succeeded
         message:
           type: string
           nullable: true
           description: Status message
 
-    JobRunResponse:
+    TaskRunResponse:
       type: object
       required:
         - run_id
-        - job_id
+        - task_id
         - started_at
       properties:
         run_id:
           type: string
           description: Unique run identifier
-        job_id:
+        task_id:
           type: string
-          description: Associated job ID
+          description: Associated task ID
         status:
           type: string
           nullable: true
@@ -1960,7 +1793,7 @@ components:
           nullable: true
           description: Execution log path
 
-    JobRunListResponse:
+    TaskRunListResponse:
       type: object
       required:
         - runs
@@ -1969,409 +1802,50 @@ components:
         runs:
           type: array
           items:
-            $ref: '#/components/schemas/JobRunResponse'
-          description: List of job runs
+            $ref: '#/components/schemas/TaskRunResponse'
+          description: List of task runs
         total:
           type: integer
           description: Total number of runs
 
-    # Legacy Jobs Schemas
-    StoryTriggerRequest:
+    TaskGroupCreateRequest:
       type: object
+      required:
+        - tasks
       properties:
-        max_stories:
-          type: integer
-          minimum: 1
-          maximum: 100
-          default: 1
-          description: Maximum stories to generate
-        duration_seconds:
-          type: integer
-          nullable: true
-          minimum: 1
-          description: Duration limit in seconds
-        interval_seconds:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Interval between stories
-        enable_dedup:
-          type: boolean
-          default: false
-          description: Enable deduplication check
-        db_path:
-          type: string
-          nullable: true
-          description: Custom database path
-        load_history:
-          type: boolean
-          default: false
-          description: Load story history on startup
-        model:
-          type: string
-          nullable: true
-          description: Model selection
-        target_length:
-          type: integer
-          nullable: true
-          minimum: 300
-          maximum: 10000
-          description: Target story length
-        webhook_url:
-          type: string
-          nullable: true
-          description: Webhook URL for completion notification
-        webhook_events:
+        tasks:
           type: array
           items:
-            type: string
-          default: ["succeeded", "failed", "skipped"]
-          description: Events that trigger webhook
-
-    ResearchTriggerRequest:
-      type: object
-      required:
-        - topic
-      properties:
-        topic:
-          type: string
-          description: Research topic to analyze
-        tags:
-          type: array
-          items:
-            type: string
-          default: []
-          description: Tags for categorization
-        model:
-          type: string
-          nullable: true
-          description: Model selection
-        timeout:
-          type: integer
-          nullable: true
-          description: Timeout in seconds
-        webhook_url:
-          type: string
-          nullable: true
-          description: Webhook URL for completion notification
-        webhook_events:
-          type: array
-          items:
-            type: string
-          default: ["succeeded", "failed", "skipped"]
-          description: Events that trigger webhook
-
-    JobTriggerResponse:
-      type: object
-      required:
-        - job_id
-        - type
-        - status
-      properties:
-        job_id:
-          type: string
-          description: Created job ID
-        type:
-          type: string
-          description: Job type (story_generation or research)
-        status:
-          type: string
-          description: Initial job status
-        message:
-          type: string
-          default: "Job triggered successfully"
-          description: Status message
-
-    JobCancelResponse:
-      type: object
-      required:
-        - job_id
-        - success
-      properties:
-        job_id:
-          type: string
-          description: Job identifier
-        success:
-          type: boolean
-          description: Whether cancel succeeded
-        message:
-          type: string
-          nullable: true
-          description: Status message
-        error:
-          type: string
-          nullable: true
-          description: Error message if failed
-
-    JobMonitorResult:
-      type: object
-      required:
-        - job_id
-      properties:
-        job_id:
-          type: string
-          description: Job identifier
-        status:
-          type: string
-          nullable: true
-          description: Job status
-        pid:
-          type: integer
-          nullable: true
-          description: Process ID
-        artifacts:
-          type: array
-          items:
-            type: string
-          default: []
-          description: Output artifacts
-        error:
-          type: string
-          nullable: true
-          description: Error message
-        message:
-          type: string
-          nullable: true
-          description: Status message
-        reason:
-          type: string
-          nullable: true
-          description: Skip reason for skipped jobs
-        webhook_processed:
-          type: boolean
-          default: false
-          description: Whether webhook was processed
-
-    JobMonitorResponse:
-      type: object
-      required:
-        - monitored_count
-        - results
-      properties:
-        monitored_count:
-          type: integer
-          description: Number of jobs monitored
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/JobMonitorResult'
-          description: Monitor results for each job
-
-    JobDedupCheckResponse:
-      type: object
-      required:
-        - job_id
-        - has_artifact
-      properties:
-        job_id:
-          type: string
-          description: Job identifier
-        has_artifact:
-          type: boolean
-          default: false
-          description: Whether job produced an artifact
-        artifact_path:
-          type: string
-          nullable: true
-          description: Path to artifact
-        signal:
-          type: string
-          nullable: true
-          description: Dedup signal (LOW/MEDIUM/HIGH)
-          enum:
-            - LOW
-            - MEDIUM
-            - HIGH
-        similarity_score:
-          type: number
-          format: float
-          nullable: true
-          description: Similarity score
-        message:
-          type: string
-          nullable: true
-          description: Status message
-
-    BatchJobSpec:
-      type: object
-      required:
-        - type
-      properties:
-        type:
-          type: string
-          enum:
-            - research
-            - story
-          description: Job type
-        topic:
-          type: string
-          nullable: true
-          description: Research topic (required for research jobs)
-        tags:
-          type: array
-          items:
-            type: string
-          default: []
-          description: Tags for research job
-        max_stories:
-          type: integer
-          minimum: 1
-          maximum: 100
-          default: 1
-          description: Max stories for story job
-        enable_dedup:
-          type: boolean
-          default: false
-          description: Enable dedup for story job
-        target_length:
-          type: integer
-          nullable: true
-          minimum: 300
-          maximum: 10000
-          description: Target story length
-        model:
-          type: string
-          nullable: true
-          description: Model override
-        timeout:
-          type: integer
-          nullable: true
-          description: Timeout in seconds
-
-    BatchTriggerRequest:
-      type: object
-      required:
-        - jobs
-      properties:
-        jobs:
-          type: array
-          items:
-            $ref: '#/components/schemas/BatchJobSpec'
+            $ref: '#/components/schemas/TaskCreateRequest'
           minItems: 1
           maxItems: 50
-          description: List of job specifications
-        webhook_url:
-          type: string
-          nullable: true
-          description: Webhook URL when all batch jobs complete
-        webhook_events:
-          type: array
-          items:
-            type: string
-          default: ["succeeded", "failed", "skipped"]
-          description: Events that trigger webhook
+          description: List of task specifications
 
-    BatchTriggerResponse:
+    TaskGroupResponse:
       type: object
       required:
-        - batch_id
-        - job_ids
-        - job_count
+        - group_id
+        - task_ids
+        - task_count
       properties:
-        batch_id:
+        group_id:
           type: string
-          description: Created batch ID
-        job_ids:
+          description: Created group ID
+        task_ids:
           type: array
           items:
             type: string
-          description: List of created job IDs
-        job_count:
+          description: List of created task IDs
+        task_count:
           type: integer
-          description: Number of jobs in batch
+          description: Number of tasks in group
         status:
           type: string
           default: "queued"
-          description: Initial batch status
+          description: Initial group status
         message:
           type: string
-          default: "Batch triggered successfully"
-
-    BatchJobStatus:
-      type: object
-      required:
-        - job_id
-        - type
-        - status
-      properties:
-        job_id:
-          type: string
-          description: Job identifier
-        type:
-          type: string
-          description: Job type
-        status:
-          type: string
-          description: Job status
-        error:
-          type: string
-          nullable: true
-          description: Error message if failed
-
-    BatchStatusResponse:
-      type: object
-      required:
-        - batch_id
-        - status
-        - total_jobs
-        - completed_jobs
-        - succeeded_jobs
-        - failed_jobs
-        - running_jobs
-        - queued_jobs
-        - created_at
-      properties:
-        batch_id:
-          type: string
-          description: Batch identifier
-        status:
-          type: string
-          description: Aggregate batch status
-        total_jobs:
-          type: integer
-          description: Total number of jobs
-        completed_jobs:
-          type: integer
-          description: Number of completed jobs
-        succeeded_jobs:
-          type: integer
-          description: Number of succeeded jobs
-        failed_jobs:
-          type: integer
-          description: Number of failed jobs
-        running_jobs:
-          type: integer
-          description: Number of running jobs
-        queued_jobs:
-          type: integer
-          description: Number of queued jobs
-        jobs:
-          type: array
-          items:
-            $ref: '#/components/schemas/BatchJobStatus'
-          default: []
-          description: Individual job statuses
-        created_at:
-          type: string
-          format: date-time
-          description: Batch creation timestamp
-        finished_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: Batch completion timestamp
-        webhook_url:
-          type: string
-          nullable: true
-          description: Webhook URL
-        webhook_sent:
-          type: boolean
-          default: false
-          description: Whether webhook was sent
-        message:
-          type: string
-          nullable: true
-          description: Status message
+          default: "Task group created successfully"
 
     # Research Additional Schemas
     ResearchDedupCheckRequest:

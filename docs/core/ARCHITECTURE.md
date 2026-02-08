@@ -11,7 +11,7 @@ The Horror Story Generator is a multi-pipeline content generation system with th
 
 1. **Story Generation** - Claude API-based horror story creation
 2. **Research Generation** - Ollama-based research card creation
-3. **Trigger API** - Non-blocking job execution via HTTP
+3. **Task Scheduler** - Queue-based task execution via HTTP API
 
 All pipelines share common infrastructure for deduplication, storage, and monitoring.
 
@@ -22,50 +22,47 @@ All pipelines share common infrastructure for deduplication, storage, and monito
 ```mermaid
 flowchart TB
     subgraph Entry["Entry Points"]
-        CLI1["python main.py<br/>(Story CLI)"]
-        CLI2["python -m src.research.executor<br/>(Research CLI)"]
-        API["uvicorn src.api.main:app<br/>(Trigger API)"]
+        API["uvicorn src.api.main:app<br/>(API Server)"]
     end
 
     subgraph Core["Core Generators"]
         SG["HorrorStory<br/>Generator"]
         RG["Research<br/>Generator"]
-        Router["FastAPI Router<br/>(jobs.py)"]
+        Scheduler["Task Scheduler<br/>(SQLite Queue)"]
     end
 
     subgraph External["External APIs"]
         Claude["Claude API<br/>(api_client)"]
         Ollama["Ollama API<br/>(ollama_client)"]
-        Subprocess["subprocess.Popen<br/>(CLI execution)"]
     end
 
     subgraph Infra["Shared Infrastructure"]
         StoryReg["Story Registry<br/>(SQLite)"]
         ResDedup["Research Dedup<br/>(FAISS + SQLite)"]
-        JobMgr["Job Manager<br/>(File-based JSON)"]
     end
 
     subgraph Storage["Storage Layer"]
         DS["data/stories/<br/>stories.db"]
         DR["data/research/<br/>research_registry.db"]
-        Jobs["jobs/<br/>logs/"]
+        TaskDB["data/<br/>scheduler.db"]
     end
 
-    CLI1 --> SG
-    CLI2 --> RG
-    API --> Router
+    API --> Scheduler
+    API --> SG
+    API --> RG
+
+    Scheduler --> SG
+    Scheduler --> RG
 
     SG --> Claude
     RG --> Ollama
-    Router --> Subprocess
 
     Claude --> StoryReg
     Ollama --> ResDedup
-    Subprocess --> JobMgr
 
     StoryReg --> DS
     ResDedup --> DR
-    JobMgr --> Jobs
+    Scheduler --> TaskDB
 ```
 
 ---
@@ -137,7 +134,7 @@ flowchart LR
 - 연구 카드 없이 템플릿 기반으로만 스토리를 생성합니다
 - 단, `RESEARCH_INJECT_REQUIRE=true`인 경우 연구 카드가 없으면 생성이 중단됩니다
 
-**API Entry Point:** `POST /story/generate` (blocking) or `POST /jobs/story/trigger` (non-blocking)
+**API Entry Point:** `POST /story/generate` (blocking) or `POST /tasks` with type `"story"` (non-blocking, scheduler-based)
 
 ### Research Auto-Injection (Default: ON)
 
@@ -590,70 +587,59 @@ mechanism: ["surveillance"]     →     threat_mechanism: "surveillance"
 
 ---
 
-## Pipeline 3: Trigger API
+## Pipeline 3: Task Scheduler
 
 ### Design Principle
 
-> **CLI = Source of Truth**
+> **API Server = Sole Execution Interface**
 
-The API does not contain business logic. It triggers CLI commands via subprocess and monitors their execution.
+All task execution is managed through the API server. Tasks are enqueued via `POST /tasks` and the scheduler dispatches them sequentially.
 
 ### Flow
 
 ```mermaid
 flowchart LR
-    A["HTTP Request<br/>POST /jobs/*/trigger"] --> B["Job Creation<br/>job_manager.py"]
-    B --> C["CLI Launch<br/>subprocess.Popen"]
-    C --> D["202 Accepted<br/>return job_id"]
-    D --> E["Background Monitor<br/>job_monitor.py"]
-    E --> F{"Process<br/>running?"}
-    F -->|Yes| E
-    F -->|No| G["Update Status<br/>Collect Artifacts"]
+    A["HTTP Request<br/>POST /tasks"] --> B["Task Creation<br/>persistence.py"]
+    B --> C["Queue (SQLite)"]
+    C --> D["Scheduler Dispatch<br/>service.py"]
+    D --> E["Executor<br/>executor.py"]
+    E --> F["Task Completion<br/>Update Status"]
 ```
 
-### Job Lifecycle
+### Task Lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> queued
-    queued --> running
-    running --> succeeded
-    running --> failed
-    running --> cancelled
-    succeeded --> [*]
-    failed --> [*]
-    cancelled --> [*]
+    [*] --> QUEUED
+    QUEUED --> RUNNING
+    QUEUED --> CANCELLED
+    RUNNING --> COMPLETED: TaskRun
+    RUNNING --> FAILED: TaskRun
+    COMPLETED --> [*]
+    FAILED --> [*]
+    CANCELLED --> [*]
 ```
 
 ### Key Modules
 
 | Module | File | Responsibility |
 |--------|------|----------------|
-| Jobs Router | `src/api/routers/jobs.py` | Non-blocking job endpoints |
+| Scheduler Router | `src/api/routers/scheduler.py` | Scheduler control endpoints |
+| Tasks Router | `src/api/routers/tasks.py` | Task CRUD endpoints |
 | Story Router | `src/api/routers/story.py` | Direct story generation/listing |
 | Schemas | `src/api/schemas/` | Pydantic models |
-| Job Manager | `src/infra/job_manager.py` | Job CRUD operations |
-| Job Monitor | `src/infra/job_monitor.py` | PID polling, status updates |
+| Scheduler Service | `src/scheduler/service.py` | Dispatch loop, task execution |
+| Persistence | `src/scheduler/persistence.py` | SQLite task storage |
 
-### Job Storage
+### Task Storage
 
-Jobs are stored as JSON files:
+Tasks are stored in SQLite database (`data/scheduler.db`) with the following structure:
 
-```
-jobs/
-└── {job_id}.json
-
-{
-  "job_id": "abc-123-def",
-  "type": "story_generation",
-  "status": "running",
-  "pid": 12345,
-  "log_path": "logs/story_abc-123-def.log",
-  "artifacts": [],
-  "created_at": "2026-01-12T10:00:00",
-  "started_at": "2026-01-12T10:00:01"
-}
-```
+| Table | Purpose |
+|-------|---------|
+| `tasks` | Task queue and status |
+| `task_runs` | Execution history and results |
+| `task_groups` | Group execution management |
 
 ---
 
@@ -773,23 +759,19 @@ flowchart TB
 
 ### Story Model Selection
 
-**CLI:**
-```bash
-# Default (Claude Sonnet)
-python main.py
-
-# Ollama local models
-python main.py --model ollama:llama3
-python main.py --model ollama:qwen
-```
-
-**API:**
+**API (Direct):**
 ```json
-POST /jobs/story/trigger
+POST /story/generate
 {
-  "max_stories": 5,
+  "topic": "Korean apartment horror",
   "model": "ollama:llama3"
 }
+```
+
+**API (Scheduler):**
+```json
+POST /tasks
+[{"type": "story", "params": {"model": "ollama:llama3"}, "priority": 10}]
 ```
 
 **Metadata Recording:**
@@ -802,19 +784,20 @@ POST /jobs/story/trigger
 
 ### Research Model Selection
 
-**CLI:**
-```bash
-# Default (Ollama qwen3:30b)
-python -m src.research.executor run "topic"
+**API (Direct):**
+```json
+POST /research/run
+{
+  "topic": "Korean apartment horror",
+  "model": "deep-research",
+  "timeout": 300
+}
+```
 
-# Different Ollama model
-python -m src.research.executor run "topic" --model qwen:14b
-
-# Gemini standard (requires GEMINI_ENABLED=true)
-python -m src.research.executor run "topic" --model gemini
-
-# Gemini Deep Research Agent (requires GEMINI_ENABLED=true)
-python -m src.research.executor run "topic" --model deep-research
+**API (Scheduler):**
+```json
+POST /tasks
+[{"type": "research", "params": {"topic": "Korean apartment horror", "model": "deep-research", "timeout": 300}}]
 ```
 
 **Metadata Recording (Ollama):**

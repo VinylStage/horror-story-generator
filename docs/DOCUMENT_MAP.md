@@ -50,7 +50,6 @@ docs/
 | [openapi.yaml](technical/openapi.yaml) | OpenAPI 3.0 스펙 |
 | [dataflow.md](technical/dataflow.md) | 데이터 흐름도 |
 | [decision_log.md](technical/decision_log.md) | 기술 결정 로그 |
-| [TRIGGER_API.md](technical/TRIGGER_API.md) | 트리거 API 상세 |
 | [runbook_24h_test.md](technical/runbook_24h_test.md) | 24시간 테스트 런북 |
 | [REGISTRY_BACKUP_GUIDE.md](technical/REGISTRY_BACKUP_GUIDE.md) | 레지스트리 백업 가이드 |
 | [RESEARCH_DEDUP_SETUP.md](technical/RESEARCH_DEDUP_SETUP.md) | 연구 중복 제거 설정 |

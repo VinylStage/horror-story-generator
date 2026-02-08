@@ -23,7 +23,7 @@ logging.basicConfig(
 from fastapi import Depends, FastAPI
 
 from src import __version__
-from .routers import research, dedup, jobs, tasks, story, scheduler
+from .routers import research, dedup, tasks, story, scheduler
 from .services.ollama_resource import (
     startup_resource_manager,
     shutdown_resource_manager,
@@ -79,11 +79,7 @@ tags_metadata = [
         "name": "tasks",
         "description": "Task management - CRUD operations for scheduler-based task execution. Supports single and batch creation, concurrent groups.",
     },
-    {
-        "name": "jobs",
-        "description": "[DEPRECATED] Legacy job trigger endpoints. Use /tasks for scheduler-based task management.",
-    },
-    {
+{
         "name": "story",
         "description": "Story generation and listing - direct (blocking) story generation and registry queries",
     },
@@ -171,10 +167,6 @@ app.include_router(
 )
 app.include_router(
     tasks.router, prefix="/tasks", tags=["tasks"], dependencies=auth_dependency
-)
-# /jobs kept as deprecated alias for legacy trigger endpoints
-app.include_router(
-    jobs.router, prefix="/jobs", tags=["jobs"], dependencies=auth_dependency
 )
 app.include_router(
     story.router, prefix="/story", tags=["story"], dependencies=auth_dependency

@@ -71,68 +71,63 @@ OLLAMA_PORT=11434                # Ollama 포트
 
 ## 사용 방법
 
-### 스토리 생성 (CLI)
-
-```bash
-# 스토리 1개 생성 (기본 Claude Sonnet)
-python main.py
-
-# 5개 스토리 생성 (중복 검사 활성화)
-python main.py --max-stories 5 --enable-dedup --interval-seconds 60
-
-# 24시간 연속 실행
-python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
-
-# 로컬 Ollama 모델로 스토리 생성
-python main.py --model ollama:llama3
-python main.py --model ollama:qwen
-```
-
-**CLI 옵션:**
-| 옵션 | 설명 | 기본값 |
-|------|------|--------|
-| `--max-stories N` | 생성할 최대 스토리 수 | 1 |
-| `--duration-seconds N` | 실행 지속 시간 (초) | 무제한 |
-| `--interval-seconds N` | 생성 간 대기 시간 (초) | 0 |
-| `--enable-dedup` | 중복 검사 활성화 | False |
-| `--db-path PATH` | SQLite DB 경로 | data/story_registry.db |
-| `--model MODEL` | 모델 선택 (`ollama:model`, Claude 모델명) | Claude Sonnet |
-
-### 연구 카드 생성 (CLI)
-
-```bash
-# 연구 주제 실행 (기본 Ollama qwen3:30b)
-python -m src.research.executor run "한국 아파트 공포" --tags horror korean apartment
-
-# 다른 Ollama 모델로 연구
-python -m src.research.executor run "병원 공포" --model qwen:14b
-
-# Gemini API로 연구 (GEMINI_ENABLED=true 필요)
-python -m src.research.executor run "도시 전설" --model gemini
-
-# Gemini Deep Research Agent로 연구 (권장, GEMINI_ENABLED=true 필요)
-# API: Google AI Studio, 모델: deep-research-pro-preview-12-2025
-python -m src.research.executor run "한국 공포 문화" --model deep-research
-
-# 연구 카드 목록 조회
-python -m src.research.executor list
-
-# 중복 검사
-python -m src.research.executor dedup RC-20260112-123456
-```
-
 ### API 서버 실행
 
 ```bash
+# API 서버 시작
 uvicorn src.api.main:app --host 127.0.0.1 --port 8000
+```
+
+### 스토리 생성
+
+```bash
+# 스토리 직접 생성 (동기, 블로킹)
+curl -X POST http://localhost:8000/story/generate \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "Korean apartment horror"}'
+
+# 스케줄러를 통한 스토리 생성 (비동기, 큐 기반)
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[{"type": "story", "params": {"topic": "Korean apartment horror"}, "priority": 10}]'
+```
+
+### 연구 카드 생성
+
+```bash
+# 연구 직접 실행 (동기, 블로킹)
+curl -X POST http://localhost:8000/research/run \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "한국 아파트 공포", "tags": ["apartment", "korean"]}'
+
+# 스케줄러를 통한 연구 생성 (비동기, 큐 기반)
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[{"type": "research", "params": {"topic": "한국 아파트 공포", "tags": ["apartment", "korean"]}, "priority": 5}]'
+```
+
+### 스케줄러 제어
+
+```bash
+# 스케줄러 시작 (큐 처리 시작)
+curl -X POST http://localhost:8000/scheduler/start
+
+# 스케줄러 상태 확인
+curl http://localhost:8000/scheduler/status
+
+# 작업 상태 조회
+curl http://localhost:8000/tasks/{task_id}
 ```
 
 **주요 엔드포인트:**
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/jobs/story/trigger` | 스토리 생성 트리거 |
-| POST | `/jobs/research/trigger` | 연구 생성 트리거 |
-| GET | `/jobs/{job_id}` | 작업 상태 조회 |
+| POST | `/tasks` | 작업 생성 (배열 입력) |
+| GET | `/tasks/{task_id}` | 작업 상태 조회 |
+| POST | `/scheduler/start` | 스케줄러 시작 |
+| GET | `/scheduler/status` | 스케줄러 상태 |
+| POST | `/story/generate` | 스토리 직접 생성 (블로킹) |
+| POST | `/research/run` | 연구 직접 실행 (블로킹) |
 | POST | `/research/dedup` | 시맨틱 중복 검사 |
 
 **인증 (선택):**
@@ -147,7 +142,7 @@ API_KEY=your-secure-api-key
 
 인증 활성화 시 `X-API-Key` 헤더 필요:
 ```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/jobs/story/trigger
+curl -H "X-API-Key: your-key" http://localhost:8000/tasks
 ```
 
 ---
@@ -217,20 +212,24 @@ result = generate_with_topic(
 
 ```
 horror-story-generator/
-├── main.py                      # 스토리 생성 CLI 진입점
 ├── src/
 │   ├── story/                   # 스토리 생성 파이프라인
 │   │   ├── generator.py         # 핵심 생성 로직
+│   │   ├── runner.py            # 스케줄러용 서브프로세스 진입점
 │   │   ├── api_client.py        # Claude API 클라이언트
 │   │   └── template_loader.py   # 템플릿 스켈레톤 로더
 │   ├── research/                # 연구 생성
-│   │   ├── executor/            # CLI 실행기
+│   │   ├── executor/            # 연구 실행기
 │   │   └── integration/         # 스토리-연구 연동
 │   ├── dedup/                   # 중복 검사
 │   │   ├── similarity.py        # 스토리 중복 (Canonical)
 │   │   ├── research/            # 연구 중복 (FAISS)
 │   │   └── story/               # 스토리 시맨틱 중복 (v1.4.0)
 │   ├── registry/                # 데이터 저장소
+│   ├── scheduler/               # Task Scheduler 엔진
+│   │   ├── service.py           # 스케줄러 서비스
+│   │   ├── persistence.py       # SQLite 영속성
+│   │   └── executor.py          # 작업 실행 디스패치
 │   ├── infra/                   # 인프라 (로깅, 경로 등)
 │   │   └── research_context/    # 연구↔스토리 연동 (공유 모듈)
 │   └── api/                     # FastAPI 서버
@@ -305,7 +304,7 @@ hybrid_score = (canonical_score × 0.3) + (semantic_score × 0.7)
 
 2. **토큰 수 조정**: 긴 소설을 원하면 `MAX_TOKENS` 값을 높이세요 (최대 8192)
 
-3. **중복 검사 활성화**: 여러 스토리 생성 시 `--enable-dedup` 플래그 사용 권장
+3. **중복 검사 활성화**: 스토리 생성 시 `enable_dedup` 파라미터 사용 권장
 
 ---
 
@@ -316,7 +315,7 @@ hybrid_score = (canonical_score × 0.3) + (semantic_score × 0.7)
 | [docs/OPERATIONAL_STATUS.md](docs/OPERATIONAL_STATUS.md) | 운영 상태 선언 |
 | [docs/core/README.md](docs/core/README.md) | 상세 기술 문서 |
 | [docs/core/ARCHITECTURE.md](docs/core/ARCHITECTURE.md) | 시스템 아키텍처 |
-| [docs/technical/TRIGGER_API.md](docs/technical/TRIGGER_API.md) | API 레퍼런스 |
+| [docs/core/API.md](docs/core/API.md) | API 레퍼런스 |
 | [docs/technical/REGISTRY_BACKUP_GUIDE.md](docs/technical/REGISTRY_BACKUP_GUIDE.md) | 백업 및 복구 가이드 |
 | [docs/technical/runbook_24h_test.md](docs/technical/runbook_24h_test.md) | 24시간 테스트 절차 |
 
