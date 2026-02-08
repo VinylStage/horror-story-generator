@@ -1,7 +1,7 @@
 # Documentation Map
 
 **Version:** 1.1
-**Application Version:** 1.7.0 <!-- x-release-please-version -->
+**Application Version:** 2.0.0 <!-- x-release-please-version -->
 **Last Updated:** 2026-01-18
 
 ---
