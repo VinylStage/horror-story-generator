@@ -249,7 +249,17 @@ Skipping any layer is a common source of bugs (e.g., KeyError from mismatched di
   - You MUST request explicit user permission
   - BEFORE running real, integration, or long-running tests
 
-### 7.3 Test Reporting
+### 7.3 Resource Cleanup (Mandatory)
+
+- After ANY test that starts a server, background process, or external resource:
+  - You MUST **immediately** terminate the process upon test completion
+  - You MUST verify the process is fully stopped (`ps aux | grep` confirmation)
+  - You MUST NOT proceed to the next task until cleanup is confirmed
+- This applies to: API servers (`uvicorn`), database processes, Docker containers, background workers, etc.
+
+> **Failure to clean up resources can cause system freezing or data corruption.**
+
+### 7.4 Test Reporting
 
 - Test results MUST be summarized in the PR description.
 
@@ -264,6 +274,7 @@ Skipping any layer is a common source of bugs (e.g., KeyError from mismatched di
 | Manual changelog edits | **FORBIDDEN** |
 | Untracked TODO comments | **FORBIDDEN** |
 | Bypassing user confirmation gates | **FORBIDDEN** |
+| Leaving test servers/processes running after tests | **FORBIDDEN** |
 
 ---
 
