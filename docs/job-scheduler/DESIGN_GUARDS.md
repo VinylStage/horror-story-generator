@@ -248,7 +248,7 @@ def compute_group_status(group: TaskGroup) -> GroupStatus:
 1. On failure, scheduler creates new Task with `retry_of` reference
 2. Automatic retries: max 3 attempts per original task
 3. After 3 failures: task marked as permanently failed
-4. Manual retry always allowed via `POST /api/job-runs/{run_id}/retry`
+4. Manual retry always allowed via `POST /api/task-runs/{run_id}/retry`
 
 **Rationale**: Balances automation with control. Prevents infinite retry loops while handling transient failures.
 

@@ -94,13 +94,13 @@ CREATED → ENABLED ⇄ DISABLED → [DELETED]
 ```
 
 - **CREATED**: Schedule defined but not yet enabled
-- **ENABLED**: Schedule actively creates Jobs at defined times
-- **DISABLED**: Schedule paused, no new Jobs created
+- **ENABLED**: Schedule actively creates Tasks at defined times
+- **DISABLED**: Schedule paused, no new Tasks created
 - **DELETED**: Schedule removed
 
 #### What Schedule is NOT
 
-- Schedule is NOT a Job
+- Schedule is NOT a Task
 - Schedule does NOT execute work directly
 - Schedule does NOT store execution results
 - Schedule does NOT manage queue position
@@ -164,7 +164,7 @@ QUEUED → CANCELLED
 
 #### Purpose
 
-A TaskRun represents a **historical record** of a single execution attempt. It is the immutable audit trail of what happened when a Job was executed.
+A TaskRun represents a **historical record** of a single execution attempt. It is the immutable audit trail of what happened when a Task was executed.
 
 #### Responsibilities
 
@@ -179,7 +179,7 @@ A TaskRun represents a **historical record** of a single execution attempt. It i
 | Field | Description |
 |-------|-------------|
 | `run_id` | Unique identifier |
-| `task_id` | Reference to the Job |
+| `task_id` | Reference to the Task |
 | `template_id` | Snapshot of template used |
 | `params_snapshot` | Snapshot of parameters used |
 | `status` | Execution result |
@@ -237,11 +237,11 @@ A TaskGroup represents a **logical collection** of Jobs that share execution con
 | `group_id` | Unique identifier |
 | `name` | Human-readable label (optional) |
 | `mode` | Execution mode (`parallel` or `sequential`) |
-| `task_ids` | Ordered list of Job references |
+| `task_ids` | Ordered list of Task references |
 | `status` | Aggregate status |
 | `created_at` | Creation timestamp |
-| `started_at` | When first job started |
-| `finished_at` | When last job finished |
+| `started_at` | When first task started |
+| `finished_at` | When last task finished |
 
 #### Lifecycle
 
@@ -249,23 +249,23 @@ A TaskGroup represents a **logical collection** of Jobs that share execution con
 CREATED → QUEUED → RUNNING → [terminal state]
 
 Terminal states:
-- COMPLETED (all jobs finished)
-- PARTIAL (some jobs failed)
+- COMPLETED (all tasks finished)
+- PARTIAL (some tasks failed)
 - CANCELLED
 ```
 
-- **CREATED**: Group defined, jobs being added
+- **CREATED**: Group defined, tasks being added
 - **QUEUED**: Group in queue, awaiting execution
-- **RUNNING**: At least one job in group is executing
-- **COMPLETED**: All jobs finished (success or skip)
-- **PARTIAL**: Some jobs succeeded, some failed
+- **RUNNING**: At least one task in group is executing
+- **COMPLETED**: All tasks finished (success or skip)
+- **PARTIAL**: Some tasks succeeded, some failed
 - **CANCELLED**: Group cancelled
 
 #### What TaskGroup is NOT
 
 - TaskGroup is NOT a TaskTemplate (it does not define work)
 - TaskGroup is NOT a Schedule (it does not define timing)
-- TaskGroup does NOT execute work (Jobs do)
+- TaskGroup does NOT execute work (Tasks do)
 - TaskGroup does NOT persist execution history (TaskRuns do)
 
 ---
@@ -303,7 +303,7 @@ Terminal states:
 ## Design Principles
 
 1. **Separation of Concerns**
-   - Configuration (TaskTemplate) is separate from execution (Job/TaskRun)
+   - Configuration (TaskTemplate) is separate from execution (Task/TaskRun)
    - Timing (Schedule) is separate from grouping (TaskGroup)
 
 2. **Single Responsibility**
@@ -312,7 +312,7 @@ Terminal states:
 
 3. **Immutability Where Appropriate**
    - TaskRun is immutable (audit integrity)
-   - Job is immutable after dispatch (execution consistency)
+   - Task is immutable after dispatch (execution consistency)
 
 4. **Explicit Over Implicit**
    - All relationships are explicit references
@@ -324,9 +324,9 @@ Terminal states:
 
 | Term | Definition |
 |------|------------|
-| **Execution** | The act of running work defined by a Job |
-| **Dispatch** | Assigning a Job to a Worker for execution |
-| **Queue** | Ordered collection of Jobs awaiting execution |
+| **Execution** | The act of running work defined by a Task |
+| **Dispatch** | Assigning a Task to a Worker for execution |
+| **Queue** | Ordered collection of Tasks awaiting execution |
 | **Worker** | Component that performs actual execution |
 | **Artifact** | File produced by execution (e.g., story JSON) |
 | **Priority** | Relative importance affecting execution order |
