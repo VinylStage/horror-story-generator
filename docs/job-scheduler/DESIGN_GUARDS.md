@@ -27,7 +27,7 @@ This document captures the **invariants, constraints, and critical decisions** t
 
 ### INV-001: Task Immutability After Dispatch
 
-**Statement**: Once a Task enters `DISPATCHED` state, its `params` field MUST NOT change.
+**Statement**: Once a Task enters `RUNNING` state, its `params` field MUST NOT change.
 
 **Rationale**: Execution consistency requires stable parameters. If params could change mid-execution, workers would have inconsistent views of what they're running.
 
@@ -35,7 +35,7 @@ This document captures the **invariants, constraints, and critical decisions** t
 ```python
 def update_task(task_id: str, **updates):
     task = load_task(task_id)
-    if task.status in [TaskStatus.DISPATCHED, TaskStatus.RUNNING]:
+    if task.status == TaskStatus.RUNNING:
         if "params" in updates:
             raise InvalidOperationError("Cannot modify params after dispatch")
 ```

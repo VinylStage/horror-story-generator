@@ -107,11 +107,11 @@ CREATED → ENABLED ⇄ DISABLED → [DELETED]
 
 ---
 
-### 3. Job
+### 3. Task
 
 #### Purpose
 
-A Job represents a **single unit of work** that has been queued for execution. It is an ephemeral entity that exists from the moment work is requested until execution completes.
+A Task represents a **single unit of work** that has been queued for execution. It is an ephemeral entity that exists from the moment work is requested until execution completes.
 
 #### Responsibilities
 
@@ -125,7 +125,7 @@ A Job represents a **single unit of work** that has been queued for execution. I
 | Field | Description |
 |-------|-------------|
 | `task_id` | Unique identifier |
-| `template_id` | Reference to source TaskTemplate (nullable for ad-hoc jobs) |
+| `template_id` | Reference to source TaskTemplate (nullable for ad-hoc tasks) |
 | `schedule_id` | Reference to triggering Schedule (nullable) |
 | `group_id` | Reference to TaskGroup (nullable) |
 | `task_type` | Type of work |
@@ -138,29 +138,25 @@ A Job represents a **single unit of work** that has been queued for execution. I
 
 #### Lifecycle
 
-**External (API/Webhook visible):**
 ```
-QUEUED → RUNNING → CANCELLED
+QUEUED → RUNNING → COMPLETED | FAILED
+QUEUED → CANCELLED
 ```
 
 | Status | Meaning |
 |--------|---------|
-| **QUEUED** | Job in queue, awaiting execution |
-| **RUNNING** | Job actively executing |
-| **CANCELLED** | Job cancelled before completion |
+| **QUEUED** | Task in queue, awaiting execution |
+| **RUNNING** | Task actively executing |
+| **COMPLETED** | Task execution finished successfully |
+| **FAILED** | Task execution encountered an error |
+| **CANCELLED** | Task cancelled before completion |
 
-**Internal only (not exposed via API):**
-- `PENDING`: Job created but not yet queued (e.g., awaiting group)
-- `DISPATCHED`: Job assigned to worker (brief transition state)
+#### What Task is NOT
 
-> Note: Execution outcome (success/failure) is recorded in TaskRun, not Job.
-
-#### What Job is NOT
-
-- Job is NOT a historical record (that is TaskRun)
-- Job does NOT persist after completion indefinitely
-- Job does NOT define what work to do (that is TaskTemplate)
-- Job does NOT define when to execute (that is Schedule)
+- Task is NOT a historical record (that is TaskRun)
+- Task does NOT persist after completion indefinitely
+- Task does NOT define what work to do (that is TaskTemplate)
+- Task does NOT define when to execute (that is Schedule)
 
 ---
 
@@ -276,19 +272,19 @@ Terminal states:
 
 ## Key Distinctions
 
-### TaskTemplate vs Job
+### TaskTemplate vs Task
 
-| Aspect | TaskTemplate | Job |
-|--------|-------------|-----|
+| Aspect | TaskTemplate | Task |
+|--------|-------------|------|
 | Lifespan | Long-lived | Ephemeral |
 | Purpose | Define work | Request execution |
 | Mutability | Mutable | Immutable after queued |
-| Cardinality | One template → Many jobs | One job → One execution |
+| Cardinality | One template → Many tasks | One task → One execution |
 
-### Job vs TaskRun
+### Task vs TaskRun
 
-| Aspect | Job | TaskRun |
-|--------|-----|--------|
+| Aspect | Task | TaskRun |
+|--------|------|--------|
 | Temporal scope | Future/present | Past |
 | Purpose | Queue management | Audit trail |
 | Mutability | State changes | Immutable |

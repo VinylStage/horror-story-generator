@@ -178,8 +178,11 @@ curl -X POST http://localhost:8000/story/generate \
   "success": true,
   "message": "Scheduler started successfully",
   "recovery_stats": {
-    "recovered_jobs": 2,
-    "failed_jobs": 0
+    "running_tasks_recovered": 2,
+    "reservations_expired": 0,
+    "retries_created": 0,
+    "task_groups_recovered": 0,
+    "errors": []
   }
 }
 ```
@@ -416,6 +419,11 @@ Task를 생성하고 스케줄러 큐에 등록합니다. **항상 배열 `[]` �
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `limit` | integer | 50 | 최대 결과 수 (1-200) |
+
+**Sorting:** 결과는 다음 우선순위로 정렬됩니다:
+1. **RUNNING** 상태 Task가 최상위에 표시
+2. **QUEUED** 상태 Task가 그 다음 (큐 내 `position` 오름차순)
+3. 나머지 상태 (CANCELLED 등)는 `finished_at` 내림차순, `created_at` 내림차순으로 정렬
 
 **Response:** `200 OK`
 
@@ -1679,6 +1687,47 @@ The sync endpoints (`/research/run`, `/story/generate`) support fire-and-forget 
 | `X-Webhook-Endpoint` | Source endpoint path |
 
 **Retry Logic:** Same as job webhooks (3 attempts, exponential backoff).
+
+### Scheduler Task Webhooks (v1.6.1)
+
+스케줄러 Task 완료 시 전용 웹훅 포맷을 사용합니다. Direct API 엔드포인트 웹훅 (`/story/generate`, `/research/run`)과 구분되는 별도의 포맷입니다.
+
+> **v1.6.1:** `webhook_url`을 생략하면 환경변수 `DISCORD_WEBHOOK_URL`이 자동으로 사용됩니다.
+
+**Discord Embed 포맷:**
+
+Discord 웹훅 URL 감지 시 `build_task_discord_embed_payload()`를 사용하여 Discord embed 형식으로 전송합니다.
+
+- **Title**: `📋 Task Completed: Story` / `📋❌ Task Failed: Research`
+- **항상 포함되는 필드**: Task ID, Type, Status
+- **Story 성공 시 추가 필드**: title, word_count, thumbnail_url
+- **Research 성공 시 추가 필드**: card_id, output_path, message
+- **Endpoint 필드**: `/tasks/{task_id}`
+- **Footer**: `Horror Story Generator v{version}` (동적 버전, `src.__version__`에서 가져옴)
+
+**비-Discord URL:**
+
+Discord가 아닌 URL에는 표준 sync webhook payload 형식을 사용하며, endpoint는 `/tasks/{task_id}`로 설정됩니다.
+
+```json
+{
+  "event": "completed",
+  "endpoint": "/tasks/{task_id}",
+  "status": "success",
+  "result": {
+    "task_id": "task-550e8400...",
+    "task_type": "story",
+    "run_id": "run-123",
+    "status": "COMPLETED",
+    "exit_code": 0,
+    "error": null,
+    "title": "The Floor Above",
+    "word_count": 3500,
+    "thumbnail_url": "https://..."
+  },
+  "timestamp": "2026-01-18T10:05:01"
+}
+```
 
 ---
 

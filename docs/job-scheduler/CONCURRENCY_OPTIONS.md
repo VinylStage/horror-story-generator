@@ -122,10 +122,10 @@ Phase 5+: When remote API parallelization needed:
 
 ## Decision Checklist
 
-- [ ] Confirm Option A as Phase 4 default
-- [ ] Defer Option B/C to future phase
-- [ ] Update DESIGN_GUARDS.md to promote OQ-001 → DEC-011
-- [ ] No persistence schema changes needed for Phase 4
+- [x] Confirm Option A as Phase 4 default
+- [x] Defer Option B/C to future phase
+- [x] Update DESIGN_GUARDS.md to promote OQ-001 → DEC-011
+- [x] No persistence schema changes needed for Phase 4
 
 ---
 
