@@ -134,8 +134,20 @@ Story Signature = SHA256(canonical_core + research_used)
 **Purpose:** Verify all mechanisms work before long-running test
 
 ```bash
-# Generate 3 stories at 5-minute intervals
-python main.py --max-stories 3 --interval-seconds 300
+# Start the API server
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
+# Start the scheduler
+curl -X POST http://localhost:8000/scheduler/start
+
+# Create 3 story tasks
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"type": "story", "params": {"enable_dedup": true}, "priority": 10},
+    {"type": "story", "params": {"enable_dedup": true}, "priority": 10},
+    {"type": "story", "params": {"enable_dedup": true}, "priority": 10}
+  ]'
 ```
 
 **Expected outcome:**
@@ -163,15 +175,17 @@ grep "토큰 사용량" logs/horror_story_*.log
 **Purpose:** Full Phase 1 operational verification
 
 ```bash
-# Run for 24 hours with 30-minute intervals
-# Expected: ~48 stories generated
-nohup python main.py \
-  --duration-seconds 86400 \
-  --interval-seconds 1800 \
-  > output_24h.log 2>&1 &
-
-# Save process ID
+# Start the API server in the background
+nohup uvicorn src.api.main:app --host 0.0.0.0 --port 8000 > output_24h.log 2>&1 &
 echo $! > generator.pid
+
+# Start the scheduler
+curl -X POST http://localhost:8000/scheduler/start
+
+# Create story tasks as needed (repeat periodically or use external cron)
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[{"type": "story", "params": {"enable_dedup": true}, "priority": 10}]'
 ```
 
 **Monitor during operation:**
@@ -216,19 +230,21 @@ ls data/novel/horror_story_*_metadata.json | wc -l
 **Purpose:** Verify SIGINT/SIGTERM handling
 
 ```bash
-# Start long-running operation
-python main.py --max-stories 100 --interval-seconds 60 &
-PID=$!
+# Create multiple story tasks
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[{"type": "story", "params": {"enable_dedup": true}, "priority": 10}]'
 
-# Wait for first story to complete
+# Wait for task to start running
 sleep 120
 
-# Send SIGINT (Ctrl+C equivalent)
-kill -SIGINT $PID
+# Stop the scheduler gracefully (waits for current task to complete)
+curl -X POST http://localhost:8000/scheduler/stop \
+  -H "Content-Type: application/json" \
+  -d '{"timeout": 120}'
 
-# Verify graceful shutdown
-wait $PID
-echo "Exit code: $?"
+# Verify scheduler stopped
+curl http://localhost:8000/scheduler/status
 ```
 
 **Expected behavior:**
@@ -557,27 +573,55 @@ echo "Stories with signature: $SIG_COUNT"
 
 ---
 
-## CLI Reference
+## API Reference
 
+### Task Creation
+
+```bash
+# Create a story task
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[{"type": "story", "params": {"enable_dedup": true, "model": "ollama:qwen3:30b"}, "priority": 10}]'
+
+# Create a research task
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[{"type": "research", "params": {"topic": "Korean horror culture", "model": "deep-research", "timeout": 300}}]'
+
+# Create multiple tasks at once
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"type": "story", "params": {"enable_dedup": true}, "priority": 10},
+    {"type": "research", "params": {"topic": "Urban legends"}, "priority": 5}
+  ]'
 ```
-usage: main.py [-h] [--duration-seconds DURATION_SECONDS]
-               [--max-stories MAX_STORIES]
-               [--interval-seconds INTERVAL_SECONDS]
-               [--enable-dedup] [--db-path DB_PATH]
-               [--model MODEL]
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --duration-seconds DURATION_SECONDS
-                        실행 지속 시간(초). 지정하지 않으면 --max-stories 또는
-                        수동 종료까지 실행
-  --max-stories MAX_STORIES
-                        생성할 최대 소설 개수. 기본값=1 (단일 실행)
-  --interval-seconds INTERVAL_SECONDS
-                        소설 생성 간 대기 시간(초). 기본값=0 (대기 없음)
-  --enable-dedup        중복 검사 활성화 (canonical + story-level)
-  --db-path DB_PATH     SQLite DB 경로. 기본값=data/story_registry.db
-  --model MODEL         모델 선택. 기본=Claude Sonnet. 형식: 'ollama:llama3', 'ollama:qwen'
+### Scheduler Control
+
+```bash
+# Start scheduler
+curl -X POST http://localhost:8000/scheduler/start
+
+# Stop scheduler (graceful)
+curl -X POST http://localhost:8000/scheduler/stop -H "Content-Type: application/json" -d '{"timeout": 120}'
+
+# Check scheduler status
+curl http://localhost:8000/scheduler/status
+```
+
+### Direct Generation (Blocking)
+
+```bash
+# Generate story directly
+curl -X POST http://localhost:8000/story/generate \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "Korean apartment horror"}'
+
+# Generate research directly
+curl -X POST http://localhost:8000/research/run \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "Korean horror culture", "model": "deep-research"}'
 ```
 
 **Environment Variables:**
@@ -591,46 +635,6 @@ optional arguments:
 | `GEMINI_ENABLED` | `false` | Gemini API 활성화 (연구 생성용) |
 | `GEMINI_API_KEY` | - | Gemini API 키 |
 | `GOOGLE_AI_MODEL` | `deep-research-pro-preview-12-2025` | 기본 Google AI 모델 |
-
-**Examples:**
-
-```bash
-# Single generation (default Claude, backward compatible)
-python main.py
-
-# Generate 5 stories immediately
-python main.py --max-stories 5
-
-# Generate with local Ollama model
-python main.py --model ollama:llama3
-python main.py --model ollama:qwen
-
-# Run for 1 hour, 15min intervals (with dedup)
-python main.py --duration-seconds 3600 --interval-seconds 900 --enable-dedup
-
-# Run for 24 hours, 30min intervals (with dedup)
-python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
-
-# 24h with Ollama local model
-python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup --model ollama:llama3
-
-# Infinite mode with strict dedup (stop with Ctrl+C)
-STORY_DEDUP_STRICT=true python main.py --max-stories 999999 --interval-seconds 600 --enable-dedup
-```
-
-**Research CLI Examples:**
-
-```bash
-# 연구 카드 생성 (기본 Ollama)
-python -m src.research.executor run "한국 공포 문화" --tags horror korean
-
-# Gemini Deep Research Agent로 연구 (권장)
-# API: Google AI Studio, 모델: deep-research-pro-preview-12-2025
-python -m src.research.executor run "한국 공포 문화" --model deep-research
-
-# 표준 Gemini API로 연구
-python -m src.research.executor run "한국 공포 문화" --model gemini
-```
 
 ---
 

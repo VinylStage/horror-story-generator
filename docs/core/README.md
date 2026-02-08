@@ -14,7 +14,7 @@ A research-grounded Korean horror story generation system using Claude API with 
 - **Template-Based Prompts**: Canonical dimension system ensures unique story patterns
 - **Deduplication Control**: SQLite + FAISS-based similarity detection with hybrid story dedup (v1.4.0)
 - **Research Integration**: Ollama-powered research card generation for fresh concepts
-- **Trigger API**: Non-blocking job execution via FastAPI
+- **Task Scheduler**: Queue-based task execution via FastAPI
 - **Korean Output**: All stories generated in Korean with cultural specificity
 - **24h Continuous Operation**: Background execution with graceful shutdown
 
@@ -46,14 +46,21 @@ cp .env.example .env
 ### Basic Usage
 
 ```bash
-# Generate a single story
-python main.py
+# Start the API server
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
-# Generate multiple stories with deduplication
-python main.py --max-stories 5 --enable-dedup --interval-seconds 60
+# Generate a single story (blocking)
+curl -X POST http://localhost:8000/story/generate \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "Korean apartment horror"}'
 
-# Run for 24 hours
-python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
+# Create task(s) via scheduler (non-blocking, always array input)
+curl -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '[{"type": "story", "params": {"topic": "Korean apartment horror"}, "priority": 10}]'
+
+# Check task status
+curl http://localhost:8000/tasks/{task_id}
 ```
 
 ---
@@ -62,12 +69,9 @@ python main.py --duration-seconds 86400 --interval-seconds 1800 --enable-dedup
 
 ```
 horror-story-generator/
-├── main.py                      # Story generation CLI entry point
 ├── src/                         # Main source package
 │   ├── infra/                   # Infrastructure modules
 │   │   ├── data_paths.py        # Centralized path management
-│   │   ├── job_manager.py       # Job lifecycle management
-│   │   ├── job_monitor.py       # Process monitoring
 │   │   └── logging_config.py    # Logging setup
 │   │
 │   ├── registry/                # Data persistence
@@ -89,6 +93,7 @@ horror-story-generator/
 │   │
 │   ├── story/                   # Story generation pipeline
 │   │   ├── generator.py         # Core generation orchestration
+│   │   ├── runner.py            # Subprocess entry point for scheduler
 │   │   ├── api_client.py        # Claude API client
 │   │   ├── prompt_builder.py    # Prompt construction
 │   │   ├── template_loader.py   # Template loading
@@ -96,14 +101,18 @@ horror-story-generator/
 │   │   └── seed_integration.py  # Seed injection
 │   │
 │   ├── research/                # Research generation
-│   │   ├── executor/            # CLI executor
-│   │   │   ├── cli.py           # Entry point
+│   │   ├── executor/            # Research executor
 │   │   │   ├── executor.py      # Ollama-based generation
 │   │   │   └── validator.py     # Output validation
 │   │   └── integration/         # Story-research bridge
 │   │       ├── loader.py        # Card loading
 │   │       ├── selector.py      # Context selection
 │   │       └── vector_backend_hooks.py  # Vector operations (v1.4.0)
+│   │
+│   ├── scheduler/               # Task scheduler engine
+│   │   ├── service.py           # Scheduler service
+│   │   ├── persistence.py       # SQLite persistence
+│   │   └── executor.py          # Task execution dispatch
 │   │
 │   └── api/                     # FastAPI application
 │       ├── main.py              # API server
@@ -117,7 +126,7 @@ horror-story-generator/
 ├── data/                        # Runtime data
 │   ├── research/                # Research cards (YYYY/MM/)
 │   ├── seeds/                   # Story seeds
-│   ├── novel/                   # Generated stories (v1.3.1+)
+│   ├── novel/                   # Generated stories
 │   ├── story_vectors/           # Story FAISS index (v1.4.0)
 │   └── *.db                     # SQLite databases
 ├── logs/                        # Execution logs
@@ -152,89 +161,9 @@ Generated stories follow vinylog blog-compatible format:
 
 ---
 
-## CLI Reference
+## API Usage
 
-### Story Generation
-
-```bash
-python main.py [OPTIONS]
-
-Options:
-  --max-stories N          Maximum stories to generate (default: 1)
-  --duration-seconds N     Run duration limit in seconds
-  --interval-seconds N     Wait time between generations (default: 0)
-  --enable-dedup           Enable deduplication control
-  --db-path PATH           SQLite database path
-  --load-history           Load existing stories into memory
-  --model MODEL            Model selection (see below)
-  --target-length N        Target story length in characters (300-10000, soft limit)
-```
-
-**Model Options:**
-
-| Value | Description |
-|-------|-------------|
-| (default) | Claude Sonnet - 고품질 한국어 호러 |
-| `claude-sonnet-4-5-20250929` | Claude Sonnet 명시적 지정 |
-| `claude-opus-4-5-20251101` | Claude Opus (고성능) |
-| `ollama:qwen3:30b` | 로컬 Ollama 모델 |
-
-**Examples:**
-```bash
-# Claude 기본 (권장)
-python main.py --max-stories 3 --enable-dedup
-
-# Ollama 로컬 모델
-python main.py --model ollama:qwen3:30b
-
-# 목표 길이 지정 (1500자)
-python main.py --target-length 1500
-```
-
-### Research Generation
-
-```bash
-python -m src.research.executor run TOPIC [OPTIONS]
-
-Arguments:
-  TOPIC                    Research topic (e.g., "Korean apartment horror")
-
-Options:
-  --tags TAG [TAG ...]     Classification tags
-  --model MODEL            Model selection (see below)
-  --timeout N              Generation timeout in seconds
-  --dry-run                Show prompt without executing
-  --skip-markdown          Skip generating markdown file
-  -o, --output-dir PATH    Output directory (default: data/research)
-```
-
-**Model Options:**
-
-| Value | Description | Timeout |
-|-------|-------------|---------|
-| `qwen3:30b` (default) | Ollama 로컬 모델 | 60s |
-| `gemini` | Google Gemini API | 120s |
-| `deep-research` | Gemini Deep Research Agent (고품질, 권장) | 300-600s |
-
-**Requirements:**
-- Gemini 모델: `GEMINI_ENABLED=true`, `GEMINI_API_KEY` 환경변수 필요
-
-**Examples:**
-```bash
-# Ollama 기본
-python -m src.research.executor run "Korean apartment horror"
-
-# Gemini Deep Research (권장)
-python -m src.research.executor run "Korean apartment horror" --model deep-research --timeout 300
-
-# Gemini 표준
-python -m src.research.executor run "Urban isolation" --model gemini --timeout 120
-
-# 태그 포함
-python -m src.research.executor run "Subway horror" --tags urban supernatural --model deep-research
-```
-
-### API Server
+### Starting the Server
 
 ```bash
 uvicorn src.api.main:app --host 0.0.0.0 --port 8000
@@ -281,18 +210,23 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/jobs/story/trigger` | Trigger story generation job |
-| POST | `/jobs/research/trigger` | Trigger research generation job |
-| GET | `/jobs/{job_id}` | Get job status |
-| GET | `/jobs` | List all jobs |
-| POST | `/jobs/{job_id}/cancel` | Cancel running job |
-| POST | `/jobs/monitor` | Update all running job statuses |
-| POST | `/jobs/{job_id}/dedup_check` | Check canonical deduplication |
-| POST | `/research/run` | Run research generation (sync) |
+| POST | `/tasks` | Create task(s) in scheduler queue |
+| GET | `/tasks` | List all tasks |
+| GET | `/tasks/{task_id}` | Get task details |
+| PATCH | `/tasks/{task_id}` | Update task priority |
+| DELETE | `/tasks/{task_id}` | Cancel task |
+| GET | `/tasks/{task_id}/runs` | Get task execution history |
+| POST | `/tasks/group` | Create task group |
+| POST | `/scheduler/start` | Start scheduler |
+| POST | `/scheduler/stop` | Stop scheduler |
+| GET | `/scheduler/status` | Get scheduler status |
+| POST | `/story/generate` | Generate story directly (blocking) |
+| POST | `/research/run` | Run research generation (blocking) |
 | GET | `/research/list` | List research cards |
 | POST | `/research/dedup` | Check semantic similarity (FAISS) |
+| POST | `/dedup/evaluate` | Evaluate story deduplication |
 
-See `docs/technical/TRIGGER_API.md` for detailed API documentation.
+See `docs/core/API.md` for detailed API documentation.
 
 ---
 
@@ -312,10 +246,10 @@ Template + Knowledge Units → Prompt Builder → Claude API → Story → Dedup
 Topic → Ollama (qwen3) → Research Card → FAISS Index → Dedup Check → Save
 ```
 
-### 3. Trigger API Pipeline
+### 3. Task Scheduler Pipeline
 
 ```
-HTTP Request → Job Creation → Subprocess Launch → PID Monitoring → Status Update
+POST /tasks → Task Queue (SQLite) → Scheduler Dispatch → Executor → Status Update
 ```
 
 See `docs/core/ARCHITECTURE.md` for detailed architecture documentation.
@@ -426,7 +360,7 @@ See root `CONTRIBUTING.md` for development guidelines.
 | Document | Description |
 |----------|-------------|
 | `docs/core/ARCHITECTURE.md` | System architecture details |
-| `docs/technical/TRIGGER_API.md` | API reference |
+| `docs/core/API.md` | API reference |
 | `docs/core/ROADMAP.md` | Future development plans |
 | `CONTRIBUTING.md` | Development guidelines |
 | `docs/technical/canonical_enum.md` | Canonical dimension definitions |

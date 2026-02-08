@@ -2,7 +2,7 @@
 Data path helpers for horror-story-generator.
 
 Phase B+: Centralized path management for all data directories.
-v1.3.1: Added novel output directory, job directory, and legacy deprecation.
+v1.3.1: Added novel output directory and legacy deprecation.
 v1.4.0: Added story vectors directory for semantic dedup.
 
 Directory structure:
@@ -25,14 +25,8 @@ data/
  │   └── metadata.json         # story_id <-> vector mapping
  └── story_registry.db         # Existing story registry
 
-jobs/                          # Job storage (v1.3.1: centralized)
-
 Environment Variables:
 - NOVEL_OUTPUT_DIR: Override default novel output directory (default: data/novel)
-- JOB_DIR: Override job storage directory (default: jobs)
-- JOB_PRUNE_ENABLED: Enable job history pruning (default: false)
-- JOB_PRUNE_DAYS: Days to keep job history (default: 30)
-- JOB_PRUNE_MAX_COUNT: Maximum jobs to keep (default: 1000)
 """
 
 import logging
@@ -276,28 +270,6 @@ def get_novel_output_subdir() -> Path:
     return get_novel_output_dir() / str(now.year) / f"{now.month:02d}"
 
 
-# =============================================================================
-# Job Storage Paths (v1.3.1)
-# =============================================================================
-
-def get_jobs_dir() -> Path:
-    """
-    Get jobs directory for job file storage.
-
-    v1.3.1: Centralized job storage path.
-    Can be overridden via JOB_DIR environment variable.
-
-    Default: <project_root>/jobs
-
-    Returns:
-        Path: Jobs directory
-    """
-    env_path = os.getenv("JOB_DIR")
-    if env_path:
-        return Path(env_path).resolve()
-    return get_project_root() / "jobs"
-
-
 def get_logs_dir() -> Path:
     """
     Get logs directory for job execution logs.
@@ -306,31 +278,6 @@ def get_logs_dir() -> Path:
         Path: Logs directory
     """
     return get_project_root() / "logs"
-
-
-# =============================================================================
-# Job Pruning Configuration (v1.3.1)
-# =============================================================================
-
-def get_job_prune_config() -> dict:
-    """
-    Get job pruning configuration from environment variables.
-
-    v1.3.1: Optional job history cleanup.
-
-    Environment Variables:
-    - JOB_PRUNE_ENABLED: Enable pruning (default: false)
-    - JOB_PRUNE_DAYS: Days to keep (default: 30)
-    - JOB_PRUNE_MAX_COUNT: Max jobs to keep (default: 1000)
-
-    Returns:
-        dict: Pruning configuration
-    """
-    return {
-        "enabled": _get_env_bool("JOB_PRUNE_ENABLED", False),
-        "days": _get_env_int("JOB_PRUNE_DAYS", 30),
-        "max_count": _get_env_int("JOB_PRUNE_MAX_COUNT", 1000),
-    }
 
 
 # =============================================================================
@@ -386,7 +333,7 @@ def ensure_data_directories() -> dict:
     Creates directories if they don't exist.
     Safe to call multiple times.
 
-    v1.3.1: Added novel output and jobs directories.
+    v1.3.1: Added novel output directory.
 
     Returns:
         dict: Dictionary of created/existing directory paths
@@ -399,7 +346,6 @@ def ensure_data_directories() -> dict:
         "research_logs": get_research_logs_dir(),
         "seeds": get_seeds_root(),
         "novel_output": get_novel_output_dir(),  # v1.3.1
-        "jobs": get_jobs_dir(),  # v1.3.1
         "logs": get_logs_dir(),  # v1.3.1
         "story_vectors": get_story_vectors_dir(),  # v1.4.0
     }
@@ -423,7 +369,7 @@ def get_all_paths() -> dict:
 
     Useful for debugging and configuration display.
 
-    v1.3.1: Added novel output, jobs, and prune config.
+    v1.3.1: Added novel output.
 
     Returns:
         dict: All path configurations
@@ -447,9 +393,7 @@ def get_all_paths() -> dict:
         "story_registry": get_story_registry_path(),
         # v1.3.1: New paths
         "novel_output": get_novel_output_dir(),
-        "jobs": get_jobs_dir(),
         "logs": get_logs_dir(),
-        "job_prune_config": get_job_prune_config(),
         # v1.4.0: Story vectors
         "story_vectors": {
             "root": get_story_vectors_dir(),

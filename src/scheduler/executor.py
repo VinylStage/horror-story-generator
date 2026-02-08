@@ -182,7 +182,7 @@ class SubprocessTaskHandler(TaskHandler):
         params = task.params
 
         if task.task_type == "story":
-            cmd = [sys.executable, str(self.project_root / "main.py")]
+            cmd = [sys.executable, "-m", "src.story.runner"]
 
             if params.get("max_stories"):
                 cmd.extend(["--max-stories", str(params["max_stories"])])

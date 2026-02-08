@@ -785,8 +785,8 @@ Q3: Group 전체 완료를 기다릴 것인가, 개별 Job 완료 후 인터럽�
 
 | ID | 항목 | 질문 |
 |----|------|------|
-| Q-01 | 기존 API 호환성 | /jobs/* API 유지? 제거? deprecated? |
-| Q-02 | Batch API | /jobs/batch/trigger를 새 시스템으로 마이그레이션? |
+| Q-01 | 기존 API 호환성 | **Resolved (v2.0.0):** Legacy `/jobs/*/trigger`, batch, monitor, dedup_check endpoints removed. `POST /tasks` is the sole task creation API. |
+| Q-02 | Batch API | **Resolved (v2.0.0):** Legacy batch trigger removed. Use `POST /tasks` with array input for batch creation. |
 | Q-03 | Webhook 통합 | 기존 webhook 로직 재사용 or 새로 구현? |
 | Q-04 | UI/Dashboard | 큐 관리 UI 필요 여부 |
 | Q-05 | 테스트 전략 | 스케줄러 테스트 방법 (시간 mocking 등) |

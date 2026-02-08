@@ -11,6 +11,11 @@ import pytest
 from pydantic import ValidationError
 
 
+# Target length range boundaries
+TARGET_LENGTH_MIN = 300
+TARGET_LENGTH_MAX = 10000
+
+
 class TestStoryGenerateRequestSchema:
     """Tests for StoryGenerateRequest target_length validation."""
 
@@ -27,34 +32,34 @@ class TestStoryGenerateRequestSchema:
         from src.api.schemas.story import StoryGenerateRequest
 
         # Minimum
-        request = StoryGenerateRequest(target_length=300)
-        assert request.target_length == 300
+        request = StoryGenerateRequest(target_length=TARGET_LENGTH_MIN)
+        assert request.target_length == TARGET_LENGTH_MIN
 
         # Maximum
-        request = StoryGenerateRequest(target_length=10000)
-        assert request.target_length == 10000
+        request = StoryGenerateRequest(target_length=TARGET_LENGTH_MAX)
+        assert request.target_length == TARGET_LENGTH_MAX
 
         # Middle value
         request = StoryGenerateRequest(target_length=2500)
         assert request.target_length == 2500
 
     def test_target_length_below_minimum(self):
-        """Should reject target_length below 300."""
+        """Should reject target_length below minimum."""
         from src.api.schemas.story import StoryGenerateRequest
 
         with pytest.raises(ValidationError) as exc_info:
-            StoryGenerateRequest(target_length=299)
+            StoryGenerateRequest(target_length=TARGET_LENGTH_MIN - 1)
 
-        assert "greater than or equal to 300" in str(exc_info.value)
+        assert f"greater than or equal to {TARGET_LENGTH_MIN}" in str(exc_info.value)
 
     def test_target_length_above_maximum(self):
-        """Should reject target_length above 10000."""
+        """Should reject target_length above maximum."""
         from src.api.schemas.story import StoryGenerateRequest
 
         with pytest.raises(ValidationError) as exc_info:
-            StoryGenerateRequest(target_length=10001)
+            StoryGenerateRequest(target_length=TARGET_LENGTH_MAX + 1)
 
-        assert "less than or equal to 10000" in str(exc_info.value)
+        assert f"less than or equal to {TARGET_LENGTH_MAX}" in str(exc_info.value)
 
     def test_target_length_with_other_params(self):
         """Should work with other parameters."""
@@ -71,104 +76,6 @@ class TestStoryGenerateRequestSchema:
         assert request.auto_research is True
         assert request.model == "ollama:qwen3:30b"
         assert request.target_length == 2000
-
-
-class TestStoryTriggerRequestSchema:
-    """Tests for StoryTriggerRequest target_length validation."""
-
-    def test_target_length_optional(self):
-        """target_length should be optional in trigger request."""
-        from src.api.schemas.jobs import StoryTriggerRequest
-
-        request = StoryTriggerRequest()
-
-        assert request.target_length is None
-
-    def test_target_length_valid_range(self):
-        """Should accept valid target_length values."""
-        from src.api.schemas.jobs import StoryTriggerRequest
-
-        request = StoryTriggerRequest(target_length=1500)
-
-        assert request.target_length == 1500
-
-    def test_target_length_validation(self):
-        """Should validate target_length range."""
-        from src.api.schemas.jobs import StoryTriggerRequest
-
-        with pytest.raises(ValidationError):
-            StoryTriggerRequest(target_length=100)  # Too small
-
-        with pytest.raises(ValidationError):
-            StoryTriggerRequest(target_length=10001)  # Too large
-
-
-class TestBatchJobSpecSchema:
-    """Tests for BatchJobSpec target_length validation."""
-
-    def test_target_length_optional(self):
-        """target_length should be optional in batch spec."""
-        from src.api.schemas.jobs import BatchJobSpec
-
-        spec = BatchJobSpec(type="story")
-
-        assert spec.target_length is None
-
-    def test_target_length_valid(self):
-        """Should accept valid target_length in batch spec."""
-        from src.api.schemas.jobs import BatchJobSpec
-
-        spec = BatchJobSpec(type="story", target_length=3000)
-
-        assert spec.target_length == 3000
-
-    def test_target_length_validation(self):
-        """Should validate target_length range in batch spec."""
-        from src.api.schemas.jobs import BatchJobSpec
-
-        with pytest.raises(ValidationError):
-            BatchJobSpec(type="story", target_length=200)
-
-
-class TestBuildStoryCommand:
-    """Tests for build_story_command with target_length."""
-
-    def test_no_target_length(self):
-        """Should not include --target-length when not provided."""
-        from src.api.routers.jobs import build_story_command
-
-        cmd = build_story_command({"max_stories": 1})
-
-        assert "--target-length" not in cmd
-
-    def test_with_target_length(self):
-        """Should include --target-length when provided."""
-        from src.api.routers.jobs import build_story_command
-
-        cmd = build_story_command({"max_stories": 1, "target_length": 2500})
-
-        assert "--target-length" in cmd
-        idx = cmd.index("--target-length")
-        assert cmd[idx + 1] == "2500"
-
-    def test_target_length_with_other_args(self):
-        """Should include target_length with other arguments."""
-        from src.api.routers.jobs import build_story_command
-
-        cmd = build_story_command({
-            "max_stories": 5,
-            "enable_dedup": True,
-            "model": "claude-sonnet-4-5-20250929",
-            "target_length": 1500
-        })
-
-        assert "--max-stories" in cmd
-        assert "--enable-dedup" in cmd
-        assert "--model" in cmd
-        assert "--target-length" in cmd
-
-        idx = cmd.index("--target-length")
-        assert cmd[idx + 1] == "1500"
 
 
 class TestMetadataRecording:

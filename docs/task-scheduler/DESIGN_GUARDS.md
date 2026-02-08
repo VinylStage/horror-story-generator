@@ -423,14 +423,14 @@ The following questions have been resolved and documented as decisions:
 
 ---
 
-### CON-004: Backward Compatibility Period
+### CON-004: Legacy Endpoint Removal (v2.0.0)
 
-**Constraint**: Legacy `/jobs/*` endpoints must remain functional during migration.
+**Status**: Resolved. Legacy `/jobs/*` endpoints have been fully removed in v2.0.0.
 
 **Implications**:
-- Coexistence layer required
-- Version negotiation or prefix routing
-- Deprecation warnings before removal
+- `POST /tasks` is the sole interface for asynchronous task creation
+- No backward compatibility layer needed
+- Clients must use the new Task API
 
 ---
 
