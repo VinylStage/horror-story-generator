@@ -12,6 +12,8 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 import httpx
 
+from src import __version__
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,7 +121,7 @@ def build_discord_embed_payload(
         "color": color,
         "fields": fields,
         "timestamp": datetime.now().isoformat(),
-        "footer": {"text": "Horror Story Generator v1.4"},
+        "footer": {"text": f"Horror Story Generator v{__version__}"},
     }
 
     return {
@@ -148,8 +150,6 @@ def build_task_discord_embed_payload(
     Returns:
         Discord-compatible payload with embeds
     """
-    from src import __version__
-
     is_success = status == "success"
     color = DISCORD_COLOR_SUCCESS if is_success else DISCORD_COLOR_ERROR
     emoji = "📋" if is_success else "📋❌"
@@ -242,7 +242,7 @@ def _send_webhook_in_thread(
                 # Build headers based on webhook type
                 headers = {
                     "Content-Type": "application/json",
-                    "User-Agent": "HorrorStoryGenerator/1.4",
+                    "User-Agent": f"HorrorStoryGenerator/{__version__}",
                 }
                 # Add custom headers only for non-Discord webhooks
                 if not is_discord:
