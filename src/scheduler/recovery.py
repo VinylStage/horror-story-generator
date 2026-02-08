@@ -165,8 +165,10 @@ class RecoveryManager:
                     error="Scheduler crash recovery",
                 )
 
-                # Update task finished_at
-                self.persistence.update_task(task.task_id, finished_at=now)
+                # Update task status and finished_at
+                self.persistence.update_task(
+                    task.task_id, status=TaskStatus.FAILED, finished_at=now,
+                )
 
             elif task_run.status is None or not task_run.is_terminal():
                 # Crash during execution
@@ -181,17 +183,23 @@ class RecoveryManager:
                     error="Scheduler crash recovery",
                 )
 
-                # Update task finished_at
-                self.persistence.update_task(task.task_id, finished_at=now)
-
-            else:
-                # Crash after completion - just update task finished_at
-                logger.info(
-                    f"Task {task.task_id}: TaskRun terminal, updating finished_at only"
+                # Update task status and finished_at
+                self.persistence.update_task(
+                    task.task_id, status=TaskStatus.FAILED, finished_at=now,
                 )
 
+            else:
+                # Crash after completion - update task status and finished_at
+                logger.info(
+                    f"Task {task.task_id}: TaskRun terminal ({task_run.status.value}), "
+                    f"syncing task status"
+                )
+
+                from .dispatcher import _run_status_to_task_status
+                task_status = _run_status_to_task_status(task_run.status)
                 self.persistence.update_task(
                     task.task_id,
+                    status=task_status,
                     finished_at=task_run.finished_at or now,
                 )
 

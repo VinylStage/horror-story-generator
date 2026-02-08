@@ -333,10 +333,13 @@ class TestSTExternalStates:
         """
         ST-EXT-01: API returns only external Task statuses.
 
-        Assertion: Status in {QUEUED, RUNNING, CANCELLED}
+        Assertion: Status in {QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED}
         """
         # Verify all TaskStatus values are external
-        valid_statuses = {TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.CANCELLED}
+        valid_statuses = {
+            TaskStatus.QUEUED, TaskStatus.RUNNING,
+            TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED,
+        }
 
         # All status values should be in the valid set
         for status in TaskStatus:

@@ -41,10 +41,10 @@ class TestWHSchema:
         WH-SCHEMA-01: Task status in webhook matches API.
 
         Assertions:
-        - Webhook status ∈ {QUEUED, RUNNING, CANCELLED}
+        - Webhook status ∈ {QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED}
         """
         # These are the only valid Task statuses per API_CONTRACT.md
-        valid_task_statuses = {"QUEUED", "RUNNING", "CANCELLED"}
+        valid_task_statuses = {"QUEUED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"}
 
         # Verify TaskStatus enum values
         actual_statuses = {status.value for status in TaskStatus}

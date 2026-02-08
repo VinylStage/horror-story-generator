@@ -26,11 +26,15 @@ class TaskStatus(str, Enum):
     From API_CONTRACT.md Section 2.1:
     - QUEUED: Waiting in queue
     - RUNNING: Currently executing
+    - COMPLETED: Execution finished successfully
+    - FAILED: Execution failed
     - CANCELLED: Cancelled before completion
     """
 
     QUEUED = "QUEUED"
     RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
     CANCELLED = "CANCELLED"
 
 
