@@ -18,16 +18,22 @@ from src.image.providers.base import ImageResult, ImageProvider
 from src.image.prompt_builder import build_image_prompt, build_negative_prompt
 from src.image.generator import generate_thumbnail, ThumbnailResult
 
+# Provider name constants
+PROVIDER_DALLE = "openai_dalle3"
+PROVIDER_STABILITY = "stability_ai"
+PROVIDER_FLUX = "flux"
+PROVIDER_LOCAL_SD = "local_sd"
+
 
 class TestImageConfig:
     """Test configuration loading."""
 
     def test_valid_providers_list(self):
         """Test that VALID_PROVIDERS contains expected values."""
-        assert "openai_dalle3" in VALID_PROVIDERS
-        assert "stability_ai" in VALID_PROVIDERS
-        assert "flux" in VALID_PROVIDERS
-        assert "local_sd" in VALID_PROVIDERS
+        assert PROVIDER_DALLE in VALID_PROVIDERS
+        assert PROVIDER_STABILITY in VALID_PROVIDERS
+        assert PROVIDER_FLUX in VALID_PROVIDERS
+        assert PROVIDER_LOCAL_SD in VALID_PROVIDERS
         assert len(VALID_PROVIDERS) == 4
 
     def test_validate_provider_valid(self):
@@ -41,40 +47,29 @@ class TestImageConfig:
         assert validate_provider("midjourney") is False
         assert validate_provider("") is False
 
-    @patch.dict(os.environ, {"ENABLE_THUMBNAIL_GENERATION": "false"}, clear=False)
-    def test_feature_disabled_by_default(self):
+    def test_feature_disabled_by_default(self, monkeypatch):
         """Test that generation is disabled when flag is false."""
-        # Reload config module to pick up patched env
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", False)
 
         assert config_module.is_image_generation_available() is False
 
-    @patch.dict(os.environ, {
-        "ENABLE_THUMBNAIL_GENERATION": "true",
-        "OPENAI_API_KEY": "test-key"
-    }, clear=False)
-    def test_feature_enabled_with_api_key(self):
+    def test_feature_enabled_with_api_key(self, monkeypatch):
         """Test that generation is available when enabled with API key."""
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", True)
+        monkeypatch.setattr(config_module, "OPENAI_API_KEY", "test-key")
 
         assert config_module.is_image_generation_available() is True
 
-    @patch.dict(os.environ, {
-        "ENABLE_THUMBNAIL_GENERATION": "true",
-        "OPENAI_API_KEY": "",
-        "STABILITY_AI_API_KEY": "",
-        "REPLICATE_API_TOKEN": "",
-        "LOCAL_SD_ENABLED": "false"
-    }, clear=False)
-    def test_feature_enabled_without_keys(self):
+    def test_feature_enabled_without_keys(self, monkeypatch):
         """Test that generation is unavailable when enabled but no API keys."""
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", True)
+        monkeypatch.setattr(config_module, "OPENAI_API_KEY", "")
+        monkeypatch.setattr(config_module, "STABILITY_AI_API_KEY", "")
+        monkeypatch.setattr(config_module, "REPLICATE_API_TOKEN", "")
+        monkeypatch.setattr(config_module, "LOCAL_SD_ENABLED", False)
 
         assert config_module.is_image_generation_available() is False
 
@@ -87,11 +82,11 @@ class TestImageResult:
         result = ImageResult(
             success=True,
             url="https://example.com/image.png",
-            provider="openai_dalle3"
+            provider=PROVIDER_DALLE
         )
         assert result.success is True
         assert result.url == "https://example.com/image.png"
-        assert result.provider == "openai_dalle3"
+        assert result.provider == PROVIDER_DALLE
         assert result.error is None
         assert result.metadata == {}
 
@@ -100,7 +95,7 @@ class TestImageResult:
         result = ImageResult(
             success=False,
             url=None,
-            provider="stability_ai",
+            provider=PROVIDER_STABILITY,
             error="API key not configured"
         )
         assert result.success is False
@@ -112,7 +107,7 @@ class TestImageResult:
         result = ImageResult(
             success=True,
             url="https://example.com/image.png",
-            provider="flux",
+            provider=PROVIDER_FLUX,
             metadata={"model": "flux-schnell", "width": 1024}
         )
         assert result.metadata["model"] == "flux-schnell"
@@ -130,7 +125,7 @@ class TestPromptBuilder:
             "central_element": "shadow figure",
             "horror_type": "psychological horror"
         }
-        prompt = build_image_prompt(keywords, "openai_dalle3")
+        prompt = build_image_prompt(keywords, PROVIDER_DALLE)
 
         assert "Korean horror" in prompt
         assert "dark apartment hallway" in prompt
@@ -146,7 +141,7 @@ class TestPromptBuilder:
             "central_element": "bloody handprint",
             "horror_type": "body horror"
         }
-        prompt = build_image_prompt(keywords, "stability_ai")
+        prompt = build_image_prompt(keywords, PROVIDER_STABILITY)
 
         assert "horror movie poster" in prompt
         assert "hospital corridor" in prompt
@@ -160,7 +155,7 @@ class TestPromptBuilder:
             "central_element": "distorted reflection",
             "horror_type": "supernatural horror"
         }
-        prompt = build_image_prompt(keywords, "flux")
+        prompt = build_image_prompt(keywords, PROVIDER_FLUX)
 
         assert "Korean horror" in prompt
         assert "empty subway station" in prompt
@@ -174,7 +169,7 @@ class TestPromptBuilder:
             "central_element": "antique mirror",
             "horror_type": "ghost story"
         }
-        prompt = build_image_prompt(keywords, "local_sd")
+        prompt = build_image_prompt(keywords, PROVIDER_LOCAL_SD)
 
         assert "masterpiece" in prompt
         assert "old house attic" in prompt
@@ -182,20 +177,20 @@ class TestPromptBuilder:
 
     def test_build_negative_prompt_stability(self):
         """Test negative prompt for Stability AI."""
-        negative = build_negative_prompt("stability_ai")
+        negative = build_negative_prompt(PROVIDER_STABILITY)
         assert "text" in negative
         assert "watermark" in negative
         assert "blurry" in negative
 
     def test_build_negative_prompt_dalle(self):
         """Test negative prompt for DALL-E (should be empty)."""
-        negative = build_negative_prompt("openai_dalle3")
+        negative = build_negative_prompt(PROVIDER_DALLE)
         assert negative == ""
 
     def test_default_keywords(self):
         """Test prompt building with default keywords."""
         keywords = {}  # Empty keywords
-        prompt = build_image_prompt(keywords, "openai_dalle3")
+        prompt = build_image_prompt(keywords, PROVIDER_DALLE)
 
         # Should use defaults
         assert "dark atmospheric space" in prompt
@@ -218,7 +213,7 @@ class TestProviderAvailability:
 
         provider = DallEProvider(api_key="test-key")
         assert provider.is_available() is True
-        assert provider.name == "openai_dalle3"
+        assert provider.name == PROVIDER_DALLE
 
     def test_stability_unavailable_without_key(self):
         """Test Stability AI provider is unavailable without API key."""
@@ -245,12 +240,10 @@ class TestProviderAvailability:
 class TestGracefulDegradation:
     """Test graceful degradation when providers are unavailable."""
 
-    @patch.dict(os.environ, {"ENABLE_THUMBNAIL_GENERATION": "false"}, clear=False)
-    def test_disabled_returns_empty_url(self):
+    def test_disabled_returns_empty_url(self, monkeypatch):
         """Test returns empty thumbnail when disabled."""
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", False)
 
         result = generate_thumbnail(
             story_text="Test horror story content",
@@ -263,18 +256,14 @@ class TestGracefulDegradation:
         assert result.provider == "none"
         assert "disabled" in result.error.lower() or "no api" in result.error.lower()
 
-    @patch.dict(os.environ, {
-        "ENABLE_THUMBNAIL_GENERATION": "true",
-        "OPENAI_API_KEY": "",
-        "STABILITY_AI_API_KEY": "",
-        "REPLICATE_API_TOKEN": "",
-        "LOCAL_SD_ENABLED": "false"
-    }, clear=False)
-    def test_no_providers_returns_empty_url(self):
+    def test_no_providers_returns_empty_url(self, monkeypatch):
         """Test returns empty thumbnail when no providers available."""
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", True)
+        monkeypatch.setattr(config_module, "OPENAI_API_KEY", "")
+        monkeypatch.setattr(config_module, "STABILITY_AI_API_KEY", "")
+        monkeypatch.setattr(config_module, "REPLICATE_API_TOKEN", "")
+        monkeypatch.setattr(config_module, "LOCAL_SD_ENABLED", False)
 
         result = generate_thumbnail(
             story_text="Test horror story content",
@@ -294,12 +283,12 @@ class TestThumbnailResult:
         result = ThumbnailResult(
             success=True,
             thumbnail_url="https://example.com/thumb.png",
-            provider="openai_dalle3",
+            provider=PROVIDER_DALLE,
             generated_at="2026-01-30T12:00:00"
         )
         assert result.success is True
         assert result.thumbnail_url == "https://example.com/thumb.png"
-        assert result.provider == "openai_dalle3"
+        assert result.provider == PROVIDER_DALLE
         assert result.error is None
 
     def test_failure_result(self):
@@ -401,7 +390,7 @@ class TestFluxProvider:
 
         provider = FluxReplicateProvider(api_token=None)
         assert provider.is_available() is False
-        assert provider.name == "flux"
+        assert provider.name == PROVIDER_FLUX
 
     def test_flux_available_with_token(self):
         """Test FLUX provider is available with API token."""
@@ -430,7 +419,7 @@ class TestLocalSDProvider:
 
         provider = LocalSDProvider(enabled=False)
         assert provider.is_available() is False
-        assert provider.name == "local_sd"
+        assert provider.name == PROVIDER_LOCAL_SD
 
     def test_local_sd_available_when_enabled_and_server_reachable(self):
         """Test Local SD provider is available when enabled and server reachable."""
@@ -467,21 +456,21 @@ class TestGeneratorFunctions:
         """Test getting provider instances by name."""
         from src.image.generator import _get_provider_instance
 
-        dalle = _get_provider_instance("openai_dalle3")
+        dalle = _get_provider_instance(PROVIDER_DALLE)
         assert dalle is not None
-        assert dalle.name == "openai_dalle3"
+        assert dalle.name == PROVIDER_DALLE
 
-        stability = _get_provider_instance("stability_ai")
+        stability = _get_provider_instance(PROVIDER_STABILITY)
         assert stability is not None
-        assert stability.name == "stability_ai"
+        assert stability.name == PROVIDER_STABILITY
 
-        flux = _get_provider_instance("flux")
+        flux = _get_provider_instance(PROVIDER_FLUX)
         assert flux is not None
-        assert flux.name == "flux"
+        assert flux.name == PROVIDER_FLUX
 
-        local_sd = _get_provider_instance("local_sd")
+        local_sd = _get_provider_instance(PROVIDER_LOCAL_SD)
         assert local_sd is not None
-        assert local_sd.name == "local_sd"
+        assert local_sd.name == PROVIDER_LOCAL_SD
 
     def test_get_provider_instance_invalid(self):
         """Test getting provider instance with invalid name."""
@@ -494,9 +483,9 @@ class TestGeneratorFunctions:
         """Test provider list with preferred provider."""
         from src.image.generator import _get_providers_to_try
 
-        providers = _get_providers_to_try("flux")
+        providers = _get_providers_to_try(PROVIDER_FLUX)
         assert len(providers) == 1
-        assert providers[0].name == "flux"
+        assert providers[0].name == PROVIDER_FLUX
 
     def test_get_providers_to_try_with_invalid_preferred(self):
         """Test provider list with invalid preferred provider."""
@@ -510,11 +499,11 @@ class TestGeneratorFunctions:
         result = ThumbnailResult(
             success=True,
             thumbnail_url="https://example.com/thumb.png",
-            provider="openai_dalle3",
+            provider=PROVIDER_DALLE,
             generated_at="2026-01-30T12:00:00"
         )
         assert "success=True" in repr(result)
-        assert "openai_dalle3" in repr(result)
+        assert PROVIDER_DALLE in repr(result)
 
     def test_thumbnail_result_repr_failure(self):
         """Test ThumbnailResult __repr__ for failure case."""
@@ -532,25 +521,21 @@ class TestGeneratorFunctions:
 class TestGenerateThumbnailAdvanced:
     """Advanced tests for generate_thumbnail function."""
 
-    @patch.dict(os.environ, {
-        "ENABLE_THUMBNAIL_GENERATION": "true",
-        "OPENAI_API_KEY": "test-key"
-    }, clear=False)
-    def test_generate_with_skip_keyword_extraction(self):
+    def test_generate_with_skip_keyword_extraction(self, monkeypatch):
         """Test generation with skip_keyword_extraction flag."""
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", True)
+        monkeypatch.setattr(config_module, "OPENAI_API_KEY", "test-key")
 
         # Mock the provider to avoid actual API call
         with patch('src.image.generator._get_providers_to_try') as mock_providers:
             mock_provider = MagicMock()
-            mock_provider.name = "openai_dalle3"
+            mock_provider.name = PROVIDER_DALLE
             mock_provider.is_available.return_value = True
             mock_provider.generate_image.return_value = ImageResult(
                 success=True,
                 url="https://example.com/image.png",
-                provider="openai_dalle3"
+                provider=PROVIDER_DALLE
             )
             mock_providers.return_value = [mock_provider]
 
@@ -564,24 +549,20 @@ class TestGenerateThumbnailAdvanced:
             assert result.success is True
             assert result.thumbnail_url == "https://example.com/image.png"
 
-    @patch.dict(os.environ, {
-        "ENABLE_THUMBNAIL_GENERATION": "true",
-        "OPENAI_API_KEY": "test-key"
-    }, clear=False)
-    def test_generate_with_custom_prompt(self):
+    def test_generate_with_custom_prompt(self, monkeypatch):
         """Test generation with custom prompt."""
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", True)
+        monkeypatch.setattr(config_module, "OPENAI_API_KEY", "test-key")
 
         with patch('src.image.generator._get_providers_to_try') as mock_providers:
             mock_provider = MagicMock()
-            mock_provider.name = "openai_dalle3"
+            mock_provider.name = PROVIDER_DALLE
             mock_provider.is_available.return_value = True
             mock_provider.generate_image.return_value = ImageResult(
                 success=True,
                 url="https://example.com/custom.png",
-                provider="openai_dalle3"
+                provider=PROVIDER_DALLE
             )
             mock_providers.return_value = [mock_provider]
 
@@ -597,36 +578,32 @@ class TestGenerateThumbnailAdvanced:
             call_args = mock_provider.generate_image.call_args
             assert call_args[1]["prompt"] == "A custom horror image prompt"
 
-    @patch.dict(os.environ, {
-        "ENABLE_THUMBNAIL_GENERATION": "true",
-        "OPENAI_API_KEY": "test-key"
-    }, clear=False)
-    def test_generate_with_provider_fallback(self):
+    def test_generate_with_provider_fallback(self, monkeypatch):
         """Test generation falls back to next provider on failure."""
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", True)
+        monkeypatch.setattr(config_module, "OPENAI_API_KEY", "test-key")
 
         with patch('src.image.generator._get_providers_to_try') as mock_providers:
             # First provider fails
             mock_provider1 = MagicMock()
-            mock_provider1.name = "openai_dalle3"
+            mock_provider1.name = PROVIDER_DALLE
             mock_provider1.is_available.return_value = True
             mock_provider1.generate_image.return_value = ImageResult(
                 success=False,
                 url=None,
-                provider="openai_dalle3",
+                provider=PROVIDER_DALLE,
                 error="API error"
             )
 
             # Second provider succeeds
             mock_provider2 = MagicMock()
-            mock_provider2.name = "stability_ai"
+            mock_provider2.name = PROVIDER_STABILITY
             mock_provider2.is_available.return_value = True
             mock_provider2.generate_image.return_value = ImageResult(
                 success=True,
                 url="https://example.com/fallback.png",
-                provider="stability_ai"
+                provider=PROVIDER_STABILITY
             )
 
             mock_providers.return_value = [mock_provider1, mock_provider2]
@@ -639,17 +616,13 @@ class TestGenerateThumbnailAdvanced:
             )
 
             assert result.success is True
-            assert result.provider == "stability_ai"
+            assert result.provider == PROVIDER_STABILITY
 
-    @patch.dict(os.environ, {
-        "ENABLE_THUMBNAIL_GENERATION": "true",
-        "OPENAI_API_KEY": "test-key"
-    }, clear=False)
-    def test_generate_handles_exception(self):
+    def test_generate_handles_exception(self, monkeypatch):
         """Test generation handles unexpected exceptions gracefully."""
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", True)
+        monkeypatch.setattr(config_module, "OPENAI_API_KEY", "test-key")
 
         with patch('src.image.generator._get_providers_to_try') as mock_providers:
             mock_providers.side_effect = Exception("Unexpected error")
@@ -665,30 +638,26 @@ class TestGenerateThumbnailAdvanced:
             assert result.provider == "error"
             assert "Unexpected error" in result.error
 
-    @patch.dict(os.environ, {
-        "ENABLE_THUMBNAIL_GENERATION": "true",
-        "OPENAI_API_KEY": "test-key"
-    }, clear=False)
-    def test_generate_skips_unavailable_provider(self):
+    def test_generate_skips_unavailable_provider(self, monkeypatch):
         """Test generation skips providers that are not available."""
-        import importlib
         import src.image.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, "ENABLE_THUMBNAIL_GENERATION", True)
+        monkeypatch.setattr(config_module, "OPENAI_API_KEY", "test-key")
 
         with patch('src.image.generator._get_providers_to_try') as mock_providers:
             # First provider not available
             mock_provider1 = MagicMock()
-            mock_provider1.name = "openai_dalle3"
+            mock_provider1.name = PROVIDER_DALLE
             mock_provider1.is_available.return_value = False
 
             # Second provider available and succeeds
             mock_provider2 = MagicMock()
-            mock_provider2.name = "stability_ai"
+            mock_provider2.name = PROVIDER_STABILITY
             mock_provider2.is_available.return_value = True
             mock_provider2.generate_image.return_value = ImageResult(
                 success=True,
                 url="https://example.com/available.png",
-                provider="stability_ai"
+                provider=PROVIDER_STABILITY
             )
 
             mock_providers.return_value = [mock_provider1, mock_provider2]
@@ -701,7 +670,7 @@ class TestGenerateThumbnailAdvanced:
             )
 
             assert result.success is True
-            assert result.provider == "stability_ai"
+            assert result.provider == PROVIDER_STABILITY
             # First provider should not have generate_image called
             mock_provider1.generate_image.assert_not_called()
 
@@ -711,12 +680,12 @@ class TestPromptBuilderAdvanced:
 
     def test_build_negative_prompt_flux(self):
         """Test negative prompt for FLUX (should be empty, doesn't support negative prompts)."""
-        negative = build_negative_prompt("flux")
+        negative = build_negative_prompt(PROVIDER_FLUX)
         assert negative == ""  # FLUX doesn't use negative prompts
 
     def test_build_negative_prompt_local_sd(self):
         """Test negative prompt for Local SD."""
-        negative = build_negative_prompt("local_sd")
+        negative = build_negative_prompt(PROVIDER_LOCAL_SD)
         assert "text" in negative
         assert "watermark" in negative
         assert "blurry" in negative
@@ -729,7 +698,7 @@ class TestPromptBuilderAdvanced:
             "central_element": "ghost",
             "horror_type": "supernatural"
         }
-        prompt = build_image_prompt(keywords, "openai_dalle3", title="The Haunted Forest")
+        prompt = build_image_prompt(keywords, PROVIDER_DALLE, title="The Haunted Forest")
         # Title may or may not be included depending on implementation
         assert "dark forest" in prompt
 
@@ -754,7 +723,7 @@ class TestDallEProviderAdditional:
         from src.image.providers.openai_dalle import DallEProvider
 
         provider = DallEProvider(api_key="test-key")
-        assert provider.name == "openai_dalle3"
+        assert provider.name == PROVIDER_DALLE
 
     def test_dalle_provider_available_with_env_key(self):
         """Test DALL-E uses environment key when not provided."""
@@ -763,7 +732,7 @@ class TestDallEProviderAdditional:
         # Provider should use env var when api_key is None
         provider = DallEProvider()
         # Just verify it doesn't crash
-        assert provider.name == "openai_dalle3"
+        assert provider.name == PROVIDER_DALLE
 
 
 class TestStabilityProviderAdditional:
@@ -774,7 +743,7 @@ class TestStabilityProviderAdditional:
         from src.image.providers.stability_ai import StabilityAIProvider
 
         provider = StabilityAIProvider(api_key="test-key")
-        assert provider.name == "stability_ai"
+        assert provider.name == PROVIDER_STABILITY
 
     def test_stability_available_with_key(self):
         """Test availability with API key."""
@@ -792,7 +761,7 @@ class TestFluxProviderAdditional:
         from src.image.providers.flux_replicate import FluxReplicateProvider
 
         provider = FluxReplicateProvider(api_token="test-token")
-        assert provider.name == "flux"
+        assert provider.name == PROVIDER_FLUX
 
 
 class TestLocalSDProviderAdditional:
@@ -803,7 +772,7 @@ class TestLocalSDProviderAdditional:
         from src.image.providers.local_sd import LocalSDProvider
 
         provider = LocalSDProvider(enabled=True)
-        assert provider.name == "local_sd"
+        assert provider.name == PROVIDER_LOCAL_SD
 
     def test_local_sd_uses_env_config(self):
         """Test Local SD uses environment configuration."""

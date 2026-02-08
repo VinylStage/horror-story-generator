@@ -12,12 +12,19 @@ from src.research.integration.loader import (
     ACCEPTABLE_QUALITY_SCORES,
 )
 
+# Test card ID constants
+CARD_ID_GOOD = "RC-20260115-120000"
+CARD_ID_PARTIAL = "RC-20260115-130000"
+CARD_ID_INCOMPLETE = "RC-20260115-140000"
+CARD_ID_NONEXISTENT = "RC-99999999-999999"
+CARD_ID_BAD_FORMAT = "RC-BAD-FORMAT"
+
 
 @pytest.fixture
 def sample_card():
     """Create a sample research card."""
     return {
-        "card_id": "RC-20260115-120000",
+        "card_id": CARD_ID_GOOD,
         "input": {"topic": "Test topic"},
         "output": {
             "title": "Test Title",
@@ -40,24 +47,24 @@ def research_dir(tmp_path, sample_card):
     card_dir.mkdir(parents=True)
 
     # Create good quality card
-    card_path = card_dir / "RC-20260115-120000.json"
+    card_path = card_dir / f"{CARD_ID_GOOD}.json"
     with open(card_path, "w") as f:
         json.dump(sample_card, f)
 
     # Create partial quality card
     partial_card = sample_card.copy()
-    partial_card["card_id"] = "RC-20260115-130000"
+    partial_card["card_id"] = CARD_ID_PARTIAL
     partial_card["validation"] = {"quality_score": "partial"}
     partial_card["metadata"] = {"created_at": "2026-01-15T13:00:00"}
-    with open(card_dir / "RC-20260115-130000.json", "w") as f:
+    with open(card_dir / f"{CARD_ID_PARTIAL}.json", "w") as f:
         json.dump(partial_card, f)
 
     # Create incomplete quality card
     incomplete_card = sample_card.copy()
-    incomplete_card["card_id"] = "RC-20260115-140000"
+    incomplete_card["card_id"] = CARD_ID_INCOMPLETE
     incomplete_card["validation"] = {"quality_score": "incomplete"}
     incomplete_card["metadata"] = {"created_at": "2026-01-15T14:00:00"}
-    with open(card_dir / "RC-20260115-140000.json", "w") as f:
+    with open(card_dir / f"{CARD_ID_INCOMPLETE}.json", "w") as f:
         json.dump(incomplete_card, f)
 
     return tmp_path
@@ -125,18 +132,18 @@ class TestGetCardById:
 
     def test_finds_card_by_id(self, research_dir):
         """Test finding card by ID using expected path."""
-        card = get_card_by_id("RC-20260115-120000", str(research_dir))
+        card = get_card_by_id(CARD_ID_GOOD, str(research_dir))
         assert card is not None
-        assert card["card_id"] == "RC-20260115-120000"
+        assert card["card_id"] == CARD_ID_GOOD
 
     def test_returns_none_for_nonexistent(self, research_dir):
         """Test returns None for non-existent card."""
-        card = get_card_by_id("RC-99999999-999999", str(research_dir))
+        card = get_card_by_id(CARD_ID_NONEXISTENT, str(research_dir))
         assert card is None
 
     def test_returns_none_for_nonexistent_dir(self, tmp_path):
         """Test returns None when directory doesn't exist."""
-        card = get_card_by_id("RC-20260115-120000", str(tmp_path / "nonexistent"))
+        card = get_card_by_id(CARD_ID_GOOD, str(tmp_path / "nonexistent"))
         assert card is None
 
     def test_fallback_search_finds_card(self, tmp_path, sample_card):
@@ -146,12 +153,12 @@ class TestGetCardById:
         card_dir.mkdir()
 
         # Use a card ID that won't match expected path structure
-        sample_card["card_id"] = "RC-BAD-FORMAT"
-        card_path = card_dir / "RC-BAD-FORMAT.json"
+        sample_card["card_id"] = CARD_ID_BAD_FORMAT
+        card_path = card_dir / f"{CARD_ID_BAD_FORMAT}.json"
         with open(card_path, "w") as f:
             json.dump(sample_card, f)
 
-        card = get_card_by_id("RC-BAD-FORMAT", str(tmp_path))
+        card = get_card_by_id(CARD_ID_BAD_FORMAT, str(tmp_path))
         assert card is not None
 
 
@@ -193,7 +200,7 @@ class TestGetCardSummary:
         """Test extracting card summary."""
         summary = get_card_summary(sample_card)
 
-        assert summary["card_id"] == "RC-20260115-120000"
+        assert summary["card_id"] == CARD_ID_GOOD
         assert summary["title"] == "Test Title"
         assert summary["topic"] == "Test topic"
         assert summary["quality"] == "good"

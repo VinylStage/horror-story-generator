@@ -8,6 +8,11 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
 
+# Test card ID constants
+TEST_CARD_ID = "RC-20260111-120000"
+TEST_CARD_ID_SHORT = "RC-001"
+
+
 class TestExecuteResearch:
     """Tests for execute_research function."""
 
@@ -19,7 +24,7 @@ class TestExecuteResearch:
         mock_process = AsyncMock()
         mock_process.returncode = 0
         mock_process.communicate = AsyncMock(return_value=(
-            b"Card ID: RC-20260111-120000\nTitle: Test Card\nQuality: good\nJSON: /path/to/card.json",
+            f"Card ID: {TEST_CARD_ID}\nTitle: Test Card\nQuality: good\nJSON: /path/to/card.json".encode(),
             b""
         ))
 
@@ -27,11 +32,11 @@ class TestExecuteResearch:
             mock_rm.return_value = MagicMock()
             with patch("asyncio.create_subprocess_exec", return_value=mock_process):
                 with patch("asyncio.wait_for", return_value=(
-                    b"Card ID: RC-20260111-120000\nTitle: Test Card\nQuality: good\nJSON: /path/to/card.json",
+                    f"Card ID: {TEST_CARD_ID}\nTitle: Test Card\nQuality: good\nJSON: /path/to/card.json".encode(),
                     b""
                 )):
                     mock_process.communicate = AsyncMock(return_value=(
-                        b"Card ID: RC-20260111-120000\nTitle: Test Card\nQuality: good\nJSON: /path/to/card.json",
+                        f"Card ID: {TEST_CARD_ID}\nTitle: Test Card\nQuality: good\nJSON: /path/to/card.json".encode(),
                         b""
                     ))
                     result = await execute_research(
@@ -42,7 +47,7 @@ class TestExecuteResearch:
                     )
 
                     assert result["status"] == "complete"
-                    assert result["card_id"] == "RC-20260111-120000"
+                    assert result["card_id"] == TEST_CARD_ID
 
     @pytest.mark.asyncio
     async def test_execute_research_cli_error(self):
@@ -110,12 +115,12 @@ class TestExecuteResearch:
 
         mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate = AsyncMock(return_value=(b"Card ID: RC-001", b""))
+        mock_process.communicate = AsyncMock(return_value=(f"Card ID: {TEST_CARD_ID_SHORT}".encode(), b""))
 
         with patch("src.api.services.research_service.get_resource_manager") as mock_rm:
             mock_rm.return_value = MagicMock()
             with patch("asyncio.create_subprocess_exec", return_value=mock_process) as mock_exec:
-                with patch("asyncio.wait_for", return_value=(b"Card ID: RC-001", b"")):
+                with patch("asyncio.wait_for", return_value=(f"Card ID: {TEST_CARD_ID_SHORT}".encode(), b"")):
                     await execute_research(
                         topic="Test",
                         tags=["tag1"],
@@ -139,27 +144,27 @@ class TestParseCliOutput:
         """Should parse all fields from CLI output."""
         from src.api.services.research_service import parse_cli_output
 
-        output = """Card ID: RC-20260111-120000
+        output = f"""Card ID: {TEST_CARD_ID}
 Title: The Haunted Apartment
 Quality: good
-JSON: /data/research/2026/01/RC-20260111-120000.json
-Markdown: /data/research/2026/01/RC-20260111-120000.md"""
+JSON: /data/research/2026/01/{TEST_CARD_ID}.json
+Markdown: /data/research/2026/01/{TEST_CARD_ID}.md"""
 
         result = parse_cli_output(output)
 
-        assert result["card_id"] == "RC-20260111-120000"
+        assert result["card_id"] == TEST_CARD_ID
         assert result["title"] == "The Haunted Apartment"
         assert result["quality"] == "good"
-        assert result["output_path"] == "/data/research/2026/01/RC-20260111-120000.json"
+        assert result["output_path"] == f"/data/research/2026/01/{TEST_CARD_ID}.json"
 
     def test_parse_partial_output(self):
         """Should handle partial output."""
         from src.api.services.research_service import parse_cli_output
 
-        output = "Card ID: RC-001"
+        output = f"Card ID: {TEST_CARD_ID_SHORT}"
         result = parse_cli_output(output)
 
-        assert result["card_id"] == "RC-001"
+        assert result["card_id"] == TEST_CARD_ID_SHORT
         assert result["title"] == ""
         assert result["quality"] == ""
 
@@ -192,7 +197,7 @@ class TestValidateCard:
         from src.api.services.research_service import validate_card
 
         with patch("pathlib.Path.exists", return_value=False):
-            result = await validate_card("RC-20260111-120000")
+            result = await validate_card(TEST_CARD_ID)
 
             assert result["is_valid"] is False
             assert result["quality_score"] == "not_found"
@@ -215,7 +220,7 @@ class TestValidateCard:
                     b"Validation passed\nquality_score: excellent",
                     b""
                 )):
-                    result = await validate_card("RC-20260111-120000")
+                    result = await validate_card(TEST_CARD_ID)
 
                     assert result["is_valid"] is True
                     assert result["quality_score"] == "excellent"
@@ -238,7 +243,7 @@ class TestValidateCard:
                     b"",
                     b"Validation failed: missing required fields"
                 )):
-                    result = await validate_card("RC-20260111-120000")
+                    result = await validate_card(TEST_CARD_ID)
 
                     assert result["is_valid"] is False
                     assert result["quality_score"] == "error"
@@ -250,7 +255,7 @@ class TestValidateCard:
 
         with patch("pathlib.Path.exists", return_value=True):
             with patch("asyncio.create_subprocess_exec", side_effect=Exception("Process error")):
-                result = await validate_card("RC-20260111-120000")
+                result = await validate_card(TEST_CARD_ID)
 
                 assert result["is_valid"] is False
                 assert "Process error" in result["message"]

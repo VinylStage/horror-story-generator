@@ -44,6 +44,13 @@ from src.scheduler import (
 from src.scheduler.executor import TaskHandler
 
 
+# Scheduler configuration constants for E2E tests
+MAX_RETRY_ATTEMPTS = 3
+PRIORITY_HIGH = 10
+PRIORITY_MED = 5
+PRIORITY_LOW = 1
+
+
 # =============================================================================
 # E2E Test Fixtures
 # =============================================================================
@@ -175,7 +182,7 @@ def e2e_service(e2e_temp_dir, e2e_handler):
     retry_controller = RetryController(
         persistence=persistence,
         queue_manager=queue_manager,
-        max_attempts=3,
+        max_attempts=MAX_RETRY_ATTEMPTS,
         base_delay_seconds=0,  # No delay for tests
     )
 
@@ -267,9 +274,9 @@ class TestE2ENormalExecution:
         3. Verify execution order
         """
         # Enqueue tasks with different priorities
-        task_low = e2e_service.enqueue_task("story", {"id": "low"}, priority=1)
-        task_high = e2e_service.enqueue_task("story", {"id": "high"}, priority=10)
-        task_med = e2e_service.enqueue_task("story", {"id": "medium"}, priority=5)
+        task_low = e2e_service.enqueue_task("story", {"id": "low"}, priority=PRIORITY_LOW)
+        task_high = e2e_service.enqueue_task("story", {"id": "high"}, priority=PRIORITY_HIGH)
+        task_med = e2e_service.enqueue_task("story", {"id": "medium"}, priority=PRIORITY_MED)
 
         # Execute all
         execution_order = []
@@ -344,8 +351,8 @@ class TestE2EDirectExecution:
         4. Task2 executes after direct
         """
         # Enqueue two tasks
-        task1 = e2e_service.enqueue_task("story", {"seq": 1}, priority=10)
-        task2 = e2e_service.enqueue_task("story", {"seq": 2}, priority=5)
+        task1 = e2e_service.enqueue_task("story", {"seq": 1}, priority=PRIORITY_HIGH)
+        task2 = e2e_service.enqueue_task("story", {"seq": 2}, priority=PRIORITY_MED)
 
         execution_order = []
 
@@ -462,8 +469,9 @@ class TestE2ERetryFlow:
             if attempts > 5:  # Safety limit
                 break
 
-        # Original + 3 retries = 4 attempts total
-        assert attempts == 4, f"Expected 4 attempts (1 original + 3 retries), got {attempts}"
+        # Original + MAX_RETRY_ATTEMPTS retries = 4 attempts total
+        expected_attempts = 1 + MAX_RETRY_ATTEMPTS
+        assert attempts == expected_attempts, f"Expected {expected_attempts} attempts (1 original + {MAX_RETRY_ATTEMPTS} retries), got {attempts}"
 
         # No more tasks in queue
         queued = e2e_service.list_queued_tasks()
@@ -575,7 +583,7 @@ class TestE2ERecovery:
         # Simulate crash and recovery
         persistence2 = PersistenceAdapter(str(db_path))
         queue_manager2 = QueueManager(persistence2)
-        retry_controller2 = RetryController(persistence2, queue_manager2, max_attempts=3)
+        retry_controller2 = RetryController(persistence2, queue_manager2, max_attempts=MAX_RETRY_ATTEMPTS)
         recovery_manager2 = RecoveryManager(persistence2, queue_manager2, retry_controller2)
 
         stats = recovery_manager2.recover_on_startup()

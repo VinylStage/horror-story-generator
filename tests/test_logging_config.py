@@ -13,6 +13,18 @@ import pytest
 from src.infra.logging_config import DailyRotatingFileHandler, setup_logging
 
 
+LOGGER_NAME = "horror_story_generator"
+
+
+@pytest.fixture
+def clean_logger():
+    """Provide a clean logger and ensure cleanup after test."""
+    test_logger = logging.getLogger(LOGGER_NAME)
+    test_logger.handlers.clear()
+    yield test_logger
+    test_logger.handlers.clear()
+
+
 class TestDailyRotatingFileHandler:
     """Tests for DailyRotatingFileHandler class."""
 
@@ -65,38 +77,24 @@ class TestDailyRotatingFileHandler:
 class TestSetupLogging:
     """Tests for setup_logging function."""
 
-    def test_returns_logger(self):
+    def test_returns_logger(self, clean_logger):
         """Test that setup_logging returns a logger instance."""
-        test_logger = logging.getLogger("horror_story_generator")
-        test_logger.handlers.clear()
-
         logger = setup_logging("INFO")
 
         assert isinstance(logger, logging.Logger)
-        assert logger.name == "horror_story_generator"
+        assert logger.name == LOGGER_NAME
 
-        logger.handlers.clear()
-
-    def test_sets_correct_log_level(self):
+    def test_sets_correct_log_level(self, clean_logger):
         """Test that setup_logging sets the correct log level."""
-        # Reset handlers for clean test
-        test_logger = logging.getLogger("horror_story_generator")
-        test_logger.handlers.clear()
-
         logger = setup_logging("DEBUG")
         assert logger.level == logging.DEBUG
 
-        logger.handlers.clear()
+        clean_logger.handlers.clear()
         logger = setup_logging("WARNING")
         assert logger.level == logging.WARNING
 
-        logger.handlers.clear()
-
-    def test_adds_console_handler(self):
+    def test_adds_console_handler(self, clean_logger):
         """Test that setup_logging adds a console handler."""
-        test_logger = logging.getLogger("horror_story_generator")
-        test_logger.handlers.clear()
-
         logger = setup_logging("INFO")
 
         has_stream_handler = any(
@@ -105,14 +103,7 @@ class TestSetupLogging:
         )
         assert has_stream_handler
 
-        logger.handlers.clear()
-
-    def test_prevents_propagation(self):
+    def test_prevents_propagation(self, clean_logger):
         """Test that logger propagation is disabled."""
-        test_logger = logging.getLogger("horror_story_generator")
-        test_logger.handlers.clear()
-
         logger = setup_logging("INFO")
         assert logger.propagate is False
-
-        logger.handlers.clear()

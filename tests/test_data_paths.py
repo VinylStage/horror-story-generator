@@ -269,25 +269,22 @@ class TestInitialize:
 class TestGetNovelOutputDir:
     """Tests for get_novel_output_dir function (v1.3.1)."""
 
-    def test_returns_default_path(self):
+    def test_returns_default_path(self, monkeypatch):
         """Should return data/novel by default."""
         from src.infra.data_paths import get_novel_output_dir, get_data_root
 
-        with patch.dict("os.environ", {}, clear=False):
-            # Clear NOVEL_OUTPUT_DIR if set
-            import os
-            os.environ.pop("NOVEL_OUTPUT_DIR", None)
-            result = get_novel_output_dir()
-            assert result == get_data_root() / "novel"
+        monkeypatch.delenv("NOVEL_OUTPUT_DIR", raising=False)
+        result = get_novel_output_dir()
+        assert result == get_data_root() / "novel"
 
-    def test_respects_env_override(self):
+    def test_respects_env_override(self, monkeypatch):
         """Should respect NOVEL_OUTPUT_DIR environment variable."""
         from src.infra.data_paths import get_novel_output_dir
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch.dict("os.environ", {"NOVEL_OUTPUT_DIR": tmpdir}):
-                result = get_novel_output_dir()
-                assert result == Path(tmpdir).resolve()
+            monkeypatch.setenv("NOVEL_OUTPUT_DIR", tmpdir)
+            result = get_novel_output_dir()
+            assert result == Path(tmpdir).resolve()
 
 
 class TestGetLegacyResearchCardsJsonl:

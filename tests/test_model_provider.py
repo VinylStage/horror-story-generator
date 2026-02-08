@@ -17,6 +17,9 @@ from src.story.model_provider import (
     OllamaProvider,
 )
 
+# Model name constants
+DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
+
 
 class TestModelInfo:
     """Tests for ModelInfo dataclass."""
@@ -25,11 +28,11 @@ class TestModelInfo:
         """Test creating a ModelInfo instance."""
         info = ModelInfo(
             provider="anthropic",
-            model_name="claude-sonnet-4-5-20250929",
-            full_spec="claude-sonnet-4-5-20250929"
+            model_name=DEFAULT_CLAUDE_MODEL,
+            full_spec=DEFAULT_CLAUDE_MODEL
         )
         assert info.provider == "anthropic"
-        assert info.model_name == "claude-sonnet-4-5-20250929"
+        assert info.model_name == DEFAULT_CLAUDE_MODEL
 
 
 class TestGenerationResult:
@@ -41,7 +44,7 @@ class TestGenerationResult:
             text="Generated text",
             usage={"input_tokens": 100, "output_tokens": 50},
             provider="anthropic",
-            model="claude-sonnet-4-5-20250929"
+            model=DEFAULT_CLAUDE_MODEL
         )
         assert result.text == "Generated text"
         assert result.usage["input_tokens"] == 100
@@ -58,14 +61,12 @@ class TestParseModelSpec:
             assert info.provider == "anthropic"
             assert info.model_name == "claude-test-model"
 
-    def test_parse_none_without_env_uses_default(self):
+    def test_parse_none_without_env_uses_default(self, monkeypatch):
         """Test that None without env var uses hardcoded default."""
-        with patch.dict(os.environ, {}, clear=True):
-            # Remove CLAUDE_MODEL if it exists
-            os.environ.pop("CLAUDE_MODEL", None)
-            info = parse_model_spec(None)
-            assert info.provider == "anthropic"
-            assert info.model_name == "claude-sonnet-4-5-20250929"
+        monkeypatch.delenv("CLAUDE_MODEL", raising=False)
+        info = parse_model_spec(None)
+        assert info.provider == "anthropic"
+        assert info.model_name == DEFAULT_CLAUDE_MODEL
 
     def test_parse_ollama_spec(self):
         """Test parsing ollama model spec."""
@@ -82,9 +83,9 @@ class TestParseModelSpec:
 
     def test_parse_claude_model_direct(self):
         """Test parsing direct Claude model name."""
-        info = parse_model_spec("claude-sonnet-4-5-20250929")
+        info = parse_model_spec(DEFAULT_CLAUDE_MODEL)
         assert info.provider == "anthropic"
-        assert info.model_name == "claude-sonnet-4-5-20250929"
+        assert info.model_name == DEFAULT_CLAUDE_MODEL
 
 
 class TestGetProvider:
@@ -98,9 +99,9 @@ class TestGetProvider:
 
     def test_get_claude_provider(self):
         """Test getting a Claude provider."""
-        provider = get_provider("claude-sonnet-4-5-20250929")
+        provider = get_provider(DEFAULT_CLAUDE_MODEL)
         assert isinstance(provider, ClaudeProvider)
-        assert provider.model_name == "claude-sonnet-4-5-20250929"
+        assert provider.model_name == DEFAULT_CLAUDE_MODEL
 
     def test_get_default_provider(self):
         """Test getting default provider (Claude)."""
@@ -196,14 +197,13 @@ class TestClaudeProvider:
 class TestOllamaProvider:
     """Tests for OllamaProvider class."""
 
-    def test_init_default_host_port(self):
+    def test_init_default_host_port(self, monkeypatch):
         """Test initialization with default host and port."""
-        with patch.dict(os.environ, {}, clear=True):
-            os.environ.pop("OLLAMA_HOST", None)
-            os.environ.pop("OLLAMA_PORT", None)
-            provider = OllamaProvider("llama3")
-            assert provider.host == "localhost"
-            assert provider.port == 11434
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        monkeypatch.delenv("OLLAMA_PORT", raising=False)
+        provider = OllamaProvider("llama3")
+        assert provider.host == "localhost"
+        assert provider.port == 11434
 
     def test_init_custom_host_port(self):
         """Test initialization with custom host and port."""

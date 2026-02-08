@@ -19,6 +19,15 @@ from src.story.template_loader import (
 )
 
 
+# Cluster count thresholds and their corresponding weight multipliers
+CLUSTER_THRESHOLD_LOW = 4
+CLUSTER_THRESHOLD_MED = 6
+CLUSTER_THRESHOLD_HIGH = 8
+PENALTY_WEIGHT_LOW = 0.50   # 50% penalty at threshold 4
+PENALTY_WEIGHT_MED = 0.20   # 80% penalty at threshold 6
+PENALTY_WEIGHT_HIGH = 0.05  # 95% penalty at threshold 8
+
+
 class TestLoadTemplateSkeletons:
     """Tests for load_template_skeletons function."""
 
@@ -97,8 +106,8 @@ class TestComputeTemplateWeights:
             {"template_id": "T-002"},       # Not in cluster
         ]
 
-        weights = compute_template_weights(skeletons, cluster_count=4)
-        assert weights[0] == 0.50  # Cluster template penalized
+        weights = compute_template_weights(skeletons, cluster_count=CLUSTER_THRESHOLD_LOW)
+        assert weights[0] == PENALTY_WEIGHT_LOW  # Cluster template penalized
         assert weights[1] == 1.0   # Non-cluster template unchanged
 
     def test_penalty_at_threshold_6(self):
@@ -108,8 +117,8 @@ class TestComputeTemplateWeights:
             {"template_id": "T-002"},       # Not in cluster
         ]
 
-        weights = compute_template_weights(skeletons, cluster_count=6)
-        assert weights[0] == 0.20  # 80% penalty = 0.20 multiplier
+        weights = compute_template_weights(skeletons, cluster_count=CLUSTER_THRESHOLD_MED)
+        assert weights[0] == PENALTY_WEIGHT_MED  # 80% penalty = 0.20 multiplier
         assert weights[1] == 1.0
 
     def test_penalty_at_threshold_8(self):
@@ -119,8 +128,8 @@ class TestComputeTemplateWeights:
             {"template_id": "T-002"},       # Not in cluster
         ]
 
-        weights = compute_template_weights(skeletons, cluster_count=8)
-        assert weights[0] == 0.05  # 95% penalty = 0.05 multiplier
+        weights = compute_template_weights(skeletons, cluster_count=CLUSTER_THRESHOLD_HIGH)
+        assert weights[0] == PENALTY_WEIGHT_HIGH  # 95% penalty = 0.05 multiplier
         assert weights[1] == 1.0
 
 
@@ -144,13 +153,13 @@ class TestClusterConfiguration:
 
     def test_weight_penalties(self):
         """Test weight penalties configuration."""
-        assert 4 in PHASE3B_WEIGHT_PENALTIES
-        assert 6 in PHASE3B_WEIGHT_PENALTIES
-        assert 8 in PHASE3B_WEIGHT_PENALTIES
+        assert CLUSTER_THRESHOLD_LOW in PHASE3B_WEIGHT_PENALTIES
+        assert CLUSTER_THRESHOLD_MED in PHASE3B_WEIGHT_PENALTIES
+        assert CLUSTER_THRESHOLD_HIGH in PHASE3B_WEIGHT_PENALTIES
 
-        assert PHASE3B_WEIGHT_PENALTIES[4] == 0.50
-        assert PHASE3B_WEIGHT_PENALTIES[6] == 0.20
-        assert PHASE3B_WEIGHT_PENALTIES[8] == 0.05
+        assert PHASE3B_WEIGHT_PENALTIES[CLUSTER_THRESHOLD_LOW] == PENALTY_WEIGHT_LOW
+        assert PHASE3B_WEIGHT_PENALTIES[CLUSTER_THRESHOLD_MED] == PENALTY_WEIGHT_MED
+        assert PHASE3B_WEIGHT_PENALTIES[CLUSTER_THRESHOLD_HIGH] == PENALTY_WEIGHT_HIGH
 
 
 class TestLoadTemplateSkeletonsEdgeCases:
