@@ -1,4 +1,4 @@
-# Job Scheduler Domain Model
+# Task Scheduler Domain Model
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
@@ -9,7 +9,7 @@
 
 ## Overview
 
-This document defines the canonical domain model for the Job Scheduler system. These entities form the conceptual foundation for all scheduler-related functionality. Implementation details are intentionally omitted; this document serves as the authoritative reference for what each entity represents and why it exists.
+This document defines the canonical domain model for the Task Scheduler system. These entities form the conceptual foundation for all scheduler-related functionality. Implementation details are intentionally omitted; this document serves as the authoritative reference for what each entity represents and why it exists.
 
 ---
 
@@ -339,4 +339,4 @@ Terminal states:
 - [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
 - [API_CONTRACT.md](./API_CONTRACT.md) - API 계약
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요

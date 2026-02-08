@@ -1,4 +1,4 @@
-# Job Scheduler Entity Relationships
+# Task Scheduler Entity Relationships
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
@@ -9,7 +9,7 @@
 
 ## Overview
 
-This document defines the relationships between Job Scheduler entities. It covers cardinality, ownership semantics, creation triggers, and lifecycle dependencies. These relationships form the foundation for API contract design and database schema decisions.
+This document defines the relationships between Task Scheduler entities. It covers cardinality, ownership semantics, creation triggers, and lifecycle dependencies. These relationships form the foundation for API contract design and database schema decisions.
 
 ---
 
@@ -443,5 +443,5 @@ Legend:
 - [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
 - [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

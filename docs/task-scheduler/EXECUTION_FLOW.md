@@ -1,4 +1,4 @@
-# Job Scheduler Execution Flow
+# Task Scheduler Execution Flow
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
@@ -9,7 +9,7 @@
 
 ## Purpose
 
-This document provides visual representations of the Job Scheduler execution flows.
+This document provides visual representations of the Task Scheduler execution flows.
 Each diagram is accompanied by a text explanation.
 
 ---
@@ -406,5 +406,5 @@ on_failure: skip     # → Skip remaining without CANCELLED status
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
 - [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
 - [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) - 구현 계획
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

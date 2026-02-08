@@ -1,4 +1,4 @@
-# Job Scheduler E2E Test Report
+# Task Scheduler E2E Test Report
 
 **Document Version:** 1.1.0
 **Application Version:** 1.6.0 <!-- x-release-please-version -->
@@ -310,4 +310,4 @@ tests/scheduler/test_e2e.py::TestE2EWebhook::test_e2e_webhook_04_at_least_once_s
 - [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
 - [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요

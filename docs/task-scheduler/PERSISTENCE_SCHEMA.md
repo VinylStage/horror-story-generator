@@ -1,4 +1,4 @@
-# Job Scheduler Persistence Schema Design
+# Task Scheduler Persistence Schema Design
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
@@ -684,5 +684,5 @@ Before any implementation, verify:
 - [ENTITY_RELATIONSHIPS.md](./ENTITY_RELATIONSHIPS.md) - 엔티티 관계 정의
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
 - [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

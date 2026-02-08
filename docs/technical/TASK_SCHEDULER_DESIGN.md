@@ -1,4 +1,4 @@
-# Job Scheduler System Design
+# Task Scheduler System Design
 
 > **Status:** IMPLEMENTED (Phase 3 Complete)
 > **Application Version:** 1.6.0 <!-- x-release-please-version -->

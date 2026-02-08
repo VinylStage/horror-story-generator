@@ -1,4 +1,4 @@
-# Job Scheduler Recovery Scenarios
+# Task Scheduler Recovery Scenarios
 
 > **Status:** FINAL (Phase 5 Complete)
 > **Document Version:** 1.0.0
@@ -431,5 +431,5 @@ test_crash_during_running_job:
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
 - [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
 - [E2E_TEST_PLAN.md](./E2E_TEST_PLAN.md) - E2E 테스트 계획
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

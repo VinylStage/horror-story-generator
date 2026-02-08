@@ -1,4 +1,4 @@
-# Job Scheduler End-to-End Test Plan
+# Task Scheduler End-to-End Test Plan
 
 **Document Version:** 1.1.0
 **Application Version:** 1.6.0 <!-- x-release-please-version -->
@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-This document defines the End-to-End (E2E) test plan for the Job Scheduler.
+This document defines the End-to-End (E2E) test plan for the Task Scheduler.
 E2E tests validate the complete scheduler lifecycle with all components
 integrated, ensuring the system behaves correctly as a whole.
 
@@ -275,4 +275,4 @@ python -m pytest tests/scheduler/test_pipeline_e2e.py -v --run-pipeline
 - [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
 - [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요

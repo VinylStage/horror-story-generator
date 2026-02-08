@@ -362,7 +362,7 @@ def compute_group_status(group: TaskGroup) -> GroupStatus:
 - Phase 5+: Add `on_failure: stop | continue | skip` field when user requests flexibility
 - Default value `stop` ensures backward compatibility
 
-**Reference**: See `JOBGROUP_BEHAVIOR_OPTIONS.md` for full decision analysis.
+**Reference**: See `TASKGROUP_BEHAVIOR_OPTIONS.md` for full decision analysis.
 
 ---
 
@@ -495,5 +495,5 @@ Before implementation of any component:
 - [PERSISTENCE_SCHEMA.md](./PERSISTENCE_SCHEMA.md) - 영속성 스키마
 - [API_CONTRACT.md](./API_CONTRACT.md) - API 계약
 - [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

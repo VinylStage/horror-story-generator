@@ -134,5 +134,5 @@ Phase 5+: When remote API parallelization needed:
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일 (DEC-011 참조)
 - [EXECUTION_FLOW.md](./EXECUTION_FLOW.md) - 실행 흐름 다이어그램
 - [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) - 도메인 모델 정의
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 

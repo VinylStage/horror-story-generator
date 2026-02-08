@@ -1,4 +1,4 @@
-# Job Scheduler Test Strategy
+# Task Scheduler Test Strategy
 
 > **Status:** FINAL (Phase 6-A Validated)
 > **Document Version:** 1.0.0
@@ -618,5 +618,5 @@ For tests requiring concurrent access (PERS-003-A):
 - [E2E_TEST_PLAN.md](./E2E_TEST_PLAN.md) - E2E 테스트 계획
 - [E2E_TEST_REPORT.md](./E2E_TEST_REPORT.md) - E2E 테스트 결과
 - [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
-- [JOB_SCHEDULER_DESIGN.md](../technical/JOB_SCHEDULER_DESIGN.md) - 시스템 설계 개요
+- [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
 
