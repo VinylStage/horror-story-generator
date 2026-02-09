@@ -8,6 +8,7 @@ Supports both sync (urllib) and async (httpx) operations.
 import asyncio
 import json
 import logging
+import os
 import urllib.request
 import urllib.error
 from typing import List, Optional
@@ -20,13 +21,13 @@ except ImportError:
 
 logger = logging.getLogger("horror_story_generator")
 
-# Default Ollama settings
-OLLAMA_BASE_URL = "http://localhost:11434"
+# Default Ollama settings (configurable via environment)
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_EMBED_ENDPOINT = "/api/embed"
 
 # Default embedding model
 # Note: qwen3:30b supports embeddings via Ollama
-DEFAULT_EMBED_MODEL = "nomic-embed-text"
+DEFAULT_EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 
 # Embedding dimension (will be detected from first embedding)
 _embedding_dim: Optional[int] = None

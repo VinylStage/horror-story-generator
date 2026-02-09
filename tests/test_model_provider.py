@@ -3,9 +3,9 @@
 import json
 import os
 import pytest
-import socket
-from http.client import HTTPException
 from unittest.mock import patch, MagicMock
+
+import httpx
 
 from src.story.model_provider import (
     ModelInfo,
@@ -202,36 +202,49 @@ class TestOllamaProvider:
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         monkeypatch.delenv("OLLAMA_PORT", raising=False)
         provider = OllamaProvider("llama3")
-        assert provider.host == "localhost"
-        assert provider.port == 11434
+        assert provider.base_url == "http://localhost:11434"
 
     def test_init_custom_host_port(self):
         """Test initialization with custom host and port."""
         with patch.dict(os.environ, {"OLLAMA_HOST": "192.168.1.100", "OLLAMA_PORT": "8080"}):
             provider = OllamaProvider("llama3")
-            assert provider.host == "192.168.1.100"
-            assert provider.port == 8080
+            assert provider.base_url == "http://192.168.1.100:8080"
 
     def test_provider_name(self):
         """Test provider_name property."""
         provider = OllamaProvider("llama3")
         assert provider.provider_name == "ollama"
 
+    def _make_mock_response(self, status_code, json_data):
+        """Create a mock httpx response with working raise_for_status."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = status_code
+        mock_resp.json.return_value = json_data
+        if status_code >= 400:
+            mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+                "error", request=MagicMock(), response=mock_resp
+            )
+        else:
+            mock_resp.raise_for_status.return_value = None
+        return mock_resp
+
     def test_generate_success(self):
         """Test successful generation with Ollama."""
         provider = OllamaProvider("llama3")
 
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({
+        response_data = {
             "response": "A scary tale",
             "prompt_eval_count": 50,
             "eval_count": 200
-        }).encode("utf-8")
+        }
 
-        mock_conn = MagicMock()
-        mock_conn.getresponse.return_value = mock_response
+        mock_response = self._make_mock_response(200, response_data)
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
 
-        with patch("src.story.model_provider.HTTPConnection", return_value=mock_conn):
+        with patch("src.story.model_provider.httpx.Client", return_value=mock_client):
             result = provider.generate(
                 system_prompt="Horror writer",
                 user_prompt="Write story",
@@ -247,15 +260,15 @@ class TestOllamaProvider:
         """Test generation when eval_count is not in response."""
         provider = OllamaProvider("llama3")
 
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({
-            "response": "Story without metrics"
-        }).encode("utf-8")
+        response_data = {"response": "Story without metrics"}
 
-        mock_conn = MagicMock()
-        mock_conn.getresponse.return_value = mock_response
+        mock_response = self._make_mock_response(200, response_data)
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
 
-        with patch("src.story.model_provider.HTTPConnection", return_value=mock_conn):
+        with patch("src.story.model_provider.httpx.Client", return_value=mock_client):
             result = provider.generate(
                 system_prompt="System",
                 user_prompt="User",
@@ -269,16 +282,16 @@ class TestOllamaProvider:
         """Test handling of Ollama error response."""
         provider = OllamaProvider("llama3")
 
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({
-            "error": "Model not found"
-        }).encode("utf-8")
+        response_data = {"error": "Model not found"}
 
-        mock_conn = MagicMock()
-        mock_conn.getresponse.return_value = mock_response
+        mock_response = self._make_mock_response(200, response_data)
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
 
-        with patch("src.story.model_provider.HTTPConnection", return_value=mock_conn):
-            with pytest.raises(Exception, match="Ollama error"):
+        with patch("src.story.model_provider.httpx.Client", return_value=mock_client):
+            with pytest.raises(RuntimeError, match="Ollama error"):
                 provider.generate(
                     system_prompt="System",
                     user_prompt="User",
@@ -286,14 +299,16 @@ class TestOllamaProvider:
                 )
 
     def test_generate_timeout(self):
-        """Test handling of socket timeout."""
+        """Test handling of timeout."""
         provider = OllamaProvider("llama3")
 
-        mock_conn = MagicMock()
-        mock_conn.request.side_effect = socket.timeout("Connection timed out")
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.side_effect = httpx.TimeoutException("Connection timed out")
 
-        with patch("src.story.model_provider.HTTPConnection", return_value=mock_conn):
-            with pytest.raises(Exception, match="timeout"):
+        with patch("src.story.model_provider.httpx.Client", return_value=mock_client):
+            with pytest.raises(RuntimeError, match="timeout"):
                 provider.generate(
                     system_prompt="System",
                     user_prompt="User",
@@ -304,26 +319,13 @@ class TestOllamaProvider:
         """Test handling of connection error."""
         provider = OllamaProvider("llama3")
 
-        mock_conn = MagicMock()
-        mock_conn.request.side_effect = socket.error("Connection refused")
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.side_effect = httpx.ConnectError("Connection refused")
 
-        with patch("src.story.model_provider.HTTPConnection", return_value=mock_conn):
-            with pytest.raises(Exception, match="connection failed"):
-                provider.generate(
-                    system_prompt="System",
-                    user_prompt="User",
-                    config={}
-                )
-
-    def test_generate_http_exception(self):
-        """Test handling of HTTP exception."""
-        provider = OllamaProvider("llama3")
-
-        mock_conn = MagicMock()
-        mock_conn.request.side_effect = HTTPException("HTTP error")
-
-        with patch("src.story.model_provider.HTTPConnection", return_value=mock_conn):
-            with pytest.raises(Exception, match="connection failed"):
+        with patch("src.story.model_provider.httpx.Client", return_value=mock_client):
+            with pytest.raises(RuntimeError, match="connection failed"):
                 provider.generate(
                     system_prompt="System",
                     user_prompt="User",

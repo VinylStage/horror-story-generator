@@ -9,6 +9,7 @@ Phase B+: Integrates with Ollama resource manager for model lifecycle.
 import asyncio
 import json
 import logging
+import re
 import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -20,9 +21,45 @@ logger = logging.getLogger(__name__)
 # Path to research_executor module
 RESEARCH_EXECUTOR_MODULE = "src.research.executor"
 
+# Base directory for research cards
+RESEARCH_DATA_DIR = Path("data/research")
 
 # Default model from config
 DEFAULT_MODEL = "qwen3:30b"
+
+# Pattern for valid card IDs: RC-YYYYMMDD-HHMMSS
+_CARD_ID_PATTERN = re.compile(r"^RC-\d{8}-\d{6}$")
+
+
+def _resolve_card_path(card_id: str) -> Optional[Path]:
+    """
+    Safely resolve a research card file path from a card ID.
+
+    Validates the card ID format and ensures the resolved path
+    stays within the research data directory (prevents path traversal).
+
+    Args:
+        card_id: Card ID to resolve (expected format: RC-YYYYMMDD-HHMMSS)
+
+    Returns:
+        Resolved Path if valid, None if card ID is malformed or path escapes base dir
+    """
+    if not _CARD_ID_PATTERN.match(card_id):
+        return None
+
+    parts = card_id.split("-")
+    date_str = parts[1]
+    year = date_str[:4]
+    month = date_str[4:6]
+
+    base_dir = RESEARCH_DATA_DIR.resolve()
+    card_path = (base_dir / year / month / f"{card_id}.json").resolve()
+
+    # Ensure the resolved path is within the base directory
+    if not str(card_path).startswith(str(base_dir)):
+        return None
+
+    return card_path
 
 
 async def execute_research(
@@ -152,15 +189,9 @@ async def validate_card(card_id: str) -> Dict[str, Any]:
     Returns:
         Validation result dict
     """
-    # Find the card file
-    # Cards are stored in data/research/YYYY/MM/RC-YYYYMMDD-HHMMSS.json
-    parts = card_id.split("-")
-    if len(parts) >= 2:
-        date_str = parts[1]
-        year = date_str[:4]
-        month = date_str[4:6]
-        card_path = Path(f"data/research/{year}/{month}/{card_id}.json")
-    else:
+    # Find the card file safely
+    card_path = _resolve_card_path(card_id)
+    if card_path is None:
         return {
             "card_id": card_id,
             "is_valid": False,
@@ -349,14 +380,9 @@ async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
     from src.dedup.research.dedup import check_duplicate, get_similar_cards
     from src.dedup.research.index import get_index
 
-    # Parse card ID to find file path
-    parts = card_id.split("-")
-    if len(parts) >= 2:
-        date_str = parts[1]
-        year = date_str[:4]
-        month = date_str[4:6]
-        card_path = Path(f"data/research/{year}/{month}/{card_id}.json")
-    else:
+    # Parse card ID to find file path safely
+    card_path = _resolve_card_path(card_id)
+    if card_path is None:
         return {
             "card_id": card_id,
             "signal": "LOW",

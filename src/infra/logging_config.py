@@ -5,12 +5,14 @@ Phase 3B: Daily log rotation with process start time tracking.
 """
 
 import logging
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 # Process start time is captured once and reused for all daily logs
 _PROCESS_START_TIME: Optional[str] = None
+_PROCESS_START_LOCK = threading.Lock()
 
 
 class DailyRotatingFileHandler(logging.FileHandler):
@@ -28,10 +30,12 @@ class DailyRotatingFileHandler(logging.FileHandler):
 
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
+        self._lock = threading.Lock()
 
-        # Capture process start time once
-        if _PROCESS_START_TIME is None:
-            _PROCESS_START_TIME = datetime.now().strftime("%H%M%S")
+        # Capture process start time once (thread-safe)
+        with _PROCESS_START_LOCK:
+            if _PROCESS_START_TIME is None:
+                _PROCESS_START_TIME = datetime.now().strftime("%H%M%S")
 
         self._start_hhmmss = _PROCESS_START_TIME
         self._current_date: Optional[str] = None
@@ -51,15 +55,15 @@ class DailyRotatingFileHandler(logging.FileHandler):
         """Emit a record, rotating to new file if date changed."""
         current_date = datetime.now().strftime("%Y%m%d")
 
-        # Check if we need to rotate (date changed)
+        # Check if we need to rotate (date changed) — thread-safe
         if self._current_date != current_date:
-            # Close current file
-            self.close()
-
-            # Update to new file
-            self.baseFilename = self._get_current_log_path()
-            self._current_date = current_date
-            self.stream = self._open()
+            with self._lock:
+                # Double-check after acquiring lock
+                if self._current_date != current_date:
+                    self.close()
+                    self.baseFilename = self._get_current_log_path()
+                    self._current_date = current_date
+                    self.stream = self._open()
 
         super().emit(record)
 

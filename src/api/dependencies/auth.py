@@ -5,6 +5,7 @@ Optional authentication controlled by API_AUTH_ENABLED environment variable.
 When enabled, requires X-API-Key header matching API_KEY env variable.
 """
 
+import hmac
 import os
 from typing import Optional
 
@@ -51,7 +52,7 @@ async def verify_api_key(
             headers={"WWW-Authenticate": "ApiKey"},
         )
 
-    if api_key != API_KEY:
+    if not hmac.compare_digest(api_key, API_KEY):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key",

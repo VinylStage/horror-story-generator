@@ -17,6 +17,7 @@ Story Seed (SS-*) format:
 
 import json
 import logging
+import os
 import re
 import urllib.request
 import urllib.error
@@ -29,10 +30,10 @@ from src.infra.data_paths import get_seeds_root
 
 logger = logging.getLogger("horror_story_generator")
 
-# Ollama settings
-OLLAMA_BASE_URL = "http://localhost:11434"
+# Ollama settings (configurable via environment)
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_GENERATE_ENDPOINT = "/api/generate"
-DEFAULT_MODEL = "qwen3:30b"
+DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:30b")
 DEFAULT_TIMEOUT = 180
 
 # Seed generation prompt

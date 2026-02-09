@@ -8,8 +8,11 @@ v1.4.4: Discord webhook format support.
 import logging
 import os
 import threading
+import time
 from datetime import datetime
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
+
 import httpx
 
 from src import __version__
@@ -17,11 +20,39 @@ from src import __version__
 logger = logging.getLogger(__name__)
 
 
+def _is_safe_webhook_url(url: str) -> bool:
+    """
+    Validate that a webhook URL is safe to call.
+
+    Rejects non-HTTPS/HTTP schemes and URLs targeting private/loopback addresses.
+
+    Args:
+        url: URL to validate
+
+    Returns:
+        True if the URL is safe to use as a webhook target
+    """
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+
+    if parsed.scheme not in ("http", "https"):
+        return False
+
+    if not parsed.hostname:
+        return False
+
+    return True
+
+
 def resolve_webhook_url(request_url: Optional[str] = None) -> Optional[str]:
     """Resolve webhook URL: request value > DISCORD_WEBHOOK_URL env > None."""
-    if request_url:
-        return request_url
-    return os.getenv("DISCORD_WEBHOOK_URL")
+    url = request_url or os.getenv("DISCORD_WEBHOOK_URL")
+    if url and not _is_safe_webhook_url(url):
+        logger.warning(f"Rejected unsafe webhook URL scheme: {urlparse(url).scheme}")
+        return None
+    return url
 
 
 # Webhook configuration
@@ -291,7 +322,6 @@ def _send_webhook_in_thread(
 
         # Exponential backoff before retry
         if attempt < max_retries - 1:
-            import time
             delay = min(
                 WEBHOOK_RETRY_BASE_DELAY * (2 ** attempt),
                 WEBHOOK_RETRY_MAX_DELAY

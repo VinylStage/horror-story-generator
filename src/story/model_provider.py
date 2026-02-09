@@ -15,9 +15,9 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from http.client import HTTPConnection, HTTPException
-from typing import Any, Dict, Optional, Union
-import socket
+from typing import Any, Dict, Optional
+
+import httpx
 
 logger = logging.getLogger("horror_story_generator")
 
@@ -174,8 +174,9 @@ class OllamaProvider(ModelProvider):
 
     def __init__(self, model_name: str):
         self.model_name = model_name
-        self.host = os.getenv("OLLAMA_HOST", "localhost")
-        self.port = int(os.getenv("OLLAMA_PORT", "11434"))
+        host = os.getenv("OLLAMA_HOST", "localhost")
+        port = os.getenv("OLLAMA_PORT", "11434")
+        self.base_url = f"http://{host}:{port}"
 
     @property
     def provider_name(self) -> str:
@@ -206,23 +207,16 @@ class OllamaProvider(ModelProvider):
         timeout = int(config.get("timeout", 600))  # 10 min default for stories
 
         try:
-            conn = HTTPConnection(self.host, self.port, timeout=timeout)
-            headers = {"Content-Type": "application/json"}
-            conn.request(
-                "POST",
-                "/api/generate",
-                body=json.dumps(request_body),
-                headers=headers
-            )
-
-            response = conn.getresponse()
-            response_data = response.read().decode("utf-8")
-            conn.close()
-
-            response_json = json.loads(response_data)
+            with httpx.Client(timeout=timeout) as client:
+                response = client.post(
+                    f"{self.base_url}/api/generate",
+                    json=request_body,
+                )
+                response.raise_for_status()
+                response_json = response.json()
 
             if "error" in response_json:
-                raise Exception(f"Ollama error: {response_json['error']}")
+                raise RuntimeError(f"Ollama error: {response_json['error']}")
 
             text = response_json.get("response", "")
 
@@ -244,12 +238,12 @@ class OllamaProvider(ModelProvider):
                 model=self.model_name
             )
 
-        except socket.timeout:
+        except httpx.TimeoutException:
             logger.error(f"[OllamaProvider] Timeout after {timeout}s")
-            raise Exception(f"Ollama timeout after {timeout}s")
-        except (socket.error, HTTPException, OSError) as e:
+            raise RuntimeError(f"Ollama timeout after {timeout}s")
+        except httpx.RequestError as e:
             logger.error(f"[OllamaProvider] Connection error: {e}")
-            raise Exception(f"Ollama connection failed: {e}")
+            raise RuntimeError(f"Ollama connection failed: {e}")
 
 
 def get_provider(model_spec: Optional[str] = None) -> ModelProvider:
