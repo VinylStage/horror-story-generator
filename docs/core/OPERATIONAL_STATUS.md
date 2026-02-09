@@ -121,15 +121,10 @@
 | `NOVEL_OUTPUT_DIR` | `data/novel` | 스토리 출력 디렉토리 |
 | `OUTPUT_DIR` | (없음) | 스토리 출력 디렉토리 오버라이드. 설정 시 `NOVEL_OUTPUT_DIR`보다 우선 적용 (레거시 호환) |
 | `STORY_REGISTRY_DB_PATH` | `./data/story_registry.db` | 스토리 레지스트리 SQLite DB 경로 |
-| `JOB_DIR` | `jobs/` | 작업 파일 디렉토리 |
+| `SCHEDULER_DB_PATH` | `./data/scheduler.db` | 스케줄러 SQLite DB 경로 |
 
-### 작업 정리 설정 (v1.3.1)
-
-| 환경 변수 | 기본값 | 설명 |
-|-----------|--------|------|
-| `JOB_PRUNE_ENABLED` | `false` | 자동 작업 정리 활성화 |
-| `JOB_PRUNE_DAYS` | `30` | N일 이상 된 작업 정리 |
-| `JOB_PRUNE_MAX_COUNT` | `1000` | 최대 N개 최근 작업 유지 |
+> **참고**: `JOB_DIR`, `JOB_PRUNE_*` 환경 변수는 v2.0.0에서 레거시 작업 시스템과 함께 제거되었습니다.
+> 작업 관리는 Task Scheduler (SQLite 기반)로 대체되었습니다.
 
 ---
 
@@ -154,10 +149,10 @@
 | 통합 파이프라인 검증 | `docs/archive/analysis/UNIFIED_PIPELINE_FINAL_VERIFICATION.md` |
 | 스토리 중복 검사 검증 | `docs/archive/analysis/STORY_DEDUP_FINAL_VERIFICATION.md` |
 | 전체 파이프라인 스모크 테스트 | `docs/archive/analysis/FINAL_PIPELINE_SMOKE_TEST.md` |
-| 모델 선택 검증 | `docs/verification/MODEL_SELECTION_VERIFICATION.md` |
-| Gemini Deep Research 검증 | `docs/verification/GEMINI_DEEP_RESEARCH_VERIFICATION.md` |
-| 전체 파이프라인 테스트 (v1.2.0) | `docs/verification/FULL_PIPELINE_TEST_20260113.md` |
-| 스토리 생성 E2E 테스트 (v1.2.1) | `docs/verification/STORY_GENERATION_E2E_TEST.md` |
+| 모델 선택 검증 | `docs/archive/verification_reports/MODEL_SELECTION_VERIFICATION.md` |
+| Gemini Deep Research 검증 | `docs/archive/verification_reports/GEMINI_DEEP_RESEARCH_VERIFICATION.md` |
+| 전체 파이프라인 테스트 (v1.2.0) | `docs/archive/verification_reports/FULL_PIPELINE_TEST_20260113.md` |
+| 스토리 생성 E2E 테스트 (v1.2.1) | `docs/archive/verification_reports/STORY_GENERATION_E2E_TEST.md` |
 
 ---
 
@@ -200,7 +195,7 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 | `docs/core/ARCHITECTURE.md` | 시스템 아키텍처 |
 | `docs/technical/runbook_24h_test.md` | 24시간 테스트 절차 |
 | `docs/technical/BACKUP_RESTORE_GUIDE.md` | **통합 백업/복구 CLI** (권장) |
-| `docs/technical/REGISTRY_BACKUP_GUIDE.md` | 레지스트리 자동 백업 |
+| `docs/technical/BACKUP_RESTORE_GUIDE.md` | 통합 백업/복구 CLI (권장) |
 
 ---
 

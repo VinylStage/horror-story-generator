@@ -37,7 +37,7 @@ poetry install
 ```env
 ANTHROPIC_API_KEY=your_key_here
 CLAUDE_MODEL=claude-sonnet-4-5-20250929
-OUTPUT_DIR=./generated_stories
+OUTPUT_DIR=data/novel/
 MAX_TOKENS=8192
 TEMPERATURE=0.8
 
@@ -201,10 +201,10 @@ result = generate_with_topic(
 
 ## 출력 파일
 
-생성된 소설은 `generated_stories/` 디렉토리에 저장됩니다:
+생성된 소설은 `data/novel/YYYY/MM/` 디렉토리에 저장됩니다:
 
-- `horror_story_YYYYMMDD_HHMMSS.md`: 생성된 소설 본문 (마크다운)
-- `horror_story_YYYYMMDD_HHMMSS_metadata.json`: 생성 메타데이터
+- `story-YYYYMMDD-HHMMSS.md`: 생성된 소설 본문 (마크다운)
+- `story-YYYYMMDD-HHMMSS_metadata.json`: 생성 메타데이터
 
 ---
 
@@ -236,7 +236,7 @@ horror-story-generator/
 ├── assets/
 │   └── templates/               # 15개 템플릿 스켈레톤
 ├── data/                        # 런타임 데이터
-├── generated_stories/           # 출력 디렉토리
+├── data/novel/                  # 출력 디렉토리
 └── docs/                        # 문서
 ```
 
@@ -312,18 +312,18 @@ hybrid_score = (canonical_score × 0.3) + (semantic_score × 0.7)
 
 | 문서 | 설명 |
 |------|------|
-| [docs/OPERATIONAL_STATUS.md](docs/OPERATIONAL_STATUS.md) | 운영 상태 선언 |
+| [docs/core/OPERATIONAL_STATUS.md](docs/core/OPERATIONAL_STATUS.md) | 운영 상태 선언 |
 | [docs/core/README.md](docs/core/README.md) | 상세 기술 문서 |
 | [docs/core/ARCHITECTURE.md](docs/core/ARCHITECTURE.md) | 시스템 아키텍처 |
 | [docs/core/API.md](docs/core/API.md) | API 레퍼런스 |
-| [docs/technical/REGISTRY_BACKUP_GUIDE.md](docs/technical/REGISTRY_BACKUP_GUIDE.md) | 백업 및 복구 가이드 |
+| [docs/technical/BACKUP_RESTORE_GUIDE.md](docs/technical/BACKUP_RESTORE_GUIDE.md) | 통합 백업/복구 가이드 |
 | [docs/technical/runbook_24h_test.md](docs/technical/runbook_24h_test.md) | 24시간 테스트 절차 |
 
 ---
 
 ## 라이선스
 
-MIT License
+CC BY-NC-SA 4.0
 
 ## 문의
 

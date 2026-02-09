@@ -7,7 +7,7 @@
 
 ---
 
-> **v2.0.0 Note:** Legacy `/jobs/*` endpoints have been fully removed. The `POST /tasks` API is the sole interface for asynchronous task creation. Direct APIs (`/story/generate`, `/research/run`) remain unchanged.
+> **v2.0.0 Note:** Legacy `/tasks/*` endpoints have been fully removed. The `POST /tasks` API is the sole interface for asynchronous task creation. Direct APIs (`/story/generate`, `/research/run`) remain unchanged.
 
 ## Overview
 
@@ -82,7 +82,7 @@ POST /tasks/group            → Create task group
 - Supports priority, ordering, grouping
 - Always takes array input (single or batch)
 
-> **Note:** Legacy `/jobs/*` endpoints (trigger, batch, monitor, dedup_check) have been removed in v2.0.0.
+> **Note:** Legacy `/tasks/*` endpoints (trigger, batch, monitor, dedup_check) have been removed in v2.0.0.
 
 ---
 
@@ -171,7 +171,7 @@ Current:
 ```python
 class Batch:
     batch_id: str
-    job_ids: List[str]
+    task_ids: List[str]
     status: str
     webhook_url: Optional[str]
     created_at: str
@@ -183,7 +183,7 @@ class TaskGroup:
     group_id: str
     name: Optional[str]
     mode: str  # "parallel" | "sequential"
-    job_ids: List[str]
+    task_ids: List[str]
     status: str
     created_at: datetime
     started_at: Optional[datetime]
@@ -262,7 +262,7 @@ These changes alter existing behavior but maintain API compatibility.
 | Change | Risk | Mitigation |
 |--------|------|------------|
 | Tasks enter queue instead of immediate execution | Medium | Add `priority: "immediate"` flag for legacy behavior |
-| Batch becomes TaskGroup | Medium | Keep `/jobs/batch/*` as aliases |
+| Batch becomes TaskGroup | Medium | Array input via `POST /tasks` |
 | Task status reflects queue position | Medium | Add `queue_position` field, keep `status` semantics |
 
 ### High Risk (Breaking)
@@ -277,7 +277,7 @@ These changes break existing clients.
 
 ## Migration Complete (v2.0.0)
 
-Legacy `/jobs/*` endpoints have been fully removed. The migration is complete:
+Legacy `/tasks/*` endpoints have been fully removed. The migration is complete:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -297,15 +297,15 @@ Legacy `/jobs/*` endpoints have been fully removed. The migration is complete:
 └─────────────────────────────────────────────────────┘
 ```
 
-**Removed endpoints** (previously `/jobs/*`):
-- `POST /jobs/story/trigger` → Use `POST /tasks` with `type: "story"`
-- `POST /jobs/research/trigger` → Use `POST /tasks` with `type: "research"`
-- `POST /jobs/batch/trigger` → Use `POST /tasks` with array input
-- `GET /jobs/{job_id}` → Use `GET /tasks/{task_id}`
-- `POST /jobs/{job_id}/cancel` → Use `DELETE /tasks/{task_id}`
-- `POST /jobs/monitor` → Removed (scheduler handles status tracking)
-- `POST /jobs/{job_id}/monitor` → Removed (use `GET /tasks/{task_id}`)
-- `POST /jobs/{job_id}/dedup_check` → Removed
+**Removed endpoints** (previously `/tasks/*`):
+- `POST /tasks/story/trigger` → Use `POST /tasks` with `type: "story"`
+- `POST /tasks/research/trigger` → Use `POST /tasks` with `type: "research"`
+- `POST /tasks/batch/trigger` → Use `POST /tasks` with array input
+- `GET /tasks/{task_id}` → Use `GET /tasks/{task_id}`
+- `POST /tasks/{task_id}/cancel` → Use `DELETE /tasks/{task_id}`
+- `POST /tasks/monitor` → Removed (scheduler handles status tracking)
+- `POST /tasks/{task_id}/monitor` → Removed (use `GET /tasks/{task_id}`)
+- `POST /tasks/{task_id}/dedup_check` → Removed
 
 ---
 
@@ -389,8 +389,8 @@ Legacy `/jobs/*` endpoints have been fully removed. The migration is complete:
 ### Option A: Path Prefix (Recommended)
 
 ```
-/api/v1/jobs/*      → Legacy system
-/api/v2/jobs/*      → New scheduler
+/api/v1/tasks/*     → Legacy system
+/api/v2/tasks/*     → New scheduler
 ```
 
 ### Option B: Header-Based
@@ -403,8 +403,8 @@ X-API-Version: 2    → New scheduler
 ### Option C: Query Parameter
 
 ```
-/jobs/*?version=1   → Legacy system
-/jobs/*?version=2   → New scheduler
+/tasks/*?version=1  → Legacy system
+/tasks/*?version=2  → New scheduler
 ```
 
 **Recommendation**: Path prefix (Option A) for clarity and tooling compatibility.
@@ -441,21 +441,21 @@ When a direct API is called while a task is running:
 ```
 Before Direct API:
 ┌─────────────────────────────────────┐
-│ Queue: [Job1(RUNNING), Job2, Job3]  │
+│ Queue: [Task1(RUNNING), Task2, Task3]  │
 └─────────────────────────────────────┘
 
 Direct API Called:
 ┌─────────────────────────────────────┐
-│ 1. Job1 continues (NO preemption)   │
+│ 1. Task1 continues (NO preemption)  │
 │ 2. Direct request reserves next slot│
-│ 3. Job1 finishes                    │
+│ 3. Task1 finishes                   │
 │ 4. Direct request executes          │
-│ 5. Queue resumes with Job2          │
+│ 5. Queue resumes with Task2         │
 └─────────────────────────────────────┘
 
 After Direct API:
 ┌─────────────────────────────────────┐
-│ Queue: [Job2(RUNNING), Job3]        │
+│ Queue: [Task2(RUNNING), Task3]        │
 └─────────────────────────────────────┘
 ```
 
@@ -472,7 +472,7 @@ This guarantees:
 |----------|------------------|--------|
 | `POST /story/generate` | None (Direct) | Unchanged |
 | `POST /research/run` | None (Direct) | Unchanged |
-| `POST /tasks` | Task | Active (replaces legacy `/jobs/*`) |
+| `POST /tasks` | Task | Active (replaces legacy `/tasks/*`) |
 | `GET /tasks` | Task (list) | Active |
 | `GET /tasks/{task_id}` | Task + TaskRun | Active |
 | `PATCH /tasks/{task_id}` | Task | Active |

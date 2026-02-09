@@ -13,12 +13,12 @@
 ## Problem Statement
 
 **Why This Matters Now**:
-- JobGroup entity exists in DOMAIN_MODEL.md with `mode: sequential | parallel`
-- Sequential mode needs defined behavior when a member job fails
-- INV-006 (JobGroup Completion Atomicity) is testable but failure behavior is not
-- Batch API (`/jobs/batch/trigger`) maps to JobGroup; users expect predictable behavior
+- TaskGroup entity exists in DOMAIN_MODEL.md with `mode: sequential | parallel`
+- Sequential mode needs defined behavior when a member task fails
+- INV-006 (TaskGroup Completion Atomicity) is testable but failure behavior is not
+- Batch API (`POST /tasks` with array input) maps to TaskGroup; users expect predictable behavior
 
-**Question**: When Job2 in a sequential group [Job1, Job2, Job3] fails, what happens to Job3?
+**Question**: When Task2 in a sequential group [Task1, Task2, Task3] fails, what happens to Task3?
 
 ---
 
@@ -26,22 +26,22 @@
 
 ### Option A: Stop-on-Failure (Fail-Fast)
 
-**Description**: If any job fails, cancel remaining jobs in the sequence.
+**Description**: If any task fails, cancel remaining tasks in the sequence.
 
 | Aspect | Assessment |
 |--------|------------|
 | **Pros** | Predictable; Prevents wasted work; Clear error semantics |
 | **Cons** | No partial results; All-or-nothing |
-| **Operational Implication** | Logs show: "Job3 CANCELLED due to Job2 failure" |
+| **Operational Implication** | Logs show: "Task3 CANCELLED due to Task2 failure" |
 | **API Fields** | None required — this is default behavior |
 | **Persistence Impact** | None — existing status fields sufficient |
 | **Test Impact** | INV-006-C covers this; Add test for CANCELLED propagation |
 
 **Behavior**:
 ```
-Job1: COMPLETED
-Job2: FAILED
-Job3: CANCELLED (never started)
+Task1: COMPLETED
+Task2: FAILED
+Task3: CANCELLED (never started)
 Group: PARTIAL
 ```
 
@@ -49,22 +49,22 @@ Group: PARTIAL
 
 ### Option B: Continue-on-Failure (Best-Effort)
 
-**Description**: Execute all jobs regardless of failures; collect results at end.
+**Description**: Execute all tasks regardless of failures; collect results at end.
 
 | Aspect | Assessment |
 |--------|------------|
 | **Pros** | Maximum work attempted; Good for independent tasks |
 | **Cons** | May waste resources on doomed work; Unclear if results are usable |
-| **Operational Implication** | Logs show: "Job3 executed despite Job2 failure" |
+| **Operational Implication** | Logs show: "Task3 executed despite Task2 failure" |
 | **API Fields** | None required — behavior change only |
 | **Persistence Impact** | None |
 | **Test Impact** | Add test for continued execution after failure |
 
 **Behavior**:
 ```
-Job1: COMPLETED
-Job2: FAILED
-Job3: COMPLETED (executed anyway)
+Task1: COMPLETED
+Task2: FAILED
+Task3: COMPLETED (executed anyway)
 Group: PARTIAL
 ```
 
@@ -79,15 +79,15 @@ Group: PARTIAL
 | **Pros** | Maximum flexibility; Users choose per use case |
 | **Cons** | More complexity; Must validate configuration |
 | **Operational Implication** | Logs show policy used: "Policy: stop" or "Policy: continue" |
-| **API Fields** | Add `on_failure: stop | continue | skip` to JobGroup/Batch API |
-| **Persistence Impact** | Add `on_failure` column to job_groups table |
+| **API Fields** | Add `on_failure: stop | continue | skip` to TaskGroup API |
+| **Persistence Impact** | Add `on_failure` column to task_groups table |
 | **Test Impact** | 3 test paths instead of 1; Configuration validation tests |
 
 **API Example**:
 ```json
-POST /api/jobs/batch
+POST /tasks/group
 {
-  "jobs": [...],
+  "tasks": [...],
   "mode": "sequential",
   "on_failure": "stop"
 }
@@ -128,7 +128,7 @@ POST /api/jobs/batch
 ```
 Phase 4: Ship with Option A as default
 Phase 5+: When user requests flexibility:
-  1. Add on_failure field to JobGroup/Batch API
+  1. Add on_failure field to TaskGroup/Batch API
   2. Default value: "stop" (backward compatible)
   3. Implement continue/skip handlers
   4. Existing tests remain valid (stop is default)
@@ -140,14 +140,14 @@ Phase 5+: When user requests flexibility:
 
 ## Interaction with Retry (DEC-007)
 
-**Question**: Does a failed job get retried before group decides to stop?
+**Question**: Does a failed task get retried before group decides to stop?
 
 **Answer**: Yes.
 ```
-Job2 fails → RetryController creates Job2-retry (if eligible)
-           → Group waits for retry chain to exhaust
-           → If all retries fail → then stop remaining jobs
-           → Job3 cancelled only after Job2 permanently fails
+Task2 fails → RetryController creates Task2-retry (if eligible)
+            → Group waits for retry chain to exhaust
+            → If all retries fail → then stop remaining tasks
+            → Task3 cancelled only after Task2 permanently fails
 ```
 
 This ensures retry semantics are respected before group-level decisions.

@@ -9,8 +9,9 @@
 
 The system currently supports:
 - Story generation via Claude API with deduplication control
-- Research generation via Ollama with FAISS-based similarity
-- Trigger API for non-blocking job execution
+- Research generation via Ollama/Gemini with FAISS-based similarity
+- Task Scheduler for queue-based task execution via HTTP API
+- Thumbnail generation for stories (multi-provider)
 - 24-hour continuous operation with graceful shutdown
 
 ---
@@ -19,42 +20,41 @@ The system currently supports:
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Story Generation (Claude API) | Implemented | main.py CLI |
+| Story Generation (Claude API) | Implemented | API + programmatic |
 | Template System (15 templates) | Implemented | assets/templates/ |
 | Knowledge Units (52 KUs) | Implemented | assets/knowledge_units/ |
 | Story Deduplication (SQLite) | Implemented | src/registry/story_registry.py |
-| Research Generation (Ollama) | Implemented | src/research/executor/ |
+| Research Generation (Ollama/Gemini) | Implemented | src/research/executor/ |
 | Research Deduplication (FAISS) | Implemented | src/dedup/research/ |
-| Trigger API | Implemented | src/api/ |
-| Job Monitoring | Implemented | src/infra/job_monitor.py |
 | Graceful Shutdown | Implemented | SIGINT/SIGTERM handling |
-| **Job Scheduler Engine** | **Implemented** | src/scheduler/ (Phase 0-2) |
-| **Scheduler API** | **Implemented** | /scheduler/*, /jobs CRUD (Phase 3) |
+| **Task Scheduler Engine** | **Implemented** | src/scheduler/ (Phase 0-2) |
+| **Scheduler API** | **Implemented** | /scheduler/*, /tasks CRUD (Phase 3) |
+| **Thumbnail Generation** | **Implemented** | src/image/ (v1.6.1) |
+| **Multimodal (images)** | **Implemented** | Multi-provider thumbnail support |
 
 ---
 
 ## Recently Implemented Features
 
-### Job Scheduler System (v1.5.0)
+### Task Scheduler System (v1.5.0)
 
-스케줄러 기반 Job 실행 모델 구현.
+스케줄러 기반 Task 실행 모델 구현.
 
 **구현 범위:**
 - Scheduler Engine (Phase 0-2)
-  - SQLite 기반 Job persistence
+  - SQLite 기반 Task persistence
   - Priority queue 및 position 기반 정렬
-  - JobGroup sequential/parallel 실행
+  - TaskGroup sequential/parallel 실행
   - Crash recovery
 - Scheduler API Integration (Phase 3)
   - `/scheduler/start`, `/stop`, `/status`
-  - `/jobs` CRUD (POST, GET, PATCH, DELETE)
-  - `/jobs/{id}/runs` 실행 이력
-  - Legacy trigger endpoints deprecated
+  - `/tasks` CRUD (POST, GET, PATCH, DELETE)
+  - `/tasks/{id}/runs` 실행 이력
 
 **Documentation:**
 - [Task Scheduler Design](../technical/TASK_SCHEDULER_DESIGN.md)
 - [API Contract](../task-scheduler/API_CONTRACT.md)
-- [As-Is/To-Be API Design](../technical/task-scheduler-AS_IS_TO_BE_API_DESIGN-v1.md)
+- [Design Guards](../task-scheduler/DESIGN_GUARDS.md)
 
 ---
 
@@ -64,26 +64,26 @@ The system currently supports:
 
 #### ~~Webhook Notifications~~ (IMPLEMENTED v1.3.0)
 
-~~Enable callback notifications on job completion.~~
+~~Enable callback notifications on task completion.~~
 
 **Status:** ✅ Implemented in v1.3.0
 
 ---
 
-#### ~~Batch Job Trigger~~ (IMPLEMENTED v1.4.0)
+#### ~~Batch Task Creation~~ (IMPLEMENTED v1.4.0)
 
-~~Trigger multiple jobs in a single request.~~
+~~Create multiple tasks in a single request.~~
 
-**Status:** ✅ Implemented in v1.4.0
+**Status:** ✅ Implemented in v1.4.0 (via `POST /tasks` array input)
 
 ---
 
-#### Job Scheduler Templates & Cron (Phase 4)
+#### Task Scheduler Templates & Cron (Phase 4)
 
-JobTemplate 및 Cron 스케줄링 기능.
+TaskTemplate 및 Cron 스케줄링 기능.
 
 **Scope:**
-- JobTemplate CRUD APIs
+- TaskTemplate CRUD APIs
 - Cron Schedule APIs
 - APScheduler 통합
 
@@ -219,7 +219,7 @@ The following are explicitly out of scope:
 
 | Feature | Reason |
 |---------|--------|
-| Multimodal content (images) | Beyond current project goals |
+| ~~Multimodal content (images)~~ | **Implemented** (v1.6.1 thumbnail generation) |
 | Distributed execution | Complexity vs. benefit |
 | Real-time collaboration | Single-user design |
 | Commercial API hosting | Local-first architecture |
@@ -243,45 +243,32 @@ The following are explicitly out of scope:
 |------|----------|-------|
 | ~~Unify output directories~~ | ~~Medium~~ | **DONE (v1.3.1)** - Now `data/novel/` |
 | ~~Path constant centralization~~ | ~~Low~~ | **DONE (v1.3.1)** - `src/infra/data_paths.py` |
-| Test coverage gaps | Low | ~93% but some edge cases |
+| Test coverage gaps | Low | ~76% with some edge cases |
 
 ### Data
 
 | Item | Priority | Notes |
 |------|----------|-------|
 | ~~Legacy research_cards.jsonl~~ | ~~Low~~ | **DONE (v1.3.1)** - Deprecated with warning |
-| ~~Job history cleanup~~ | ~~Low~~ | **DONE (v1.3.1)** - Optional pruning via env vars |
+| ~~Task history cleanup~~ | ~~Low~~ | **DONE (v1.3.1)** - Optional pruning via env vars |
 
 ---
 
 ## Version Milestones
 
-### v0.3.x (Current)
+### v1.7.0 (Current)
 
-- Story generation with dedup
-- Research generation with FAISS
-- Trigger API
-- Job monitoring
+- Task Scheduler with full CRUD API
+- Thumbnail generation (multi-provider)
+- Legacy trigger endpoints removed
+- Webhook notifications for scheduler tasks
 
-### v0.4.0 (Next)
+### v2.0.0 (Next Major)
 
-- Webhook notifications
-- Batch job support
+- TaskTemplate & Cron scheduling (Phase 4)
 - n8n integration examples
-- Documentation cleanup complete
-
-### v0.5.0 (Future)
-
-- Story embedding dedup
-- Cultural weighting
-- Improved CLI experience
-
-### v1.0.0 (Stable)
-
-- API schema frozen
-- Full test coverage
-- Production deployment guide
-- Breaking changes resolved
+- Web UI (exploratory)
+- Full test coverage improvements
 
 ---
 
@@ -302,7 +289,7 @@ To propose a new feature:
 |----------|---------|
 | Optimal KU count per template? | Currently 2-5, needs validation |
 | Embedding model choice? | multilingual-MiniLM vs ko-sroberta |
-| Job storage scalability? | File-based may not scale |
+| Task storage scalability? | SQLite-based may not scale |
 | Authentication approach? | API keys vs OAuth |
 
 ---
