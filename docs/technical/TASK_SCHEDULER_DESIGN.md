@@ -1,7 +1,7 @@
 # Task Scheduler System Design
 
 > **Status:** IMPLEMENTED (Phase 3 Complete)
-> **Application Version:** 1.7.0 <!-- x-release-please-version -->
+> **Application Version:** 2.0.0 <!-- x-release-please-version -->
 > **Date:** 2026-01-18
 > **Author:** Claude Code (with VinylStage)
 > **Implementation:** `feat/88-scheduler-api-integration`
