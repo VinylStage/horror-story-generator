@@ -388,37 +388,39 @@ data/research/vectors/metadata.json     # 메타데이터 매핑
 
 ---
 
-## 6. Job Record
+## 6. Task Record
 
-비동기 작업 관리용 레코드입니다.
+비동기 작업 관리용 레코드입니다. SQLite 기반 Task Scheduler에서 관리됩니다.
 
 ### 6.1 저장 위치
 
 ```
-jobs/{job_id}.json
+SQLite DB (scheduler.db) → tasks 테이블
 ```
 
 ### 6.2 스키마
 
 ```json
 {
-  "job_id": "string (required)",
-  "type": "enum: story_generation | research_generation (required)",
-  "status": "enum: queued | running | succeeded | failed | cancelled (required)",
-  "pid": "integer | null",
-  "log_path": "string (required)",
-  "artifacts": "string[] (required)",
+  "task_id": "string (required)",
+  "task_type": "enum: story | research (required)",
+  "status": "enum: QUEUED | RUNNING | CANCELLED (required)",
+  "params": "object (required)",
+  "priority": "integer (required)",
+  "position": "integer (required)",
+  "template_id": "string | null",
+  "group_id": "string | null",
+  "retry_of": "string | null",
   "created_at": "ISO 8601 datetime (required)",
+  "queued_at": "ISO 8601 datetime (required)",
   "started_at": "ISO 8601 datetime | null",
-  "completed_at": "ISO 8601 datetime | null",
-  "webhook_url": "URL string | null",
-  "webhook_sent": "boolean"
+  "finished_at": "ISO 8601 datetime | null"
 }
 ```
 
 ### 6.3 관련 코드
 
-**파일:** `src/infra/job_manager.py`
+**파일:** `src/scheduler/`
 
 ---
 

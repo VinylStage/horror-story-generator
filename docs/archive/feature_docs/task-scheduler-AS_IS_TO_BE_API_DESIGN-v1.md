@@ -43,38 +43,38 @@
 ## 3. To-Be 아키텍처 (현재 상태 - IMPLEMENTED)
 
 ### 3.1 핵심 원칙
-- Job은 영속적인 도메인 리소스이다
+- Task는 영속적인 도메인 리소스이다
 - Scheduler가 실행 시점을 통제한다
 - API는 단일 제어 플레인(Single Control Plane)이다
 - 실행은 요청 시점과 분리된다
 - time에 대한 명시가 없을 경우(null),
-  해당 Job은 즉시 실행 대상로 간주되며
+  해당 Task는 즉시 실행 대상로 간주되며
   스케줄러가 동작 중이라면 즉시 실행 큐에 포함된다.
 
 
 ### 3.2 도메인 개념
-- Job: 수행할 작업의 정의
-- JobRun: Job의 단일 실행 시도
-- Scheduler: Job을 JobRun으로 변환하는 백그라운드 실행 엔진
+- Task: 수행할 작업의 정의
+- TaskRun: Task의 단일 실행 시도
+- Scheduler: Task를 TaskRun으로 변환하는 백그라운드 실행 엔진
 
 ---
 
 ## 4. To-Be API 구조
 
-### 4.1 Job 관리 (CRUD)
-- POST   /jobs
+### 4.1 Task 관리 (CRUD)
+- POST   /tasks
   - 기존 api 와 다르게 엔드포인트에 story, research 구분을 짓지 않고 body 안의 type으로 구분한다.
-- GET    /jobs
-  - Job 목록 조회
-- GET    /jobs/{job_id}
-  - 특정 JOB 상세 조회
-- PATCH  /jobs/{job_id}
-  - 특정 JOB 업데이트
-  - PATCH는 Job의 메타데이터 또는 실행 순서 관련 필드 변경을 위해 사용되며,
+- GET    /tasks
+  - Task 목록 조회
+- GET    /tasks/{task_id}
+  - 특정 Task 상세 조회
+- PATCH  /tasks/{task_id}
+  - 특정 Task 업데이트
+  - PATCH는 Task의 메타데이터 또는 실행 순서 관련 필드 변경을 위해 사용되며,
     실행 순서 전체를 재정렬하는 기능은 초기 범위에 포함하지 않는다.
   - **Phase 3 구현 범위**: priority 변경만 지원
-- DELETE /jobs/{job_id}
-  - **Phase 3 구현 범위**: QUEUED 상태 Job만 삭제 가능
+- DELETE /tasks/{task_id}
+  - **Phase 3 구현 범위**: QUEUED 상태 Task만 삭제 가능
 
 ### 4.2 Scheduler 제어 (독립 시스템 리소스)
 
@@ -86,40 +86,39 @@
 - POST /scheduler/stop: 스케줄러 중지 (진행하던 작업은 즉시중지가 아니라 graceful 하게 중지)
 - GET  /scheduler/status
   - 스케줄러 실행 여부 (`scheduler_running`)
-  - 현재 실행 중인 Job ID (`current_job_id`, nullable)
-  - 현재 대기 중인 Job 큐 길이 (`queue_length`)
+  - 현재 실행 중인 Task ID (`current_task_id`, nullable)
+  - 현재 대기 중인 Task 큐 길이 (`queue_length`)
   - 누적 처리 통계 (`cumulative_stats`)
-    - `total_executed`: 총 실행된 JobRun 수
-    - `succeeded`: COMPLETED 상태 JobRun 수
-    - `failed`: FAILED 상태 JobRun 수
-    - `cancelled`: CANCELLED 상태 Job 수
-    - `skipped`: SKIPPED 상태 JobRun 수
+    - `total_executed`: 총 실행된 TaskRun 수
+    - `succeeded`: COMPLETED 상태 TaskRun 수
+    - `failed`: FAILED 상태 TaskRun 수
+    - `cancelled`: CANCELLED 상태 Task 수
+    - `skipped`: SKIPPED 상태 TaskRun 수
   - Direct API 예약 상태 (`has_active_reservation`)
 
 ### 4.3 실행 관찰
-- GET /jobs/{job_id}/runs
-  - Job에 대한 실행 이력 (JobRun) 조회
-  - 1:1 관계 (각 Job당 최대 1개 JobRun)
+- GET /tasks/{task_id}/runs
+  - Task에 대한 실행 이력 (TaskRun) 조회
+  - 1:1 관계 (각 Task당 최대 1개 TaskRun)
 
 ---
 
 ## 5. 기존 엔드포인트 유지 전략
 
-### 5.1 호환(Compatibility) 모드
-기존 trigger 엔드포인트는 즉시 제거하지 않고 유지하되,
-**deprecated**로 표시된다.
+### 5.1 레거시 엔드포인트 상태
 
-- POST /jobs/story/trigger [DEPRECATED]
-- POST /jobs/research/trigger [DEPRECATED]
+> **v2.0.0 (현재):** 레거시 trigger 엔드포인트가 완전히 제거되었습니다.
+
+- ~~POST /jobs/story/trigger~~ **REMOVED**
+- ~~POST /jobs/research/trigger~~ **REMOVED**
 
 현재 동작:
-- 기존 subprocess 방식 유지 (backward compatibility)
-- 신규 클라이언트는 `/jobs` API 사용 권장
+- 모든 비동기 작업은 `POST /tasks` API를 통해 생성
+- Direct API (`POST /story/generate`, `POST /research/run`)는 동기 실행 유지
 
-### 5.2 Deprecated 정책
-- 해당 엔드포인트들은 OpenAPI에서 deprecated로 표시
-- 즉각적인 제거는 하지 않는다
-- UI 및 신규 클라이언트는 /jobs 기반 API만 사용한다
+### 5.2 마이그레이션 완료
+- 레거시 엔드포인트는 v2.0.0에서 제거됨
+- UI 및 모든 클라이언트는 `/tasks` 기반 API를 사용
 
 ---
 

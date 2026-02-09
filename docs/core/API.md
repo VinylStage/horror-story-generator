@@ -1180,7 +1180,7 @@ The sync endpoints (`/research/run`, `/story/generate`) support fire-and-forget 
 | `X-Webhook-Event` | Event type (completed, error) |
 | `X-Webhook-Endpoint` | Source endpoint path |
 
-**Retry Logic:** Same as job webhooks (3 attempts, exponential backoff).
+**Retry Logic:** Same as task webhooks (3 attempts, exponential backoff).
 
 ### Scheduler Task Webhooks (v1.6.1)
 
@@ -1231,7 +1231,7 @@ Currently, no rate limiting is implemented. For production use, consider:
 
 - Adding API key authentication
 - Implementing request rate limits
-- Limiting concurrent jobs per type
+- Limiting concurrent tasks per type
 
 ---
 
@@ -1247,8 +1247,8 @@ Currently, no rate limiting is implemented. For production use, consider:
 
 - No authentication (add for production)
 - No WebSocket support for real-time updates
-- Job history not automatically cleaned up
-- No distributed job execution
+- Task history not automatically cleaned up
+- No distributed task execution
 
 ---
 

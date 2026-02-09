@@ -30,7 +30,7 @@
 | E2E-DIRECT (Direct API) | 3 | 3 | 0 | PASS |
 | E2E-RETRY (Retry Flow) | 3 | 3 | 0 | PASS |
 | E2E-RECOVERY (Crash Recovery) | 2 | 2 | 0 | PASS |
-| E2E-GROUP (JobGroup) | 3 | 3 | 0 | PASS |
+| E2E-GROUP (TaskGroup) | 3 | 3 | 0 | PASS |
 | E2E-WEBHOOK (Webhook) | 4 | 4 | 0 | PASS |
 | **Total Scheduler E2E** | **18** | **18** | **0** | **PASS** |
 
@@ -40,16 +40,16 @@
 
 | Test | Status | Duration | Notes |
 |------|--------|----------|-------|
-| test_e2e_norm_01_single_job_lifecycle | PASS | 0.02s | Job QUEUED → COMPLETED |
-| test_e2e_norm_02_multiple_jobs_priority_order | PASS | 0.03s | Priority ordering verified |
-| test_e2e_norm_03_job_cancellation | PASS | 0.01s | Cancel before dispatch |
+| test_e2e_norm_01_single_task_lifecycle | PASS | 0.02s | Task QUEUED → COMPLETED |
+| test_e2e_norm_02_multiple_tasks_priority_order | PASS | 0.03s | Priority ordering verified |
+| test_e2e_norm_03_task_cancellation | PASS | 0.01s | Cancel before dispatch |
 
 #### E2E-DIRECT: Direct API Reservation
 
 | Test | Status | Duration | Notes |
 |------|--------|----------|-------|
 | test_e2e_direct_01_empty_queue_immediate | PASS | 0.02s | Immediate execution |
-| test_e2e_direct_02_between_queued_jobs | PASS | 0.04s | Order: job1 → direct → job2 |
+| test_e2e_direct_02_between_queued_tasks | PASS | 0.04s | Order: task1 → direct → task2 |
 | test_e2e_direct_03_queue_pauses_during_reservation | PASS | 0.02s | Reservation blocks dispatch |
 
 #### E2E-RETRY: Retry Flow
@@ -64,14 +64,14 @@
 
 | Test | Status | Duration | Notes |
 |------|--------|----------|-------|
-| test_e2e_recovery_01_running_job_marked_failed | PASS | 0.03s | FAILED on recovery |
+| test_e2e_recovery_01_running_task_marked_failed | PASS | 0.03s | FAILED on recovery |
 | test_e2e_recovery_02_retry_created_for_recovered | PASS | 0.03s | Retry created post-recovery |
 
-#### E2E-GROUP: JobGroup Sequential Execution
+#### E2E-GROUP: TaskGroup Sequential Execution
 
 | Test | Status | Duration | Notes |
 |------|--------|----------|-------|
-| test_e2e_group_01_sequential_execution | PASS | 0.04s | Jobs execute in order |
+| test_e2e_group_01_sequential_execution | PASS | 0.04s | Tasks execute in order |
 | test_e2e_group_02_stop_on_failure | PASS | 0.06s | Group PARTIAL after failure |
 | test_e2e_group_03_completed_group | PASS | 0.03s | Group COMPLETED |
 
@@ -154,21 +154,21 @@ All pipeline tests executed via HTTP API. No direct CLI invocations.
 | Card ID | RC-20260118-184322 |
 | Output Path | data/research/2026/01/RC-20260118-184322.json |
 | File Size | 3678 bytes |
-| Exclusive Execution | Verified (no concurrent Ollama jobs) |
+| Exclusive Execution | Verified (no concurrent Ollama tasks) |
 
 #### PIPE-03: Mixed Resource Constraint
 
 | Field | Value |
 |-------|-------|
 | Scenario | Claude API story while Ollama research running |
-| Ollama Job | 0d57a95f-c28c-46ce-9d63-9ce13303001a (qwen3:30b) |
+| Ollama Task | 0d57a95f-c28c-46ce-9d63-9ce13303001a (qwen3:30b) |
 | API Story | POST /story/generate (claude-sonnet-4-5-20250929) |
 | Result | SUCCESS - both completed without conflict |
 | Story ID | 20260118_184432 |
 | Title | 7호선 환승통로 |
 | Verification | Ollama resource status showed active model during story generation |
 
-**Observation:** External API jobs can run concurrently with local Ollama jobs without resource conflict.
+**Observation:** External API tasks can run concurrently with local Ollama tasks without resource conflict.
 
 #### PIPE-04: Real Pipeline Failure + Retry
 
@@ -180,18 +180,18 @@ All pipeline tests executed via HTTP API. No direct CLI invocations.
 | Result | PASS - HTTP 502 with proper error |
 | Error Message | "Model 'nonexistent-model:latest' is not available" |
 
-**Note:** The scheduler's automatic retry mechanism (DEC-007) was validated in unit tests. The current API uses the legacy job system which doesn't have integrated retry.
+**Note:** The scheduler's automatic retry mechanism (DEC-007) was validated in unit tests. The current API uses the legacy task system which doesn't have integrated retry.
 
 #### PIPE-05: Crash During Real Execution
 
 | Field | Value |
 |-------|-------|
 | Test Method | Scheduler unit tests (TestE2ERecovery) |
-| test_e2e_recovery_01 | PASS - RUNNING job marked FAILED on recovery |
-| test_e2e_recovery_02 | PASS - Retry created for recovered job |
+| test_e2e_recovery_01 | PASS - RUNNING task marked FAILED on recovery |
+| test_e2e_recovery_02 | PASS - Retry created for recovered task |
 | Duration | 0.18s |
 
-**Note:** The scheduler's crash recovery mechanism was validated in unit tests. The current API's legacy job system lacks proper crash detection (marks crashed jobs as "succeeded" if process exits).
+**Note:** The scheduler's crash recovery mechanism was validated in unit tests. The current API's legacy task system lacks proper crash detection (marks crashed tasks as "succeeded" if process exits).
 
 ---
 
@@ -201,16 +201,16 @@ All pipeline tests executed via HTTP API. No direct CLI invocations.
 
 | Issue | Severity | Resolution |
 |-------|----------|------------|
-| `get_running_job_in_group` included completed jobs | Medium | Fixed: Added `finished_at IS NULL` check |
-| Retry jobs didn't preserve `group_id` | Medium | Fixed: Pass group_id in retry creation |
+| `get_running_task_in_group` included completed tasks | Medium | Fixed: Added `finished_at IS NULL` check |
+| Retry tasks didn't preserve `group_id` | Medium | Fixed: Pass group_id in retry creation |
 
 ### 5.2 Remaining Risks
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
-| Scheduler not integrated with API | Medium | Medium | Legacy API works; integration planned |
+| Scheduler not yet integrated with API | Medium | Medium | Legacy API works; integration planned |
 | Webhook delivery not tested | Low | Low | Schema validation complete |
-| Legacy job system lacks crash recovery | Low | Medium | Use scheduler service when integrated |
+| Legacy task system lacks crash recovery | Low | Medium | Use scheduler service when integrated |
 
 ---
 
@@ -218,11 +218,11 @@ All pipeline tests executed via HTTP API. No direct CLI invocations.
 
 ### 6.1 Bug Fixes Made During Testing
 
-1. **persistence.py line 1255-1263**: Fixed `get_running_job_in_group` to exclude
-   jobs with `finished_at` set (they are no longer "actively running")
+1. **persistence.py line 1255-1263**: Fixed `get_running_task_in_group` to exclude
+   tasks with `finished_at` set (they are no longer "actively running")
 
-2. **retry_controller.py line 167-177**: Fixed retry job creation to preserve
-   `group_id` and `sequence_number` for JobGroup retries
+2. **retry_controller.py line 167-177**: Fixed retry task creation to preserve
+   `group_id` and `sequence_number` for TaskGroup retries
 
 ### 6.2 Test Coverage
 
@@ -230,7 +230,7 @@ All pipeline tests executed via HTTP API. No direct CLI invocations.
 |-----------|----------|-------|
 | entities.py | High | All status enums tested |
 | persistence.py | High | CRUD + atomic operations |
-| queue_manager.py | High | Including JobGroup ops |
+| queue_manager.py | High | Including TaskGroup ops |
 | dispatcher.py | High | Single dispatch + loop |
 | executor.py | Medium | Mock handler used |
 | recovery.py | High | All scenarios tested |
@@ -249,12 +249,12 @@ All pipeline tests executed via HTTP API. No direct CLI invocations.
 | Pipeline E2E tests pass | PASS | 5/5 (real execution) |
 | No critical issues | PASS | All bugs fixed |
 | Design compliance | PASS | DEC-004, DEC-007, DEC-011, DEC-012 verified |
-| JobGroup implementation | PASS | INV-006 tests pass |
+| TaskGroup implementation | PASS | INV-006 tests pass |
 | Resource constraint | PASS | Ollama exclusivity validated |
 
 ### 7.2 Post-Merge Actions
 
-1. Integrate SchedulerService with API (replace legacy job_manager)
+1. Integrate SchedulerService with API (replace legacy task_manager)
 2. Validate webhook delivery with actual HTTP endpoint
 3. Monitor for performance issues in production
 4. Consider adding APScheduler integration for cron-based scheduling
@@ -280,20 +280,20 @@ $ python -m pytest tests/scheduler/ -v --tb=short
 
 collected 110 items
 
-tests/scheduler/test_e2e.py::TestE2ENormalExecution::test_e2e_norm_01_single_job_lifecycle PASSED
-tests/scheduler/test_e2e.py::TestE2ENormalExecution::test_e2e_norm_02_multiple_jobs_priority_order PASSED
-tests/scheduler/test_e2e.py::TestE2ENormalExecution::test_e2e_norm_03_job_cancellation PASSED
+tests/scheduler/test_e2e.py::TestE2ENormalExecution::test_e2e_norm_01_single_task_lifecycle PASSED
+tests/scheduler/test_e2e.py::TestE2ENormalExecution::test_e2e_norm_02_multiple_tasks_priority_order PASSED
+tests/scheduler/test_e2e.py::TestE2ENormalExecution::test_e2e_norm_03_task_cancellation PASSED
 tests/scheduler/test_e2e.py::TestE2EDirectExecution::test_e2e_direct_01_empty_queue_immediate PASSED
-tests/scheduler/test_e2e.py::TestE2EDirectExecution::test_e2e_direct_02_between_queued_jobs PASSED
+tests/scheduler/test_e2e.py::TestE2EDirectExecution::test_e2e_direct_02_between_queued_tasks PASSED
 tests/scheduler/test_e2e.py::TestE2EDirectExecution::test_e2e_direct_03_queue_pauses_during_reservation PASSED
 tests/scheduler/test_e2e.py::TestE2ERetryFlow::test_e2e_retry_01_single_failure_creates_retry PASSED
 tests/scheduler/test_e2e.py::TestE2ERetryFlow::test_e2e_retry_02_max_three_attempts PASSED
 tests/scheduler/test_e2e.py::TestE2ERetryFlow::test_e2e_retry_03_retry_chain_linkage PASSED
-tests/scheduler/test_e2e.py::TestE2ERecovery::test_e2e_recovery_01_running_job_marked_failed PASSED
+tests/scheduler/test_e2e.py::TestE2ERecovery::test_e2e_recovery_01_running_task_marked_failed PASSED
 tests/scheduler/test_e2e.py::TestE2ERecovery::test_e2e_recovery_02_retry_created_for_recovered PASSED
-tests/scheduler/test_e2e.py::TestE2EJobGroup::test_e2e_group_01_sequential_execution PASSED
-tests/scheduler/test_e2e.py::TestE2EJobGroup::test_e2e_group_02_stop_on_failure PASSED
-tests/scheduler/test_e2e.py::TestE2EJobGroup::test_e2e_group_03_completed_group PASSED
+tests/scheduler/test_e2e.py::TestE2ETaskGroup::test_e2e_group_01_sequential_execution PASSED
+tests/scheduler/test_e2e.py::TestE2ETaskGroup::test_e2e_group_02_stop_on_failure PASSED
+tests/scheduler/test_e2e.py::TestE2ETaskGroup::test_e2e_group_03_completed_group PASSED
 tests/scheduler/test_e2e.py::TestE2EWebhook::test_e2e_webhook_01_completed_event_schema PASSED
 tests/scheduler/test_e2e.py::TestE2EWebhook::test_e2e_webhook_02_failed_event_includes_error PASSED
 tests/scheduler/test_e2e.py::TestE2EWebhook::test_e2e_webhook_03_skipped_event_for_group PASSED

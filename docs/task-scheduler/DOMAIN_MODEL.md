@@ -25,7 +25,7 @@ A TaskTemplate represents a **reusable specification** for work that can be exec
 
 - Define the type of work (research, story generation, etc.)
 - Store default parameters for execution
-- Provide a stable reference for creating Jobs
+- Provide a stable reference for creating Tasks
 - Enable reuse across multiple executions
 
 #### Conceptual Fields
@@ -48,7 +48,7 @@ CREATED → ACTIVE → [ARCHIVED]
 
 - **CREATED**: Template exists and can be used
 - **ACTIVE**: Normal operational state
-- **ARCHIVED**: Soft-deleted, not available for new Jobs
+- **ARCHIVED**: Soft-deleted, not available for new Tasks
 
 #### What TaskTemplate is NOT
 
@@ -221,11 +221,11 @@ COMPLETED | FAILED | SKIPPED
 
 #### Purpose
 
-A TaskGroup represents a **logical collection** of Jobs that share execution constraints. It enables batch operations and coordinated execution.
+A TaskGroup represents a **logical collection** of Tasks that share execution constraints. It enables batch operations and coordinated execution.
 
 #### Responsibilities
 
-- Group related Jobs together
+- Group related Tasks together
 - Define execution mode (parallel or sequential within group)
 - Track aggregate completion status
 - Enable batch operations (cancel all, reorder all)
@@ -295,7 +295,7 @@ Terminal states:
 | Aspect | Schedule | TaskGroup |
 |--------|----------|----------|
 | Trigger | Time-based | Explicit |
-| Scope | Single template | Multiple jobs |
+| Scope | Single template | Multiple tasks |
 | Recurrence | Repeating | One-time |
 
 ---

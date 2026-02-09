@@ -22,7 +22,7 @@ This contract aligns **API responses, internal state, and webhook payloads** to 
 | Scheduler Control (`/scheduler/*`) | ✅ Implemented | start, stop, status |
 | Tasks CRUD (`/tasks`) | ✅ Implemented | POST, GET, PATCH, DELETE |
 | Task Runs (`/tasks/{id}/runs`) | ✅ Implemented | 1:1 Task-to-Run relationship |
-| Legacy Trigger Endpoints | ✅ Deprecated | Maintained for compatibility |
+| Legacy Trigger Endpoints | ❌ Removed | Removed in v2.0.0 (PR #139) |
 | TaskTemplate APIs | 🔮 Planned | Phase 4+ |
 | Schedule (Cron) APIs | 🔮 Planned | Phase 4+ |
 
@@ -83,7 +83,7 @@ This design enables future extensibility (`/scheduler/config`, `/scheduler/metri
 ```json
 {
   "scheduler_running": true,
-  "current_task_id": "job-123",
+  "current_task_id": "task-123",
   "queue_length": 5,
   "cumulative_stats": {
     "total_executed": 42,
@@ -122,7 +122,7 @@ This design enables future extensibility (`/scheduler/config`, `/scheduler/metri
 **Task Response:**
 ```json
 {
-  "task_id": "job-550e8400...",
+  "task_id": "task-550e8400...",
   "task_type": "story",
   "status": "QUEUED",
   "params": {...},
@@ -141,7 +141,7 @@ This design enables future extensibility (`/scheduler/config`, `/scheduler/metri
 
 ### Create Template
 ```
-POST /api/job-templates
+POST /api/task-templates
 ```
 
 ```json
@@ -163,15 +163,15 @@ POST /api/job-templates
 
 ### Get Templates
 ```
-GET /api/job-templates
-GET /api/job-templates/{template_id}
+GET /api/task-templates
+GET /api/task-templates/{template_id}
 ```
 
 ---
 
 ### Update Template
 ```
-PATCH /api/job-templates/{template_id}
+PATCH /api/task-templates/{template_id}
 ```
 
 - Changes apply **only to future Tasks**
@@ -274,19 +274,19 @@ This guarantees:
 
 ### List Runs
 ```
-GET /api/job-runs
+GET /api/task-runs
 ```
 
 ### Get Run Detail
 ```
-GET /api/job-runs/{run_id}
+GET /api/task-runs/{run_id}
 ```
 
 ---
 
 ### Retry Failed Run (Manual)
 ```
-POST /api/job-runs/{run_id}/retry
+POST /api/task-runs/{run_id}/retry
 ```
 
 Rules:
@@ -360,8 +360,8 @@ distinct from direct API endpoint webhooks (`build_discord_embed_payload`):
 
 ## 10. Compatibility
 
-- Legacy APIs remain functional during migration
-- This contract applies to **new scheduler-based execution only**
+- Legacy `/jobs/*` trigger endpoints have been removed in v2.0.0 (PR #139)
+- `POST /tasks` is the sole interface for asynchronous task creation
 
 ---
 

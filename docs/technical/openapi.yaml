@@ -11,10 +11,12 @@ info:
     - **Dedup Signals**: Evaluate story similarity (LOW/MEDIUM/HIGH)
     - **Resource Management**: Monitor Ollama model lifecycle
 
-    ## Phase B+ Additions
+    ## Additional Features
     - FAISS-based semantic deduplication
     - Story seed generation and registry
     - Ollama resource auto-cleanup
+    - Task scheduler with queue management
+    - Thumbnail image generation
 
     ## Usage
     ```bash
@@ -32,12 +34,13 @@ info:
 
     ## Note
     This API is designed for **local use only**. All operations connect to local Ollama instance.
-  version: 1.6.0
+  version: 1.7.0
   contact:
     name: VinylStage
     email: mcpe9869@gmail.com
   license:
-    name: Private
+    name: CC-BY-NC-SA-4.0
+    url: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 servers:
   - url: http://localhost:8000

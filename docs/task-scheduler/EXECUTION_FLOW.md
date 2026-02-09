@@ -29,49 +29,49 @@ sequenceDiagram
     participant R as RetryController
 
     Note over S: Cron fires or Manual API called
-    S->>Q: enqueue(new Job)
-    Q->>P: persist Job (QUEUED)
+    S->>Q: enqueue(new Task)
+    Q->>P: persist Task (QUEUED)
     P-->>Q: OK
-    Q-->>S: job_id
+    Q-->>S: task_id
 
     loop Dispatch Loop
-        D->>Q: get_next_job()
-        Q-->>D: Job (or null)
-        alt Job available
-            D->>P: update Job (RUNNING)
-            D->>E: execute(job)
-            E->>P: create JobRun
+        D->>Q: get_next_task()
+        Q-->>D: Task (or null)
+        alt Task available
+            D->>P: update Task (RUNNING)
+            D->>E: execute(task)
+            E->>P: create TaskRun
             E->>E: run work
             alt Success
-                E->>P: update JobRun (COMPLETED)
+                E->>P: update TaskRun (COMPLETED)
             else Failure
-                E->>P: update JobRun (FAILED)
-                E->>R: notify_failure(job, run)
+                E->>P: update TaskRun (FAILED)
+                E->>R: notify_failure(task, run)
             else Skip
-                E->>P: update JobRun (SKIPPED)
+                E->>P: update TaskRun (SKIPPED)
             end
             E-->>D: completion signal
-            D->>W: notify(job, run)
+            D->>W: notify(task, run)
         end
     end
 ```
 
 ### Explanation
 
-1. **Job Creation**: Either ScheduleTrigger (cron fires) or Manual API creates a new Job.
+1. **Task Creation**: Either ScheduleTrigger (cron fires) or Manual API creates a new Task.
 
-2. **Enqueue**: QueueManager receives the Job, assigns position, and persists to SQLite with status `QUEUED`.
+2. **Enqueue**: QueueManager receives the Task, assigns position, and persists to SQLite with status `QUEUED`.
 
-3. **Dispatch Loop**: Dispatcher continuously polls QueueManager for the next available Job.
+3. **Dispatch Loop**: Dispatcher continuously polls QueueManager for the next available Task.
 
-4. **Dispatch**: When a Job is available:
-   - Job status transitions to `RUNNING`
-   - Job is passed to Executor
+4. **Dispatch**: When a Task is available:
+   - Task status transitions to `RUNNING`
+   - Task is passed to Executor
 
 5. **Execution**: Executor:
-   - Creates a new JobRun record
+   - Creates a new TaskRun record
    - Runs the actual work (story generation, research, etc.)
-   - Updates JobRun with terminal status
+   - Updates TaskRun with terminal status
 
 6. **Post-Execution**:
    - On `FAILED`: RetryController is notified for potential retry
@@ -92,15 +92,15 @@ sequenceDiagram
     participant E as Executor
     participant Q as QueueManager
 
-    Note over D: Job1 is RUNNING
+    Note over D: Task1 is RUNNING
     C->>H: POST /story/generate
     H->>D: reserve_next_slot()
     D-->>H: reservation_id
 
     Note over D: Queue dispatch PAUSED
-    Note over E: Job1 still running...
+    Note over E: Task1 still running...
 
-    E-->>D: Job1 complete
+    E-->>D: Task1 complete
     D->>H: slot_ready signal
 
     H->>E: execute_direct(request)
@@ -111,8 +111,8 @@ sequenceDiagram
     Note over D: Queue dispatch RESUMED
     H-->>C: response
 
-    D->>Q: get_next_job()
-    Note over D: Job2 dispatched normally
+    D->>Q: get_next_task()
+    Note over D: Task2 dispatched normally
 ```
 
 ### Explanation
@@ -121,26 +121,26 @@ sequenceDiagram
 
 2. **Reserve Slot**: DirectExecutionHandler requests next-slot reservation from Dispatcher.
 
-3. **Queue Paused**: Dispatcher pauses queue dispatch. No new jobs will be dispatched.
+3. **Queue Paused**: Dispatcher pauses queue dispatch. No new tasks will be dispatched.
 
-4. **Wait for Current Job**: If a job is currently running (Job1), it continues to completion. **No preemption occurs.**
+4. **Wait for Current Task**: If a task is currently running (Task1), it continues to completion. **No preemption occurs.**
 
 5. **Execute Direct Request**: Once the slot is available:
    - DirectExecutionHandler executes the request
-   - This is NOT a Job - no Job entity is created
+   - This is NOT a Task - no Task entity is created
    - Result returned directly to client
 
 6. **Release Slot**: After completion, reservation is released.
 
-7. **Resume Queue**: Dispatcher resumes normal queue dispatch. Next QUEUED job (Job2) is dispatched.
+7. **Resume Queue**: Dispatcher resumes normal queue dispatch. Next QUEUED task (Task2) is dispatched.
 
 ### Key Invariant (DEC-004)
 
 ```
-Execution Order: [Current RUNNING Job] → [Direct Request] → [Remaining Queue]
+Execution Order: [Current RUNNING Task] → [Direct Request] → [Remaining Queue]
 ```
 
-- Direct requests NEVER preempt running jobs
+- Direct requests NEVER preempt running tasks
 - Queue is paused, not cleared
 - Deterministic ordering guaranteed
 
@@ -157,49 +157,49 @@ sequenceDiagram
     participant Q as QueueManager
     participant P as PersistenceAdapter
 
-    E->>R: notify_failure(job1, run1)
-    R->>P: count_retry_chain(job1)
+    E->>R: notify_failure(task1, run1)
+    R->>P: count_retry_chain(task1)
     P-->>R: attempts = 0
 
     Note over R: attempts < 3, create retry
     R->>R: calculate_backoff(attempt=1)
-    R->>Q: enqueue(new Job2, retry_of=job1)
-    Q->>P: persist Job2 (QUEUED)
+    R->>Q: enqueue(new Task2, retry_of=task1)
+    Q->>P: persist Task2 (QUEUED)
 
-    Note over E: Later: Job2 executes and fails
-    E->>R: notify_failure(job2, run2)
-    R->>P: count_retry_chain(job2)
+    Note over E: Later: Task2 executes and fails
+    E->>R: notify_failure(task2, run2)
+    R->>P: count_retry_chain(task2)
     P-->>R: attempts = 1
 
     Note over R: attempts < 3, create retry
     R->>R: calculate_backoff(attempt=2)
-    R->>Q: enqueue(new Job3, retry_of=job2)
+    R->>Q: enqueue(new Task3, retry_of=task2)
 
-    Note over E: Later: Job3 executes and fails
-    E->>R: notify_failure(job3, run3)
-    R->>P: count_retry_chain(job3)
+    Note over E: Later: Task3 executes and fails
+    E->>R: notify_failure(task3, run3)
+    R->>P: count_retry_chain(task3)
     P-->>R: attempts = 2
 
     Note over R: attempts < 3, create retry
-    R->>Q: enqueue(new Job4, retry_of=job3)
+    R->>Q: enqueue(new Task4, retry_of=task3)
 
-    Note over E: Later: Job4 executes and fails
-    E->>R: notify_failure(job4, run4)
-    R->>P: count_retry_chain(job4)
+    Note over E: Later: Task4 executes and fails
+    E->>R: notify_failure(task4, run4)
+    R->>P: count_retry_chain(task4)
     P-->>R: attempts = 3
 
     Note over R: attempts >= 3, NO auto-retry
-    R->>P: mark_permanently_failed(job4)
+    R->>P: mark_permanently_failed(task4)
 ```
 
 ### Explanation
 
-1. **Failure Notification**: When Executor completes a JobRun with status `FAILED`, it notifies RetryController.
+1. **Failure Notification**: When Executor completes a TaskRun with status `FAILED`, it notifies RetryController.
 
 2. **Chain Counting**: RetryController traverses the `retry_of` chain to count total attempts.
 
 3. **Retry Decision** (DEC-007):
-   - If attempts < 3: Create new Job with `retry_of` reference
+   - If attempts < 3: Create new Task with `retry_of` reference
    - If attempts >= 3: Mark as permanently failed, no auto-retry
 
 4. **Backoff Calculation**:
@@ -208,13 +208,13 @@ sequenceDiagram
 
 5. **Chain Structure**:
    ```
-   Job1 (original)
-     └── Job2 (retry_of: Job1)
-           └── Job3 (retry_of: Job2)
-                 └── Job4 (retry_of: Job3) ← max reached
+   Task1 (original)
+     └── Task2 (retry_of: Task1)
+           └── Task3 (retry_of: Task2)
+                 └── Task4 (retry_of: Task3) ← max reached
    ```
 
-6. **Manual Retry**: Always available via `POST /api/job-runs/{run_id}/retry`, regardless of auto-retry count.
+6. **Manual Retry**: Always available via `POST /api/task-runs/{run_id}/retry`, regardless of auto-retry count.
 
 ---
 
@@ -231,21 +231,21 @@ sequenceDiagram
     participant W as WebhookService
 
     Note over SC: Scheduler starts after crash
-    SC->>P: load_all_jobs()
-    P-->>SC: [Job1(RUNNING), Job2(QUEUED), Job3(QUEUED)]
+    SC->>P: load_all_tasks()
+    P-->>SC: [Task1(RUNNING), Task2(QUEUED), Task3(QUEUED)]
 
-    loop For each RUNNING job
-        SC->>P: create JobRun(FAILED, error="Crash recovery")
-        SC->>P: update Job status
-        SC->>R: notify_failure(job, run)
-        SC->>W: notify(job, run)
+    loop For each RUNNING task
+        SC->>P: create TaskRun(FAILED, error="Crash recovery")
+        SC->>P: update Task status
+        SC->>R: notify_failure(task, run)
+        SC->>W: notify(task, run)
     end
 
-    loop For each QUEUED job
-        SC->>Q: restore_to_queue(job)
+    loop For each QUEUED task
+        SC->>Q: restore_to_queue(task)
     end
 
-    Note over Q: Queue restored: [Job2, Job3]
+    Note over Q: Queue restored: [Task2, Task3]
     Note over SC: Normal dispatch loop begins
 ```
 
@@ -253,16 +253,16 @@ sequenceDiagram
 
 1. **Startup**: Scheduler process starts after unexpected termination.
 
-2. **Load State**: All jobs loaded from SQLite.
+2. **Load State**: All tasks loaded from SQLite.
 
-3. **Handle RUNNING Jobs** (orphaned from crash):
+3. **Handle RUNNING Tasks** (orphaned from crash):
    - Cannot verify actual execution state
    - Conservative approach: mark as FAILED
-   - Create JobRun with `error = "Scheduler crash recovery"`
-   - Trigger RetryController (may create retry job)
+   - Create TaskRun with `error = "Scheduler crash recovery"`
+   - Trigger RetryController (may create retry task)
    - Fire webhook notification
 
-4. **Restore QUEUED Jobs**:
+4. **Restore QUEUED Tasks**:
    - Add back to queue in original order
    - Position and priority preserved
 
@@ -270,26 +270,26 @@ sequenceDiagram
 
 ### Key Invariant (DEC-008)
 
-- QUEUED jobs are NEVER lost due to restart
-- RUNNING jobs are FAILED (safe assumption: incomplete)
+- QUEUED tasks are NEVER lost due to restart
+- RUNNING tasks are FAILED (safe assumption: incomplete)
 - Retry logic handles recovery automatically
 
 ---
 
 ## 5. State Machine Summary
 
-### Job States
+### Task States
 
 ```mermaid
 stateDiagram-v2
     [*] --> QUEUED: Created
     QUEUED --> RUNNING: Dispatched
     QUEUED --> CANCELLED: Cancel request
-    RUNNING --> [*]: Complete (outcome in JobRun)
+    RUNNING --> [*]: Complete (outcome in TaskRun)
     CANCELLED --> [*]
 ```
 
-### JobRun States
+### TaskRun States
 
 ```mermaid
 stateDiagram-v2
@@ -301,7 +301,7 @@ stateDiagram-v2
 ### Combined View
 
 ```
-Job Lifecycle:          JobRun Lifecycle:
+Task Lifecycle:          TaskRun Lifecycle:
 ┌─────────────┐         ┌─────────────┐
 │   QUEUED    │         │   Created   │
 └──────┬──────┘         └──────┬──────┘
@@ -327,7 +327,7 @@ Since OQ-001 is unresolved, this section shows how different strategies would af
 
 ```
 Time →
-Worker1: [Job1]────────[Job2]────────[Job3]────────
+Worker1: [Task1]────────[Task2]────────[Task3]────────
 ```
 
 ### Option B: Per-Type Limit (Story=1, Research=1)
@@ -351,33 +351,33 @@ Remote2: [J4(remote)]────
 
 ---
 
-## 7. JobGroup Execution (OQ-002 Impact)
+## 7. TaskGroup Execution (OQ-002 Impact)
 
 Since OQ-002 is unresolved, this section shows how different failure behaviors would affect sequential groups.
 
 ### Setup
 
 ```
-JobGroup (mode: sequential)
-├── Job1
-├── Job2
-└── Job3
+TaskGroup (mode: sequential)
+├── Task1
+├── Task2
+└── Task3
 ```
 
 ### Option A: Stop Immediately
 
 ```
-Job1: COMPLETED
-Job2: FAILED    ← failure occurs
-Job3: CANCELLED ← never executed
+Task1: COMPLETED
+Task2: FAILED    ← failure occurs
+Task3: CANCELLED ← never executed
 ```
 
 ### Option B: Continue All
 
 ```
-Job1: COMPLETED
-Job2: FAILED    ← failure occurs
-Job3: COMPLETED ← still executed
+Task1: COMPLETED
+Task2: FAILED    ← failure occurs
+Task3: COMPLETED ← still executed
 ```
 
 ### Option C: Configurable
@@ -388,7 +388,7 @@ on_failure: continue # → Option B behavior
 on_failure: skip     # → Skip remaining without CANCELLED status
 ```
 
-**Implementation Note**: JobGroup executor must support injectable GroupFailurePolicy.
+**Implementation Note**: TaskGroup executor must support injectable GroupFailurePolicy.
 
 ---
 

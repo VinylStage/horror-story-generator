@@ -72,7 +72,7 @@ This runbook provides procedures to verify that the horror story generator can r
    **백업 생성 조건:**
    - 스키마 버전 불일치 시 자동 생성
    - 정상 v1.1.0 운영 시 백업 생성 안함
-   - 자세한 내용: [REGISTRY_BACKUP_GUIDE.md](REGISTRY_BACKUP_GUIDE.md)
+   - 자세한 내용: [BACKUP_RESTORE_GUIDE.md](BACKUP_RESTORE_GUIDE.md)
 
 ---
 
@@ -295,7 +295,9 @@ grep "실행 완료 - 최종 통계" logs/horror_story_*.log
 export STORY_DEDUP_STRICT=false
 
 # 2. 첫 번째 스토리 생성 (중복 검사 활성화)
-python main.py --max-stories 1 --enable-dedup
+curl -X POST http://localhost:8000/story/generate \
+  -H "Content-Type: application/json" \
+  -d '{"save_output": true}'
 ```
 
 **Verification:**
@@ -325,10 +327,12 @@ grep "duplicate detected" logs/horror_story_*.log
 # STRICT 모드 활성화
 export STORY_DEDUP_STRICT=true
 
-# 중복 시도 시 즉시 중단되어야 함
-python main.py --max-stories 1 --enable-dedup
+# 중복 시도 시 즉시 중단되어야 함 (via API)
+curl -X POST http://localhost:8000/story/generate \
+  -H "Content-Type: application/json" \
+  -d '{"save_output": true}'
 
-# 예상: 중복 감지 시 ValueError 발생 후 종료
+# 예상: 중복 감지 시 에러 응답 반환
 ```
 
 ---
@@ -427,8 +431,10 @@ tail -50 logs/horror_story_*.log
 # Verify API key
 python -c "from dotenv import load_dotenv; import os; load_dotenv(); print(os.getenv('ANTHROPIC_API_KEY'))"
 
-# Test single generation first
-python main.py --max-stories 1
+# Test single generation first via API
+curl -X POST http://localhost:8000/story/generate \
+  -H "Content-Type: application/json" \
+  -d '{"save_output": true}'
 ```
 
 ---
@@ -437,7 +443,7 @@ python main.py --max-stories 1
 
 ```bash
 # Check if process is running
-ps aux | grep "python main.py"
+ps aux | grep "uvicorn"
 
 # Check if log file is being written
 ls -lh logs/
@@ -667,7 +673,7 @@ cat test_summary.txt
 
 ## Notes
 
-- **Backward compatibility:** Running `python main.py` with no arguments still generates a single story (default: `--max-stories 1`)
+- **API-based execution:** All story generation is done via HTTP API (`POST /story/generate` or `POST /tasks`)
 - **Graceful degradation:** If token usage is unavailable, process continues with warning
 - **Log file persistence:** One log file per process execution (filename includes start timestamp)
 - **No interruption during generation:** SIGINT/SIGTERM only stop after current story completes

@@ -372,7 +372,7 @@ See root `CONTRIBUTING.md` for development guidelines.
 
 ## License
 
-MIT License
+CC BY-NC-SA 4.0
 
 ---
 

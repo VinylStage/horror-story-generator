@@ -43,7 +43,7 @@ horror-story-generator/
 ├── assets/                        # 템플릿 및 리소스
 │   └── templates/                 # 15개 템플릿 스켈레톤
 ├── data/                          # 런타임 데이터
-├── generated_stories/             # 생성된 소설
+├── data/novel/                    # 생성된 소설
 ├── logs/                          # 실행 로그
 └── docs/                          # 문서
 ```
@@ -115,7 +115,7 @@ ANTHROPIC_API_KEY=your_api_key_here
 CLAUDE_MODEL=claude-sonnet-4-5-20250929
 MAX_TOKENS=8192
 TEMPERATURE=0.8
-OUTPUT_DIR=./generated_stories
+OUTPUT_DIR=data/novel/
 LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 # API 인증 (선택 - API 서버 운영 시)
@@ -322,8 +322,8 @@ LOG_LEVEL=WARNING  # 경고 이상만 표시
 ### 생성된 파일 확인
 
 ```bash
-ls -la generated_stories/
-cat generated_stories/horror_story_*.md
+ls -la data/novel/
+cat data/novel/story-*.md
 ```
 
 ### 마크다운 포맷 검증
@@ -331,7 +331,7 @@ cat generated_stories/horror_story_*.md
 생성된 파일의 YAML frontmatter 확인:
 
 ```bash
-head -20 generated_stories/horror_story_*.md
+head -20 data/novel/story-*.md
 ```
 
 ---
@@ -425,7 +425,7 @@ release-please가 이 커밋 메시지를 분석하여 자동으로 CHANGELOG를
 
 ```bash
 # 새 기능 추가
-git commit -m "feat(api): add batch job trigger endpoint"
+git commit -m "feat(api): add batch task creation endpoint"
 
 # 버그 수정
 git commit -m "fix(story): correct canonical fingerprint calculation"
@@ -437,7 +437,7 @@ git commit -m "perf(dedup): optimize FAISS index search"
 git commit -m "docs: update API reference with new endpoints"
 
 # Breaking Change (메이저 버전 업데이트)
-git commit -m "feat(api)!: change job status response format
+git commit -m "feat(api)!: change task status response format
 
 BREAKING CHANGE: The status field now returns an object instead of a string."
 
@@ -457,9 +457,9 @@ Breaking change가 있는 경우:
 
 | 커밋 타입 | 버전 변경 | 예시 |
 |-----------|-----------|------|
-| `fix` | PATCH (0.0.x) | 0.3.0 → 0.3.1 |
-| `feat` | MINOR (0.x.0) | 0.3.0 → 0.4.0 |
-| `feat!` 또는 `BREAKING CHANGE` | MAJOR (x.0.0) | 0.3.0 → 1.0.0 |
+| `fix` | PATCH (x.x.N) | 1.7.0 → 1.7.1 |
+| `feat` | MINOR (x.N.0) | 1.7.0 → 1.8.0 |
+| `feat!` 또는 `BREAKING CHANGE` | MAJOR (N.0.0) | 1.7.0 → 2.0.0 |
 
 ---
 
@@ -469,7 +469,7 @@ Breaking change가 있는 경우:
 
 - **버전 소스**: `pyproject.toml`의 `version` 필드
 - **매니페스트**: `.release-please-manifest.json`
-- **현재 버전**: v0.3.0
+- **현재 버전**: v1.7.0
 
 ### 릴리스 프로세스
 
@@ -482,8 +482,8 @@ Breaking change가 있는 경우:
 
 ### 버전 정책
 
-- v0.x.x: 초기 개발 단계 (현재)
-- v1.0.0: 프로덕션 준비 완료 시
+- v1.x.x: 현재 안정 단계
+- v2.0.0: 주요 아키텍처 변경 시
 - API 변경 시 마이너 버전 업데이트
 - 버그 수정 시 패치 버전 업데이트
 
@@ -524,4 +524,4 @@ Breaking change가 있는 경우:
 
 ## 라이선스
 
-이 프로젝트는 MIT 라이선스를 따릅니다.
+이 프로젝트는 CC BY-NC-SA 4.0 라이선스를 따릅니다.

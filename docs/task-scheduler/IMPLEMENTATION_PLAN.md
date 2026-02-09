@@ -11,7 +11,7 @@
 
 This document bridges **design** to **implementation** by defining:
 - Component responsibilities and boundaries
-- Execution paths for all job types
+- Execution paths for all task types
 - State transition rules
 - Failure handling semantics
 
@@ -33,27 +33,27 @@ This is a planning document. No code is included.
 
 ### 1.1 QueueManager
 
-**Responsibility**: Maintains the ordered queue of QUEUED jobs.
+**Responsibility**: Maintains the ordered queue of QUEUED tasks.
 
 **Inputs**:
-- New Job (from ScheduleTrigger, Manual API, or RetryController)
-- Cancel request (job_id)
-- Reorder request (job_id, new_position)
+- New Task (from ScheduleTrigger, Manual API, or RetryController)
+- Cancel request (task_id)
+- Reorder request (task_id, new_position)
 
 **Outputs**:
-- Next job to dispatch (based on priority, position, created_at)
+- Next task to dispatch (based on priority, position, created_at)
 - Queue state queries (list, count, position)
 
 **What It MUST NOT Do**:
-- Execute jobs (Executor's responsibility)
-- Create JobRuns (Executor's responsibility)
+- Execute tasks (Executor's responsibility)
+- Create TaskRuns (Executor's responsibility)
 - Manage retry logic (RetryController's responsibility)
 - Interact with external APIs or webhooks
 
 **Key Behaviors**:
 ```
 Insertion:
-  Job added → assign position → persist to SQLite → status = QUEUED
+  Task added → assign position → persist to SQLite → status = QUEUED
 
 Ordering (INV-004):
   priority DESC, position ASC, created_at ASC
@@ -70,7 +70,7 @@ Direct API Reservation (DEC-004):
 
 ### 1.2 Dispatcher
 
-**Responsibility**: Pulls jobs from queue and hands them to Executor.
+**Responsibility**: Pulls tasks from queue and hands them to Executor.
 
 **Inputs**:
 - Signal: "worker available"
@@ -78,12 +78,12 @@ Direct API Reservation (DEC-004):
 - Queue state from QueueManager
 
 **Outputs**:
-- Job dispatched to Executor
+- Task dispatched to Executor
 - Dispatch event (for logging/monitoring)
 
 **What It MUST NOT Do**:
-- Modify job parameters (immutable after dispatch per INV-001)
-- Execute the job itself
+- Modify task parameters (immutable after dispatch per INV-001)
+- Execute the task itself
 - Handle retries
 - Manage concurrency limits (see OQ-001 - unresolved)
 
@@ -94,8 +94,8 @@ Normal dispatch loop:
      → YES: wait for reservation to complete
      → NO: continue
   2. Query QueueManager.get_next()
-  3. If job exists:
-     a. Transition job: QUEUED → RUNNING (internal DISPATCHED is transient)
+  3. If task exists:
+     a. Transition task: QUEUED → RUNNING (internal DISPATCHED is transient)
      b. Hand to Executor
   4. Wait for Executor completion signal
   5. Loop
@@ -103,7 +103,7 @@ Normal dispatch loop:
 Next-slot reservation handling:
   1. Direct API calls reserve_next_slot()
   2. Dispatcher pauses queue dispatch
-  3. Current job (if any) completes normally
+  3. Current task (if any) completes normally
   4. Direct execution runs
   5. Reservation released
   6. Queue dispatch resumes
@@ -113,18 +113,18 @@ Next-slot reservation handling:
 
 ### 1.3 Executor
 
-**Responsibility**: Runs the actual job work and produces JobRun.
+**Responsibility**: Runs the actual task work and produces TaskRun.
 
 **Inputs**:
-- Job (with params, job_type)
+- Task (with params, task_type)
 - Execution context (model spec, resource handles)
 
 **Outputs**:
-- JobRun (with status, artifacts, error, timing)
+- TaskRun (with status, artifacts, error, timing)
 - Completion signal to Dispatcher
 
 **What It MUST NOT Do**:
-- Modify the Job entity (except status transition)
+- Modify the Task entity (except status transition)
 - Decide retry policy (RetryController's responsibility)
 - Send webhooks directly (WebhookService's responsibility)
 - Manage queue state
@@ -132,18 +132,18 @@ Next-slot reservation handling:
 **Key Behaviors**:
 ```
 Execution flow:
-  1. Create JobRun (started_at = now)
-  2. Load job_type handler (story/research)
+  1. Create TaskRun (started_at = now)
+  2. Load task_type handler (story/research)
   3. Execute work
   4. On success:
-     - JobRun.status = COMPLETED
-     - JobRun.artifacts = [produced files]
+     - TaskRun.status = COMPLETED
+     - TaskRun.artifacts = [produced files]
   5. On failure:
-     - JobRun.status = FAILED
-     - JobRun.error = error message
+     - TaskRun.status = FAILED
+     - TaskRun.error = error message
   6. On skip (e.g., dedup):
-     - JobRun.status = SKIPPED
-  7. Persist JobRun (INV-002: immutable after creation)
+     - TaskRun.status = SKIPPED
+  7. Persist TaskRun (INV-002: immutable after creation)
   8. Signal completion to Dispatcher
   9. Notify RetryController (if FAILED)
   10. Trigger WebhookService
@@ -153,31 +153,31 @@ Execution flow:
 
 ### 1.4 RetryController
 
-**Responsibility**: Decides whether to create retry jobs and manages retry chain.
+**Responsibility**: Decides whether to create retry tasks and manages retry chain.
 
 **Inputs**:
-- Failed JobRun
-- Job's retry_policy (from JobTemplate)
+- Failed TaskRun
+- Task's retry_policy (from TaskTemplate)
 - Retry chain (via `retry_of` references)
 
 **Outputs**:
-- New Job (if auto-retry)
+- New Task (if auto-retry)
 - "No more retries" signal (if max reached)
 
 **What It MUST NOT Do**:
-- Execute jobs
-- Modify existing Jobs or JobRuns
+- Execute tasks
+- Modify existing Tasks or TaskRuns
 - Override template's retry_policy
 
 **Key Behaviors (DEC-007)**:
 ```
-On FAILED JobRun:
+On FAILED TaskRun:
   1. Count retry attempts in chain (traverse retry_of)
   2. If attempts < max_attempts (default: 3):
      a. Calculate backoff delay
-     b. Create new Job with:
+     b. Create new Task with:
         - Same template_id, params
-        - retry_of = original_job_id
+        - retry_of = original_task_id
         - scheduled_for = now + backoff
      c. Enqueue to QueueManager
   3. If attempts >= max_attempts:
@@ -194,10 +194,10 @@ Backoff calculation:
 
 ### 1.5 PersistenceAdapter
 
-**Responsibility**: Abstracts SQLite storage for all job-related entities.
+**Responsibility**: Abstracts SQLite storage for all task-related entities.
 
 **Inputs**:
-- CRUD operations for Job, JobRun, JobTemplate, Schedule, JobGroup
+- CRUD operations for Task, TaskRun, TaskTemplate, Schedule, TaskGroup
 
 **Outputs**:
 - Persisted entities
@@ -216,20 +216,20 @@ Storage:
   - All state persisted immediately
 
 Startup recovery:
-  1. Load all QUEUED jobs → restore queue
-  2. Find RUNNING jobs from previous session → mark as FAILED
+  1. Load all QUEUED tasks → restore queue
+  2. Find RUNNING tasks from previous session → mark as FAILED
   3. Validate queue order integrity
 
 Schema enforcement:
-  - Job.params immutable after RUNNING (app-level, not DB constraint)
-  - JobRun mostly immutable (limited mutable fields per INV-002)
+  - Task.params immutable after RUNNING (app-level, not DB constraint)
+  - TaskRun mostly immutable (limited mutable fields per INV-002)
 ```
 
 ---
 
 ### 1.6 ScheduleTrigger
 
-**Responsibility**: Converts Schedule cron triggers into Jobs.
+**Responsibility**: Converts Schedule cron triggers into Tasks.
 
 **Inputs**:
 - Enabled Schedules (from PersistenceAdapter)
@@ -237,10 +237,10 @@ Schema enforcement:
 - Timezone configuration
 
 **Outputs**:
-- New Jobs (enqueued via QueueManager)
+- New Tasks (enqueued via QueueManager)
 
 **What It MUST NOT Do**:
-- Execute jobs
+- Execute tasks
 - Modify Schedule during trigger
 - Handle missed triggers beyond catchup policy
 
@@ -250,8 +250,8 @@ Integration with APScheduler:
   1. On startup, register all enabled Schedules with APScheduler
   2. APScheduler fires trigger at cron time
   3. Trigger handler:
-     a. Load Schedule and associated JobTemplate
-     b. Create Job with merged params
+     a. Load Schedule and associated TaskTemplate
+     b. Create Task with merged params
      c. Enqueue via QueueManager
   4. Update Schedule.last_triggered_at
 
@@ -265,10 +265,10 @@ Timezone handling:
 
 ### 1.7 WebhookService
 
-**Responsibility**: Sends webhook notifications on job events.
+**Responsibility**: Sends webhook notifications on task events.
 
 **Inputs**:
-- Job completion events
+- Task completion events
 - Webhook configuration (URL, events to send)
 
 **Outputs**:
@@ -276,13 +276,13 @@ Timezone handling:
 - Delivery status tracking
 
 **What It MUST NOT Do**:
-- Block job execution
+- Block task execution
 - Guarantee exactly-once delivery
 
 **Key Behaviors (DEC-009)**:
 ```
 Delivery:
-  1. On JobRun terminal status (COMPLETED, FAILED, SKIPPED)
+  1. On TaskRun terminal status (COMPLETED, FAILED, SKIPPED)
   2. Build payload (matches API response schema)
   3. POST to webhook_url
   4. On failure:
@@ -292,7 +292,7 @@ Delivery:
 
 Fire-and-forget pattern:
   - Non-blocking (async)
-  - Does not affect job execution flow
+  - Does not affect task execution flow
 ```
 
 ---
@@ -309,22 +309,22 @@ Fire-and-forget pattern:
 - Reservation release signal
 
 **What It MUST NOT Do**:
-- Create Jobs
-- Preempt running jobs
+- Create Tasks
+- Preempt running tasks
 - Modify queue state directly
 
 **Key Behaviors (DEC-004)**:
 ```
 Execution flow:
   1. Call Dispatcher.reserve_next_slot()
-  2. Wait for current job to complete (if any)
+  2. Wait for current task to complete (if any)
   3. Execute direct request
   4. Return response to caller
   5. Call Dispatcher.release_next_slot()
   6. Dispatcher resumes queue
 
 No preemption guarantee:
-  - Running job always completes
+  - Running task always completes
   - Direct request waits (with timeout)
   - Timeout behavior: TBD (fail fast vs extend wait)
 ```
@@ -333,30 +333,30 @@ No preemption guarantee:
 
 ## 2. Execution Paths
 
-### 2.1 Path A: Scheduled Job
+### 2.1 Path A: Scheduled Task
 
 ```
 Schedule.cron fires
     ↓
 ScheduleTrigger.handle_trigger()
     ↓
-Load JobTemplate, merge params
+Load TaskTemplate, merge params
     ↓
-QueueManager.enqueue(new Job)
+QueueManager.enqueue(new Task)
     ↓
-[Job status: QUEUED]
+[Task status: QUEUED]
     ↓
 Dispatcher sees available worker
     ↓
-Dispatcher.dispatch(job)
+Dispatcher.dispatch(task)
     ↓
-[Job status: RUNNING]
+[Task status: RUNNING]
     ↓
-Executor.execute(job)
+Executor.execute(task)
     ↓
-[JobRun created]
+[TaskRun created]
     ↓
-On completion: JobRun.status = COMPLETED/FAILED/SKIPPED
+On completion: TaskRun.status = COMPLETED/FAILED/SKIPPED
     ↓
 WebhookService.notify()
     ↓
@@ -365,18 +365,18 @@ If FAILED: RetryController.evaluate()
 
 ---
 
-### 2.2 Path B: Manual Job
+### 2.2 Path B: Manual Task
 
 ```
-POST /api/jobs {template_id, priority}
+POST /api/tasks {template_id, priority}
     ↓
 Validate template exists
     ↓
-Create Job with params snapshot
+Create Task with params snapshot
     ↓
-QueueManager.enqueue(job)
+QueueManager.enqueue(task)
     ↓
-[Job status: QUEUED]
+[Task status: QUEUED]
     ↓
 (Same as Path A from Dispatcher onward)
 ```
@@ -394,11 +394,11 @@ Dispatcher.reserve_next_slot()
     ↓
 [Queue dispatch paused]
     ↓
-Wait for current RUNNING job (if any)
+Wait for current RUNNING task (if any)
     ↓
-Current job completes normally
+Current task completes normally
     ↓
-Execute direct request (NOT a Job)
+Execute direct request (NOT a Task)
     ↓
 Return response to caller
     ↓
@@ -406,38 +406,38 @@ Dispatcher.release_next_slot()
     ↓
 [Queue dispatch resumed]
     ↓
-Next QUEUED job dispatched
+Next QUEUED task dispatched
 ```
 
 ---
 
-### 2.4 Path D: Retry → New Job Creation
+### 2.4 Path D: Retry → New Task Creation
 
 ```
-JobRun.status = FAILED
+TaskRun.status = FAILED
     ↓
 Executor notifies RetryController
     ↓
-RetryController.evaluate(job, jobrun)
+RetryController.evaluate(task, taskrun)
     ↓
 Count attempts in chain (retry_of traversal)
     ↓
 attempts < 3?
-    ├── YES: Create new Job
-    │         - retry_of = original_job_id
+    ├── YES: Create new Task
+    │         - retry_of = original_task_id
     │         - scheduled_for = now + backoff
     │         - QueueManager.enqueue()
     │
     └── NO: Mark permanently failed
              - No auto-retry
-             - Manual retry via POST /api/job-runs/{run_id}/retry
+             - Manual retry via POST /api/task-runs/{run_id}/retry
 ```
 
 ---
 
 ## 3. State Transitions
 
-### 3.1 Job Lifecycle
+### 3.1 Task Lifecycle
 
 ```
                     ┌─────────────┐
@@ -447,7 +447,7 @@ attempts < 3?
                     ┌──────▼──────┐
                     │   RUNNING   │ ← Executor working
                     └──────┬──────┘
-                           │ complete (JobRun determines outcome)
+                           │ complete (TaskRun determines outcome)
                     ┌──────▼──────┐
                     │  (terminal) │
                     └─────────────┘
@@ -465,12 +465,12 @@ Cancellation:
 | CANCELLED | Cancelled before completion |
 
 **Internal-Only States** (not exposed via API):
-- `PENDING`: Job awaiting group (if using JobGroup)
+- `PENDING`: Task awaiting group (if using TaskGroup)
 - `DISPATCHED`: Brief transition between claim and execution start
 
 ---
 
-### 3.2 JobRun Lifecycle
+### 3.2 TaskRun Lifecycle
 
 ```
                     ┌─────────────┐
@@ -497,15 +497,15 @@ Cancellation:
 
 | Entity | Field | API Response | Webhook Payload |
 |--------|-------|--------------|-----------------|
-| Job | status | QUEUED/RUNNING/CANCELLED | Same |
-| JobRun | status | COMPLETED/FAILED/SKIPPED | Same |
-| JobRun | error | Error message (if FAILED) | Same |
-| JobRun | artifacts | List of file paths | Same |
+| Task | status | QUEUED/RUNNING/CANCELLED | Same |
+| TaskRun | status | COMPLETED/FAILED/SKIPPED | Same |
+| TaskRun | error | Error message (if FAILED) | Same |
+| TaskRun | artifacts | List of file paths | Same |
 
 Webhook events:
-- `job.run.completed` → JobRun.status = COMPLETED
-- `job.run.failed` → JobRun.status = FAILED
-- `job.run.skipped` → JobRun.status = SKIPPED
+- `task.run.completed` → TaskRun.status = COMPLETED
+- `task.run.failed` → TaskRun.status = FAILED
+- `task.run.skipped` → TaskRun.status = SKIPPED
 
 ---
 
@@ -515,19 +515,19 @@ Webhook events:
 
 **Automatic Retry (max 3 attempts)**:
 ```
-Attempt 1: Job1 → JobRun1 (FAILED)
+Attempt 1: Task1 → TaskRun1 (FAILED)
                 ↓
-           RetryController creates Job2 (retry_of: Job1)
+           RetryController creates Task2 (retry_of: Task1)
                 ↓
-Attempt 2: Job2 → JobRun2 (FAILED)
+Attempt 2: Task2 → TaskRun2 (FAILED)
                 ↓
-           RetryController creates Job3 (retry_of: Job2)
+           RetryController creates Task3 (retry_of: Task2)
                 ↓
-Attempt 3: Job3 → JobRun3 (FAILED)
+Attempt 3: Task3 → TaskRun3 (FAILED)
                 ↓
            RetryController: max attempts reached, no auto-retry
                 ↓
-           Job3 marked as permanently failed
+           Task3 marked as permanently failed
 ```
 
 **Backoff Strategy**:
@@ -540,19 +540,19 @@ Attempt 3: Job3 → JobRun3 (FAILED)
 ### 4.2 Manual Retry Semantics
 
 ```
-POST /api/job-runs/{run_id}/retry
+POST /api/task-runs/{run_id}/retry
     ↓
 Validate: run_id exists, status = FAILED
     ↓
-Create new Job with:
+Create new Task with:
   - template_id from original
   - params snapshot from original
-  - retry_of = original_job_id
+  - retry_of = original_task_id
   - priority: same or specified
     ↓
 Enqueue to QueueManager
     ↓
-Return new job_id
+Return new task_id
 ```
 
 Manual retry is always allowed, regardless of automatic retry count.
@@ -563,19 +563,19 @@ Manual retry is always allowed, regardless of automatic retry count.
 
 **On Scheduler Startup**:
 ```
-1. Load all Jobs from SQLite
-2. For each Job:
+1. Load all Tasks from SQLite
+2. For each Task:
    - QUEUED: Restore to queue (preserve order)
    - RUNNING: Mark as FAILED (orphaned)
-     - Create JobRun with status=FAILED, error="Scheduler crash recovery"
+     - Create TaskRun with status=FAILED, error="Scheduler crash recovery"
      - Trigger RetryController evaluation
 3. Resume normal dispatch loop
 ```
 
-**Orphaned Job Handling**:
-- RUNNING jobs from previous session cannot be verified
+**Orphaned Task Handling**:
+- RUNNING tasks from previous session cannot be verified
 - Conservative approach: mark as FAILED, let retry handle
-- Webhook fires for recovery-failed jobs
+- Webhook fires for recovery-failed tasks
 
 ---
 
@@ -592,9 +592,9 @@ The following are **explicitly out of scope** for this implementation:
 
 ### 5.2 Preemption
 
-- Running jobs are NEVER interrupted
+- Running tasks are NEVER interrupted
 - Direct APIs wait, not preempt
-- Cancel requests on RUNNING jobs wait for completion
+- Cancel requests on RUNNING tasks wait for completion
 - Reference: DEC-004 (Next-Slot Reservation)
 
 ### 5.3 UI Coupling
@@ -606,9 +606,9 @@ The following are **explicitly out of scope** for this implementation:
 
 ### 5.4 Complex Scheduling Patterns
 
-- No job dependencies (DAG execution)
+- No task dependencies (DAG execution)
 - No conditional execution (if-then-else)
-- No cross-job data passing
+- No cross-task data passing
 - Simple cron + manual + retry only
 
 ### 5.5 Exactly-Once Semantics
@@ -626,13 +626,13 @@ The following questions have been resolved and implemented.
 
 ### OQ-001 → DEC-011: Concurrency Limit Strategy
 
-**Resolution**: Global single concurrency - maximum 1 job running at any time.
+**Resolution**: Global single concurrency - maximum 1 task running at any time.
 
 **Decision Reference**: See DESIGN_GUARDS.md DEC-011
 
 **Implementation**:
-- Dispatcher checks for any RUNNING job before dispatch
-- If any job is RUNNING, new dispatch waits
+- Dispatcher checks for any RUNNING task before dispatch
+- If any task is RUNNING, new dispatch waits
 - No type-based or resource-based partitioning in Phase 4
 
 **Migration Path**:
@@ -641,21 +641,21 @@ The following questions have been resolved and implemented.
 
 ---
 
-### OQ-002 → DEC-012: JobGroup Sequential Failure Behavior
+### OQ-002 → DEC-012: TaskGroup Sequential Failure Behavior
 
-**Resolution**: Stop-on-failure - if any job in a sequential group fails, cancel remaining jobs.
+**Resolution**: Stop-on-failure - if any task in a sequential group fails, cancel remaining tasks.
 
 **Decision Reference**: See DESIGN_GUARDS.md DEC-012
 
 **Implementation**:
-- Sequential group executes jobs in order
-- If Job N fails (after retry exhaustion), cancel Job N+1, N+2, ...
-- Cancelled jobs get status `CANCELLED` with reason "predecessor failed"
+- Sequential group executes tasks in order
+- If Task N fails (after retry exhaustion), cancel Task N+1, N+2, ...
+- Cancelled tasks get status `CANCELLED` with reason "predecessor failed"
 - Group status becomes `PARTIAL`
 
 **Retry Interaction**:
-- Failed job is retried per DEC-007 before group decides to stop
-- Remaining jobs cancelled only after retry chain exhaustion
+- Failed task is retried per DEC-007 before group decides to stop
+- Remaining tasks cancelled only after retry chain exhaustion
 
 **Migration Path**:
 - Phase 5+: Add `on_failure: stop | continue | skip` field when user requests flexibility
@@ -669,7 +669,7 @@ The following questions have been resolved and implemented.
                     ┌────────────────┐
                     │ ScheduleTrigger│
                     └───────┬────────┘
-                            │ creates Jobs
+                            │ creates Tasks
                             ▼
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
 │  Manual API     │──►│  QueueManager   │◄──│ RetryController │
