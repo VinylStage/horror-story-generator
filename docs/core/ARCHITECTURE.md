@@ -709,7 +709,7 @@ Each template defines:
 |-----------|----------|
 | `data/novel/` | Generated story files (v1.3.1+, configurable via `NOVEL_OUTPUT_DIR`) |
 | `data/research/` | Research card JSON files |
-| `jobs/` | Job metadata JSON files (configurable via `JOB_DIR`) |
+| `tasks/` | Task metadata (managed by scheduler SQLite) |
 | `logs/` | Execution logs |
 
 ---
@@ -892,7 +892,7 @@ flowchart LR
 The system is designed to run locally without external services beyond Claude API:
 - SQLite for persistence (no external database)
 - FAISS-cpu for vector search (no GPU required)
-- File-based job storage (no message queue)
+- SQLite-based task storage (no message queue)
 
 ---
 
@@ -962,7 +962,7 @@ flowchart LR
 data/story_registry.backup.1.0.0.20260112_130012.db
 ```
 
-**See also:** [Registry Backup Guide](../technical/REGISTRY_BACKUP_GUIDE.md)
+**See also:** [Backup & Restore Guide](../technical/BACKUP_RESTORE_GUIDE.md)
 
 ---
 
@@ -1077,7 +1077,7 @@ Key architectural decisions are documented in `docs/technical/decision_log.md`:
 - **D-002**: Hybrid KU selection (category + canonical matching)
 - **D-003**: Assisted manual generation (not fully automated)
 - **D-004**: HIGH-only blocking policy for deduplication
-- **D-005**: File-based job storage for simplicity
+- **D-005**: SQLite-based task storage for simplicity
 - **D-006**: Unified research context module (`src/infra/research_context/`) for CLI/API consistency
 - **D-007**: Research auto-injection ON by default with traceability metadata
 - **D-008**: Story-level dedup using signature (canonical_core + research_used → SHA256)
@@ -1096,7 +1096,7 @@ Key architectural decisions are documented in `docs/technical/decision_log.md`:
 ### Uncertainties
 
 - [Uncertain] Optimal KU count per template (currently 2-5 recommended)
-- [Uncertain] Long-term scalability of file-based job storage
+- [Uncertain] Long-term scalability of SQLite-based task storage
 - [Uncertain] FAISS index performance beyond 10,000 research cards
 
 ---

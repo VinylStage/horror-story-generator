@@ -77,7 +77,7 @@ This document defines the **official application scope** of Canonical Key within
 | Generator | `src/story/generator.py` | Uses template's `canonical_core` for dedup |
 | Prompt Builder | `src/story/prompt_builder.py` | Includes `canonical_core` in prompt context |
 | Dedup API | `src/api/services/dedup_service.py` | Compares `canonical_core` for similarity |
-| Job Dedup | `src/api/routers/jobs.py` | Extracts `canonical_affinity` from research cards |
+| Task Dedup | `src/api/routers/tasks.py` | Extracts `canonical_affinity` from research cards |
 | **Canonical Extractor** | `src/story/canonical_extractor.py` | Extracts story's own CK for alignment scoring |
 
 **Rule:** Story generation MAY consume Canonical Keys from:

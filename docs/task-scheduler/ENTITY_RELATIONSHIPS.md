@@ -19,16 +19,16 @@ This document defines the relationships between Task Scheduler entities. It cove
 
 ```mermaid
 erDiagram
-    JobTemplate ||--o{ Job : "creates"
-    JobTemplate ||--o{ Schedule : "referenced by"
-    Schedule ||--o{ Job : "triggers"
-    Job ||--|| JobRun : "produces"
-    JobGroup ||--|{ Job : "contains"
+    TaskTemplate ||--o{ Task : "creates"
+    TaskTemplate ||--o{ Schedule : "referenced by"
+    Schedule ||--o{ Task : "triggers"
+    Task ||--|| TaskRun : "produces"
+    TaskGroup ||--|{ Task : "contains"
 
-    JobTemplate {
+    TaskTemplate {
         uuid template_id PK
         string name
-        string job_type
+        string task_type
         json default_params
     }
 
@@ -39,8 +39,8 @@ erDiagram
         boolean enabled
     }
 
-    Job {
-        uuid job_id PK
+    Task {
+        uuid task_id PK
         uuid template_id FK
         uuid schedule_id FK
         uuid group_id FK
@@ -48,15 +48,15 @@ erDiagram
         int priority
     }
 
-    JobRun {
+    TaskRun {
         uuid run_id PK
-        uuid job_id FK
+        uuid task_id FK
         string status
         timestamp started_at
         timestamp finished_at
     }
 
-    JobGroup {
+    TaskGroup {
         uuid group_id PK
         string mode
         string status
@@ -67,7 +67,7 @@ erDiagram
 
 ```
 ┌─────────────────┐
-│   JobTemplate   │
+│   TaskTemplate   │
 │  (Definition)   │
 └────────┬────────┘
          │ 1:N (creates)
@@ -76,25 +76,25 @@ erDiagram
          │                              │
          ▼                              ▼
 ┌─────────────────┐            ┌─────────────────┐
-│    Schedule     │            │      Job        │
+│    Schedule     │            │      Task       │
 │   (Temporal)    │────────────│  (Execution)    │
 └─────────────────┘  1:N       └────────┬────────┘
                   (triggers)            │
                                         │ 1:1
                                         ▼
                                ┌─────────────────┐
-                               │    JobRun       │
+                               │    TaskRun       │
                                │   (History)     │
                                └─────────────────┘
 
 ┌─────────────────┐
-│    JobGroup     │
+│    TaskGroup     │
 │   (Grouping)    │
 └────────┬────────┘
          │ 1:N (contains)
          ▼
 ┌─────────────────┐
-│      Job        │
+│      Task       │
 │  (Members)      │
 └─────────────────┘
 ```
@@ -103,53 +103,53 @@ erDiagram
 
 ## Relationship Details
 
-### 1. JobTemplate → Job
+### 1. TaskTemplate → Task
 
 | Aspect | Description |
 |--------|-------------|
 | **Cardinality** | One-to-Many (1:N) |
-| **Direction** | JobTemplate is the parent, Job is the child |
-| **Optionality** | Job.template_id is NULLABLE (ad-hoc jobs) |
+| **Direction** | TaskTemplate is the parent, Task is the child |
+| **Optionality** | Task.template_id is NULLABLE (ad-hoc tasks) |
 | **Ownership** | Non-owning reference (soft reference) |
-| **Cascade Delete** | NO - Jobs persist when template archived |
+| **Cascade Delete** | NO - Tasks persist when template archived |
 
 #### Creation Trigger
 
-Jobs referencing a template are created when:
-1. **Manual trigger**: User explicitly requests job creation from template
+Tasks referencing a template are created when:
+1. **Manual trigger**: User explicitly requests task creation from template
 2. **Schedule trigger**: A Schedule's cron expression fires
 3. **API call**: Direct API call specifying template_id
 
 #### Lifecycle Dependency
 
 ```
-JobTemplate ARCHIVED → Existing Jobs: Unaffected
-                     → New Jobs: Cannot be created from this template
+TaskTemplate ARCHIVED → Existing Tasks: Unaffected
+                     → New Tasks: Cannot be created from this template
                      → Active Schedules: Should be disabled (warning)
 ```
 
 ---
 
-### 2. JobTemplate → Schedule
+### 2. TaskTemplate → Schedule
 
 | Aspect | Description |
 |--------|-------------|
 | **Cardinality** | One-to-Many (1:N) |
-| **Direction** | JobTemplate is referenced, Schedule is the referencer |
+| **Direction** | TaskTemplate is referenced, Schedule is the referencer |
 | **Optionality** | Schedule.template_id is REQUIRED |
 | **Ownership** | Non-owning reference |
 | **Cascade Delete** | NO - Schedules become invalid, not deleted |
 
 #### Relationship Semantics
 
-- A Schedule MUST reference exactly one JobTemplate
-- A JobTemplate MAY be referenced by zero or more Schedules
+- A Schedule MUST reference exactly one TaskTemplate
+- A TaskTemplate MAY be referenced by zero or more Schedules
 - Multiple Schedules can use the same template with different timing/overrides
 
 #### Example
 
 ```
-JobTemplate: "daily-research"
+TaskTemplate: "daily-research"
 ├── Schedule: "morning-run" (cron: 0 9 * * *)
 ├── Schedule: "evening-run" (cron: 0 21 * * *)
 └── Schedule: "weekend-deep" (cron: 0 10 * * SAT, param_overrides: {depth: "deep"})
@@ -157,19 +157,19 @@ JobTemplate: "daily-research"
 
 ---
 
-### 3. Schedule → Job
+### 3. Schedule → Task
 
 | Aspect | Description |
 |--------|-------------|
 | **Cardinality** | One-to-Many (1:N) |
-| **Direction** | Schedule triggers, Job is triggered |
-| **Optionality** | Job.schedule_id is NULLABLE (manual jobs) |
+| **Direction** | Schedule triggers, Task is triggered |
+| **Optionality** | Task.schedule_id is NULLABLE (manual tasks) |
 | **Ownership** | Non-owning reference (audit trail only) |
-| **Cascade Delete** | NO - Jobs persist for historical audit |
+| **Cascade Delete** | NO - Tasks persist for historical audit |
 
 #### Creation Trigger
 
-A Schedule creates a Job when:
+A Schedule creates a Task when:
 1. **Cron fires**: The cron expression matches current time
 2. **Catch-up mode**: System recovery after downtime (configurable)
 3. **Manual force-trigger**: Admin forces schedule execution
@@ -183,7 +183,7 @@ Schedule.cron_expression matches NOW?
           ├── NO → Do nothing (log skip)
           └── YES → Template exists and ACTIVE?
                     ├── NO → Log error, optionally disable schedule
-                    └── YES → Create Job with:
+                    └── YES → Create Task with:
                               - template_id from Schedule
                               - schedule_id = this Schedule
                               - params = merge(template.default_params, schedule.param_overrides)
@@ -192,95 +192,95 @@ Schedule.cron_expression matches NOW?
 
 ---
 
-### 4. Job → JobRun
+### 4. Task → TaskRun
 
 | Aspect | Description |
 |--------|-------------|
 | **Cardinality** | One-to-One (1:1) |
-| **Direction** | Job produces JobRun |
-| **Optionality** | JobRun.job_id is REQUIRED |
-| **Ownership** | JobRun is owned by Job |
+| **Direction** | Task produces TaskRun |
+| **Optionality** | TaskRun.task_id is REQUIRED |
+| **Ownership** | TaskRun is owned by Task |
 | **Cascade Delete** | CONFIGURABLE - depends on retention policy |
 
 #### Why 1:1, Not 1:N?
 
 We chose 1:1 over 1:N (retry model) for clarity:
-- Each Job represents ONE execution attempt
-- Retries create NEW Jobs (with `retry_of` reference)
+- Each Task represents ONE execution attempt
+- Retries create NEW Tasks (with `retry_of` reference)
 - Simpler state machine, clearer audit trail
 
 #### Alternative Considered
 
 ```
-# Rejected: 1:N model with retries as JobRuns
-Job
-├── JobRun (attempt 1, FAILED)
-├── JobRun (attempt 2, FAILED)
-└── JobRun (attempt 3, COMPLETED)
+# Rejected: 1:N model with retries as TaskRuns
+Task
+├── TaskRun (attempt 1, FAILED)
+├── TaskRun (attempt 2, FAILED)
+└── TaskRun (attempt 3, COMPLETED)
 
 # Accepted: 1:1 model with retry chain
-Job1 → JobRun1 (FAILED), retry_of: null
-Job2 → JobRun2 (FAILED), retry_of: Job1
-Job3 → JobRun3 (COMPLETED), retry_of: Job2
+Task1 → TaskRun1 (FAILED), retry_of: null
+Task2 → TaskRun2 (FAILED), retry_of: Task1
+Task3 → TaskRun3 (COMPLETED), retry_of: Task2
 ```
 
 #### Creation Trigger
 
-JobRun is created when:
-1. **Job dispatched**: Worker picks up Job from queue
+TaskRun is created when:
+1. **Task dispatched**: Worker picks up Task from queue
 2. **Execution starts**: First line of actual work begins
 
 ```
-Job.status = QUEUED
-        ↓ (worker claims job)
-Job.status = RUNNING + JobRun created
+Task.status = QUEUED
+        ↓ (worker claims task)
+Task.status = RUNNING + TaskRun created
         ↓ (execution completes)
-JobRun.status = COMPLETED | FAILED | SKIPPED
+TaskRun.status = COMPLETED | FAILED | SKIPPED
 ```
 
 > Note: DISPATCHED is an internal transition state, not externally visible.
 
 ---
 
-### 5. JobGroup → Job
+### 5. TaskGroup → Task
 
 | Aspect | Description |
 |--------|-------------|
 | **Cardinality** | One-to-Many (1:N) |
-| **Direction** | JobGroup contains Jobs |
-| **Optionality** | Job.group_id is NULLABLE (ungrouped jobs) |
+| **Direction** | TaskGroup contains Tasks |
+| **Optionality** | Task.group_id is NULLABLE (ungrouped tasks) |
 | **Ownership** | Loose ownership (coordination, not lifecycle) |
-| **Cascade Delete** | NO - Jobs can exist without group |
+| **Cascade Delete** | NO - Tasks can exist without group |
 
 #### Ordering Within Group
 
-Jobs within a group maintain explicit ordering via `position` field:
+Tasks within a group maintain explicit ordering via `position` field:
 
 ```
-JobGroup (mode: sequential)
-├── Job (position: 1) → Executes first
-├── Job (position: 2) → Waits for position 1
-└── Job (position: 3) → Waits for position 2
+TaskGroup (mode: sequential)
+├── Task (position: 1) → Executes first
+├── Task (position: 2) → Waits for position 1
+└── Task (position: 3) → Waits for position 2
 
-JobGroup (mode: parallel)
-├── Job (position: 1) ┐
-├── Job (position: 2) ├→ All execute concurrently
-└── Job (position: 3) ┘
+TaskGroup (mode: parallel)
+├── Task (position: 1) ┐
+├── Task (position: 2) ├→ All execute concurrently
+└── Task (position: 3) ┘
 ```
 
 #### Group Status Derivation
 
-Group status is derived from member Job and JobRun statuses:
+Group status is derived from member Task and TaskRun statuses:
 
 ```
-All Jobs QUEUED             → Group QUEUED
-Any Job RUNNING             → Group RUNNING
-All Jobs reach terminal     → Group terminal (see below)
+All Tasks QUEUED             → Group QUEUED
+Any Task RUNNING             → Group RUNNING
+All Tasks reach terminal     → Group terminal (see below)
 
-Terminal derivation (based on JobRun results):
-- All JobRuns COMPLETED     → Group COMPLETED
-- Any JobRun FAILED         → Group PARTIAL
-- All Jobs CANCELLED        → Group CANCELLED
+Terminal derivation (based on TaskRun results):
+- All TaskRuns COMPLETED     → Group COMPLETED
+- Any TaskRun FAILED         → Group PARTIAL
+- All Tasks CANCELLED        → Group CANCELLED
 ```
 
 ---
@@ -289,11 +289,11 @@ Terminal derivation (based on JobRun results):
 
 | Relationship | Owner | Owned | Cascade Delete? |
 |--------------|-------|-------|-----------------|
-| JobTemplate → Schedule | Neither | Neither | No |
-| JobTemplate → Job | Neither | Neither | No |
-| Schedule → Job | Neither | Neither | No |
-| Job → JobRun | Job | JobRun | Configurable |
-| JobGroup → Job | JobGroup (loose) | Job | No |
+| TaskTemplate → Schedule | Neither | Neither | No |
+| TaskTemplate → Task | Neither | Neither | No |
+| Schedule → Task | Neither | Neither | No |
+| Task → TaskRun | Task | TaskRun | Configurable |
+| TaskGroup → Task | TaskGroup (loose) | Task | No |
 
 ---
 
@@ -304,15 +304,15 @@ Terminal derivation (based on JobRun results):
 | Entity | Field | Constraint |
 |--------|-------|------------|
 | Schedule | template_id | MUST exist, MUST be ACTIVE |
-| JobRun | job_id | MUST exist |
+| TaskRun | task_id | MUST exist |
 
 ### Soft References (Optional)
 
 | Entity | Field | Constraint |
 |--------|-------|------------|
-| Job | template_id | MAY be null (ad-hoc) |
-| Job | schedule_id | MAY be null (manual) |
-| Job | group_id | MAY be null (ungrouped) |
+| Task | template_id | MAY be null (ad-hoc) |
+| Task | schedule_id | MAY be null (manual) |
+| Task | group_id | MAY be null (ungrouped) |
 
 ### Snapshot References
 
@@ -320,14 +320,14 @@ Some references are snapshots at creation time (denormalized for audit):
 
 | Entity | Field | Source | Purpose |
 |--------|-------|--------|---------|
-| JobRun | template_id | Job.template_id | Audit trail |
-| JobRun | params_snapshot | Job.params | Reproduce execution |
+| TaskRun | template_id | Task.template_id | Audit trail |
+| TaskRun | params_snapshot | Task.params | Reproduce execution |
 
 ---
 
 ## Creation Flow Diagrams
 
-### Flow 1: Schedule-Triggered Job
+### Flow 1: Schedule-Triggered Task
 
 ```
 ┌─────────┐    cron fires    ┌──────────┐
@@ -342,7 +342,7 @@ Some references are snapshots at creation time (denormalized for audit):
                                    │ found
                               ┌────▼─────┐
                               │  Create  │
-                              │   Job    │
+                              │   Task   │
                               └────┬─────┘
                                    │
                               ┌────▼─────┐
@@ -351,10 +351,10 @@ Some references are snapshots at creation time (denormalized for audit):
                               └──────────┘
 ```
 
-### Flow 2: Manual Job from Template
+### Flow 2: Manual Task from Template
 
 ```
-┌──────────┐   POST /jobs    ┌──────────┐
+┌──────────┐   POST /tasks    ┌──────────┐
 │   User   │ ───────────────► │ Validate │
 └──────────┘                  │ Template │
                               └────┬─────┘
@@ -366,7 +366,7 @@ Some references are snapshots at creation time (denormalized for audit):
                                    │
                               ┌────▼─────┐
                               │  Create  │
-                              │   Job    │
+                              │   Task   │
                               └────┬─────┘
                                    │
                               ┌────▼─────┐
@@ -375,22 +375,22 @@ Some references are snapshots at creation time (denormalized for audit):
                               └──────────┘
 ```
 
-### Flow 3: Job Execution
+### Flow 3: Task Execution
 
 ```
 ┌──────────┐   poll queue    ┌──────────┐
 │  Worker  │ ───────────────► │  Claim   │
-└──────────┘                  │   Job    │
+└──────────┘                  │   Task   │
                               └────┬─────┘
                                    │
                               ┌────▼─────┐
                               │ DISPATCH │
-                              │ Job.stat │
+                              │ Task.sta │
                               └────┬─────┘
                                    │
                               ┌────▼─────┐
                               │  Create  │
-                              │  JobRun  │
+                              │  TaskRun  │
                               └────┬─────┘
                                    │
                               ┌────▼─────┐
@@ -410,13 +410,13 @@ Some references are snapshots at creation time (denormalized for audit):
 
 Shows which entities reference which:
 
-|                | JobTemplate | Schedule | Job | JobRun | JobGroup |
+|                | TaskTemplate | Schedule | Task | TaskRun | TaskGroup |
 |----------------|:-----------:|:--------:|:---:|:------:|:--------:|
-| **JobTemplate**| -           | -        | -   | -      | -        |
+| **TaskTemplate**| -           | -        | -   | -      | -        |
 | **Schedule**   | ✓ required  | -        | -   | -      | -        |
-| **Job**        | ○ optional  | ○ optional| -  | -      | ○ optional|
-| **JobRun**     | ✓ snapshot  | -        | ✓ required | - | -   |
-| **JobGroup**   | -           | -        | -   | -      | -        |
+| **Task**        | ○ optional  | ○ optional| -  | -      | ○ optional|
+| **TaskRun**     | ✓ snapshot  | -        | ✓ required | - | -   |
+| **TaskGroup**   | -           | -        | -   | -      | -        |
 
 Legend:
 - ✓ required = Foreign key, must exist

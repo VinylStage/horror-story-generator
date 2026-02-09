@@ -81,7 +81,7 @@ def update_taskrun(run_id: str, **updates):
 
 **Enforcement**:
 ```sql
-SELECT * FROM jobs
+SELECT * FROM tasks
 WHERE status = 'QUEUED'
 ORDER BY priority DESC, position ASC, created_at ASC
 LIMIT 1
@@ -167,8 +167,8 @@ def compute_group_status(group: TaskGroup) -> GroupStatus:
 **Rationale**: Lightweight, proven, supports cron expressions and timezone handling.
 
 **Implications**:
-- APScheduler job store separate from our Task entity
-- Trigger creates our Task, APScheduler job is just the trigger
+- APScheduler task store separate from our Task entity
+- Trigger creates our Task, APScheduler task is just the trigger
 
 ---
 
@@ -425,7 +425,7 @@ The following questions have been resolved and documented as decisions:
 
 ### CON-004: Legacy Endpoint Removal (v2.0.0)
 
-**Status**: Resolved. Legacy `/jobs/*` endpoints have been fully removed in v2.0.0.
+**Status**: Resolved. Legacy `/jobs/*` trigger endpoints have been fully removed in v2.0.0.
 
 **Implications**:
 - `POST /tasks` is the sole interface for asynchronous task creation

@@ -570,6 +570,6 @@ shasum -a 256 backups/backup_20260118_120000.tar.gz
 
 ## 관련 문서
 
-- [Registry Backup Guide](./REGISTRY_BACKUP_GUIDE.md) - Story Registry 자동 백업
+- [Registry Backup Guide (archived)](../archive/feature_docs/REGISTRY_BACKUP_GUIDE.md) - Story Registry 자동 백업 (이 문서에 통합됨)
 - [Architecture](../core/ARCHITECTURE.md) - 시스템 아키텍처
 - [API Reference](../core/API.md) - API 문서
