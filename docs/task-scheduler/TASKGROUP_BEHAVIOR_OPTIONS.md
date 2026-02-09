@@ -2,7 +2,7 @@
 
 > **Status:** RESOLVED → DEC-012
 > **Document Version:** 1.0.0
-> **Application Version:** 2.0.0 <!-- x-release-please-version -->
+> **Application Version:** 2.0.1 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 >
 > **Decision**: Option A selected — Stop-on-failure.
