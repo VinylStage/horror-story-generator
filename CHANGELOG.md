@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.1](https://github.com/VinylStage/horror-story-generator/compare/v2.0.0...v2.0.1) (2026-02-09)
+
+
+### Documentation
+
+* **archive:** archive outdated docs and create archive index ([#146](https://github.com/VinylStage/horror-story-generator/issues/146)) ([ccef93e](https://github.com/VinylStage/horror-story-generator/commit/ccef93e69785c3bd14144dd200303666fa89810e))
+* **audit:** add documentation audit report and issues list ([#146](https://github.com/VinylStage/horror-story-generator/issues/146)) ([34a68ae](https://github.com/VinylStage/horror-story-generator/commit/34a68ae8d24ae6fb523f559f81d5e789dcdcd539))
+* documentation audit and reconciliation ([#146](https://github.com/VinylStage/horror-story-generator/issues/146)) ([23262e8](https://github.com/VinylStage/horror-story-generator/commit/23262e8a0446568721c67227d950e2066c2b6f58))
+* documentation audit, reconciliation, and licensing ([#148](https://github.com/VinylStage/horror-story-generator/issues/148)) ([1e02025](https://github.com/VinylStage/horror-story-generator/commit/1e02025989ac324cd09026936c32cfd7f3e88a3e))
+* **legal:** add CC BY-NC-SA 4.0 license file and documentation ([#146](https://github.com/VinylStage/horror-story-generator/issues/146)) ([1b0b4b2](https://github.com/VinylStage/horror-story-generator/commit/1b0b4b29e590f844827b96197d647b2fa257d319))
+* **links:** fix broken references and add link check guide ([#146](https://github.com/VinylStage/horror-story-generator/issues/146)) ([fbe33a1](https://github.com/VinylStage/horror-story-generator/commit/fbe33a119ca7cfc14c36bdfd771d512daa480e26))
+* **nav:** update document map and add glossary ([#146](https://github.com/VinylStage/horror-story-generator/issues/146)) ([8fbe433](https://github.com/VinylStage/horror-story-generator/commit/8fbe43316172ddeed3a47b4636ae8c3665d02499))
+* **sync:** reconcile documentation with current codebase ([#146](https://github.com/VinylStage/horror-story-generator/issues/146)) ([ef3cb77](https://github.com/VinylStage/horror-story-generator/commit/ef3cb77afe26fe675d319ae7ce45834779726556))
+
 ## [2.0.0](https://github.com/VinylStage/horror-story-generator/compare/v1.7.0...v2.0.0) (2026-02-08)
 
 
