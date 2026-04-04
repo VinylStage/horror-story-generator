@@ -1,25 +1,21 @@
 """
 Research service - business logic for research operations.
 
-Connects to src.research.executor CLI via subprocess.
+Uses in-process research pipeline execution.
 
 Phase B+: Integrates with Ollama resource manager for model lifecycle.
 """
 
-import asyncio
 import json
 import logging
-import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from .ollama_resource import get_resource_manager
+from src.research.executor.executor import run_research_pipeline
+from src.infra.research_context.repository import get_card_by_id, load_all_research_cards
 
 logger = logging.getLogger(__name__)
-
-# Path to research_executor module
-RESEARCH_EXECUTOR_MODULE = "src.research.executor"
-
 
 # Default model from config
 DEFAULT_MODEL = "qwen3:30b"
@@ -32,7 +28,7 @@ async def execute_research(
     timeout: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    Execute research generation via research_executor CLI.
+    Execute research generation via in-process research pipeline.
 
     Args:
         topic: Research topic
@@ -48,60 +44,41 @@ async def execute_research(
     resource_manager = get_resource_manager()
     resource_manager.mark_model_used(used_model)
 
-    # Build command
-    cmd = [sys.executable, "-m", RESEARCH_EXECUTOR_MODULE, "run", topic]
-
-    if model:
-        cmd.extend(["--model", model])
-
-    if tags:
-        cmd.extend(["--tags"] + tags)
-
-    if timeout:
-        cmd.extend(["--timeout", str(timeout)])
-
-    logger.info(f"[ResearchAPI] Executing: {' '.join(cmd)}")
+    logger.info(f"[ResearchAPI] Executing research pipeline topic={topic}")
 
     try:
-        # Run subprocess
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        result = run_research_pipeline(
+            topic=topic,
+            tags=tags or [],
+            model_spec=model,
+            timeout=timeout or 300,
         )
 
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=timeout or 300
-        )
-
-        stdout_text = stdout.decode("utf-8").strip()
-        stderr_text = stderr.decode("utf-8").strip()
-
-        if process.returncode != 0:
-            logger.error(f"[ResearchAPI] CLI error: {stderr_text}")
+        if not result.get("success"):
+            error_message = result.get("error", "Research generation failed")
+            if "timed out" in str(error_message).lower():
+                return {
+                    "card_id": "",
+                    "status": "timeout",
+                    "message": str(error_message),
+                    "output_path": None,
+                }
+            logger.error(f"[ResearchAPI] Pipeline error: {error_message}")
             return {
                 "card_id": "",
                 "status": "error",
-                "message": stderr_text or f"Exit code: {process.returncode}",
+                "message": str(error_message),
                 "output_path": None,
             }
 
-        # Parse output (CLI prints "Card ID: RC-XXXXXX-XXXXXX")
-        result = parse_cli_output(stdout_text)
-        result["status"] = "complete"
-        return result
-
-    except asyncio.TimeoutError:
-        logger.error(f"[ResearchAPI] Subprocess timeout")
         return {
-            "card_id": "",
-            "status": "timeout",
-            "message": f"Research execution timed out after {timeout}s",
-            "output_path": None,
+            "card_id": result.get("card_id", ""),
+            "status": "complete",
+            "message": None,
+            "output_path": result.get("card_path"),
         }
     except Exception as e:
-        logger.error(f"[ResearchAPI] Subprocess error: {e}")
+        logger.error(f"[ResearchAPI] Pipeline error: {e}")
         return {
             "card_id": "",
             "status": "error",
@@ -112,7 +89,7 @@ async def execute_research(
 
 def parse_cli_output(output: str) -> Dict[str, Any]:
     """
-    Parse CLI output to extract card info.
+    Parse research execution output text to extract card info.
 
     Expected format:
         Card ID: RC-YYYYMMDD-HHMMSS
@@ -144,7 +121,7 @@ def parse_cli_output(output: str) -> Dict[str, Any]:
 
 async def validate_card(card_id: str) -> Dict[str, Any]:
     """
-    Validate a research card via CLI.
+    Validate a research card from persisted JSON.
 
     Args:
         card_id: Card ID to validate
@@ -176,43 +153,26 @@ async def validate_card(card_id: str) -> Dict[str, Any]:
             "message": f"Card not found: {card_path}",
         }
 
-    cmd = [sys.executable, "-m", RESEARCH_EXECUTOR_MODULE, "validate", str(card_path)]
-
-    logger.info(f"[ResearchAPI] Executing: {' '.join(cmd)}")
-
     try:
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=30
-        )
-
-        stdout_text = stdout.decode("utf-8").strip()
-
-        if process.returncode != 0:
+        with open(card_path, "r", encoding="utf-8") as f:
+            card_data = json.load(f)
+        validation = card_data.get("validation")
+        if not isinstance(validation, dict):
             return {
                 "card_id": card_id,
                 "is_valid": False,
                 "quality_score": "error",
-                "message": stderr.decode("utf-8").strip(),
+                "message": "Missing validation section",
             }
-
-        # Parse validation output
-        quality_score = "unknown"
-        for line in stdout_text.splitlines():
-            if "quality_score:" in line:
-                quality_score = line.split(":")[-1].strip()
+        quality_score = validation.get("quality_score", "unknown")
+        parse_error = validation.get("parse_error")
+        is_valid = not parse_error and quality_score not in {"invalid", "error"}
 
         return {
             "card_id": card_id,
-            "is_valid": True,
+            "is_valid": is_valid,
             "quality_score": quality_score,
-            "message": "Validation passed",
+            "message": "Validation passed" if is_valid else (parse_error or "Validation failed"),
         }
 
     except Exception as e:
@@ -231,7 +191,7 @@ async def list_cards(
     quality: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    List research cards via CLI.
+    List research cards from persisted storage.
 
     Args:
         limit: Max cards to return
@@ -241,38 +201,25 @@ async def list_cards(
     Returns:
         List result dict with cards array
     """
-    cmd = [sys.executable, "-m", RESEARCH_EXECUTOR_MODULE, "list", "--limit", str(limit + offset)]
-
-    logger.info(f"[ResearchAPI] Executing: {' '.join(cmd)}")
-
     try:
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=30
-        )
-
-        stdout_text = stdout.decode("utf-8").strip()
-
-        if process.returncode != 0:
-            return {
-                "cards": [],
-                "total": 0,
-                "limit": limit,
-                "offset": offset,
-                "message": stderr.decode("utf-8").strip(),
-            }
-
-        # Parse list output
-        cards = parse_list_output(stdout_text, offset, limit, quality)
+        all_cards = load_all_research_cards()
+        cards = []
+        for card in all_cards:
+            validation = card.get("validation", {})
+            score = validation.get("quality_score", "unknown")
+            if quality and score != quality:
+                continue
+            cards.append({
+                "card_id": card.get("card_id", ""),
+                "title": card.get("output", {}).get("title", ""),
+                "topic": card.get("input", {}).get("topic", ""),
+                "quality_score": score,
+                "created_at": card.get("metadata", {}).get("created_at", "")[:10],
+            })
+        paged_cards = cards[offset:offset + limit]
 
         return {
-            "cards": cards,
+            "cards": paged_cards,
             "total": len(cards),
             "limit": limit,
             "offset": offset,

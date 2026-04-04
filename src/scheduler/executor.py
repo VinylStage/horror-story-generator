@@ -14,13 +14,12 @@ What Executor MUST NOT do:
 """
 
 import logging
-import subprocess
-import sys
-import threading
+import os
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Optional
 
 from .entities import (
     Task,
@@ -69,11 +68,9 @@ class TaskHandler(ABC):
         ...
 
 
-class SubprocessTaskHandler(TaskHandler):
+class DirectTaskHandler(TaskHandler):
     """
-    Task handler that executes work via subprocess.
-
-    This matches the existing CLI-based execution model.
+    Task handler that executes work via direct in-process function calls.
     """
 
     def __init__(
@@ -82,15 +79,14 @@ class SubprocessTaskHandler(TaskHandler):
         logs_dir: Path,
     ):
         """
-        Initialize subprocess handler.
+        Initialize direct handler.
 
         Args:
-            project_root: Project root directory for subprocess cwd
+            project_root: Project root directory
             logs_dir: Directory for execution logs
         """
         self.project_root = project_root
         self.logs_dir = logs_dir
-        self._process: Optional[subprocess.Popen] = None
         self._cancelled = False
 
     def execute(
@@ -98,8 +94,9 @@ class SubprocessTaskHandler(TaskHandler):
         task: Task,
         log_path: Optional[str] = None,
     ) -> tuple[TaskRunStatus, Optional[str], Optional[int], list[str]]:
-        """Execute task via subprocess."""
+        """Execute task via direct function calls."""
         self._cancelled = False
+        artifacts: list[str] = []
 
         # Ensure logs directory exists
         self.logs_dir.mkdir(parents=True, exist_ok=True)
@@ -110,171 +107,153 @@ class SubprocessTaskHandler(TaskHandler):
                 self.logs_dir / f"{task.task_type}_{task.task_id}.log"
             )
 
-        # Build command based on task type
-        cmd = self._build_command(task)
-
-        logger.info(f"Executing task {task.task_id}: {' '.join(cmd)}")
+        logger.info(f"Executing task {task.task_id} ({task.task_type}) via direct handler")
 
         try:
             with open(log_path, "w") as log_file:
-                self._process = subprocess.Popen(
-                    cmd,
-                    cwd=self.project_root,
-                    stdout=log_file,
-                    stderr=subprocess.STDOUT,
-                )
-
-                # Wait for completion
-                exit_code = self._process.wait()
-
-            self._process = None
+                if task.task_type == "story":
+                    self._execute_story_task(task, log_file, artifacts)
+                elif task.task_type == "research":
+                    self._execute_research_task(task, log_file, artifacts)
+                else:
+                    raise ValueError(f"Unknown task type: {task.task_type}")
 
             if self._cancelled:
                 return (
                     TaskRunStatus.FAILED,
                     "Task was cancelled",
-                    exit_code,
-                    [],
-                )
-
-            # Parse artifacts from log or output
-            artifacts = self._collect_artifacts(task, log_path)
-
-            if exit_code == 0:
-                return (
-                    TaskRunStatus.COMPLETED,
-                    None,
-                    exit_code,
+                    -1,
                     artifacts,
                 )
-            else:
-                # Read error from log
-                error = self._read_error_from_log(log_path)
-                return (
-                    TaskRunStatus.FAILED,
-                    error or f"Process exited with code {exit_code}",
-                    exit_code,
-                    artifacts,
-                )
+
+            # Include execution log as artifact
+            if Path(log_path).exists():
+                artifacts.insert(0, log_path)
+
+            return (
+                TaskRunStatus.COMPLETED,
+                None,
+                0,
+                artifacts,
+            )
 
         except Exception as e:
             logger.exception(f"Error executing task {task.task_id}")
+            if Path(log_path).exists() and log_path not in artifacts:
+                artifacts.insert(0, log_path)
             return (
                 TaskRunStatus.FAILED,
                 str(e),
                 -1,
-                [],
+                artifacts,
             )
 
     def cancel(self) -> bool:
-        """Cancel the currently executing subprocess."""
-        if self._process is not None:
-            self._cancelled = True
-            try:
-                self._process.terminate()
-                return True
-            except Exception as e:
-                logger.error(f"Error terminating process: {e}")
-        return False
+        """Request cancellation for current task execution."""
+        self._cancelled = True
+        return True
 
-    def _build_command(self, task: Task) -> list[str]:
-        """Build subprocess command based on task type."""
+    def _execute_story_task(self, task: Task, log_file, artifacts: list[str]) -> None:
+        """Execute story task using story generator pipeline."""
+        from src.story.generator import (
+            generate_horror_story,
+            generate_with_dedup_control,
+            generate_with_topic,
+        )
+        from src.registry.story_registry import init_registry, close_registry
+        from src.dedup.similarity import load_past_stories_into_memory
+
         params = task.params
+        max_stories = int(params.get("max_stories", 1) or 1)
+        interval_seconds = int(params.get("interval_seconds", 0) or 0)
+        duration_seconds = params.get("duration_seconds")
+        enable_dedup = bool(params.get("enable_dedup", False))
+        start_ts = time.time()
+        stories_generated = 0
+        registry = None
 
-        if task.task_type == "story":
-            cmd = [sys.executable, "-m", "src.story.runner"]
+        if params.get("thumbnail_provider"):
+            os.environ["THUMBNAIL_PROVIDER"] = str(params["thumbnail_provider"])
 
-            if params.get("max_stories"):
-                cmd.extend(["--max-stories", str(params["max_stories"])])
-            if params.get("duration_seconds"):
-                cmd.extend(["--duration-seconds", str(params["duration_seconds"])])
-            if params.get("interval_seconds"):
-                cmd.extend(["--interval-seconds", str(params["interval_seconds"])])
-            if params.get("enable_dedup"):
-                cmd.append("--enable-dedup")
-            if params.get("db_path"):
-                cmd.extend(["--db-path", params["db_path"]])
-            if params.get("load_history"):
-                cmd.append("--load-history")
-            if params.get("model"):
-                cmd.extend(["--model", params["model"]])
-            if params.get("target_length"):
-                cmd.extend(["--target-length", str(params["target_length"])])
+        if enable_dedup:
+            registry = init_registry(db_path=params.get("db_path"))
+            load_history = int(params.get("load_history", 200) or 200)
+            past = registry.load_recent_accepted(limit=load_history)
+            if past:
+                load_past_stories_into_memory(past)
 
-            # Issue #123: Topic-based generation params
-            if params.get("topic"):
-                cmd.extend(["--topic", params["topic"]])
-            if params.get("tags"):
-                cmd.append("--tags")
-                cmd.extend(params["tags"])
-            if params.get("auto_research") is False:
-                cmd.append("--no-auto-research")
-            if params.get("research_model"):
-                cmd.extend(["--research-model", params["research_model"]])
-            if params.get("thumbnail_provider"):
-                cmd.extend(["--thumbnail-provider", params["thumbnail_provider"]])
-
-            return cmd
-
-        elif task.task_type == "research":
-            cmd = [sys.executable, "-m", "src.research.executor", "run"]
-
-            topic = params.get("topic", "")
-            cmd.append(topic)
-
-            tags = params.get("tags", [])
-            if tags:
-                cmd.append("--tags")
-                cmd.extend(tags)
-
-            if params.get("model"):
-                cmd.extend(["--model", params["model"]])
-            if params.get("timeout"):
-                cmd.extend(["--timeout", str(params["timeout"])])
-
-            return cmd
-
-        else:
-            raise ValueError(f"Unknown task type: {task.task_type}")
-
-    def _collect_artifacts(self, task: Task, log_path: str) -> list[str]:
-        """Collect artifacts produced by the task."""
-        artifacts = []
-
-        # Include log file as artifact
-        if Path(log_path).exists():
-            artifacts.append(log_path)
-
-        # For story tasks, look for generated story files
-        if task.task_type == "story":
-            stories_dir = self.project_root / "data" / "stories"
-            if stories_dir.exists():
-                # Get recent files (created after task started)
-                # This is a simple heuristic
-                for story_file in stories_dir.glob("*.json"):
-                    artifacts.append(str(story_file))
-
-        # For research tasks, look for research cards
-        elif task.task_type == "research":
-            research_dir = self.project_root / "data" / "research"
-            if research_dir.exists():
-                for card_file in research_dir.glob("*.json"):
-                    artifacts.append(str(card_file))
-
-        return artifacts
-
-    def _read_error_from_log(self, log_path: str) -> Optional[str]:
-        """Read last error lines from log file."""
         try:
-            with open(log_path, "r") as f:
-                lines = f.readlines()
-                # Return last few non-empty lines
-                error_lines = [l.strip() for l in lines[-10:] if l.strip()]
-                if error_lines:
-                    return "\n".join(error_lines[-3:])
-        except Exception:
-            pass
-        return None
+            while stories_generated < max_stories:
+                if self._cancelled:
+                    break
+
+                if duration_seconds is not None and (time.time() - start_ts) >= float(duration_seconds):
+                    break
+
+                topic = params.get("topic")
+                if topic is not None:
+                    result = generate_with_topic(
+                        topic=topic,
+                        auto_research=params.get("auto_research", True),
+                        model_spec=params.get("model"),
+                        research_model_spec=params.get("research_model"),
+                        save_output=True,
+                        registry=registry,
+                        target_length=params.get("target_length"),
+                        custom_tags=params.get("tags"),
+                    )
+                elif enable_dedup and registry:
+                    result = generate_with_dedup_control(
+                        registry=registry,
+                        model_spec=params.get("model"),
+                        target_length=params.get("target_length"),
+                    )
+                else:
+                    result = generate_horror_story(
+                        model_spec=params.get("model"),
+                        target_length=params.get("target_length"),
+                    )
+
+                if result and result.get("file_path"):
+                    artifacts.append(result["file_path"])
+                if result:
+                    stories_generated += 1
+
+                if interval_seconds > 0 and stories_generated < max_stories:
+                    for _ in range(interval_seconds):
+                        if self._cancelled:
+                            break
+                        time.sleep(1)
+                    if self._cancelled:
+                        break
+        finally:
+            if registry is not None:
+                close_registry()
+            log_file.write(f"stories_generated={stories_generated}\n")
+
+    def _execute_research_task(self, task: Task, log_file, artifacts: list[str]) -> None:
+        """Execute research task using research pipeline."""
+        from src.research.executor.executor import run_research_pipeline
+
+        params = task.params
+        topic = str(params.get("topic", "")).strip()
+        if not topic:
+            raise ValueError("Research task requires non-empty 'topic'")
+
+        result = run_research_pipeline(
+            topic=topic,
+            tags=params.get("tags") or [],
+            model_spec=params.get("model"),
+            timeout=int(params.get("timeout", 300) or 300),
+        )
+        log_file.write(f"success={result.get('success', False)}\n")
+
+        if not result.get("success"):
+            raise RuntimeError(result.get("error") or "Research pipeline failed")
+
+        card_path = result.get("card_path")
+        if card_path:
+            artifacts.append(card_path)
 
 
 class Executor:
@@ -415,5 +394,6 @@ class SkipExecutor:
 
 
 # Backward compatibility aliases
+SubprocessTaskHandler = DirectTaskHandler
 JobHandler = TaskHandler
-SubprocessJobHandler = SubprocessTaskHandler
+SubprocessJobHandler = DirectTaskHandler
