@@ -34,6 +34,12 @@ logger = logging.getLogger(__name__)
 _GLOBAL_ENV_LOCK = threading.Lock()
 
 
+def _ensure_log_artifact(log_path: str, artifacts: list[str]) -> None:
+    """Ensure execution log path is included in artifacts when file exists."""
+    if Path(log_path).exists() and log_path not in artifacts:
+        artifacts.insert(0, log_path)
+
+
 class TaskHandler(ABC):
     """
     Abstract base class for task type handlers.
@@ -118,10 +124,6 @@ class DirectTaskHandler(TaskHandler):
         logger.info(f"Executing task {task.task_id} ({task.task_type}) via direct handler")
 
         try:
-            def _ensure_log_artifact() -> None:
-                if Path(log_path).exists() and log_path not in artifacts:
-                    artifacts.insert(0, log_path)
-
             with open(log_path, "w") as log_file:
                 if task.task_type == "story":
                     self._execute_story_task(task, log_file, artifacts, cancel_event)
@@ -131,16 +133,13 @@ class DirectTaskHandler(TaskHandler):
                     raise ValueError(f"Unknown task type: {task.task_type}")
 
             if cancel_event.is_set():
-                _ensure_log_artifact()
+                _ensure_log_artifact(log_path, artifacts)
                 return (
                     TaskRunStatus.FAILED,
                     "Task was cancelled",
                     -1,
                     artifacts,
                 )
-
-            # Include execution log as artifact
-            _ensure_log_artifact()
 
             return (
                 TaskRunStatus.COMPLETED,
@@ -151,7 +150,6 @@ class DirectTaskHandler(TaskHandler):
 
         except Exception as e:
             logger.exception(f"Error executing task {task.task_id}")
-            _ensure_log_artifact()
             return (
                 TaskRunStatus.FAILED,
                 str(e),
@@ -159,6 +157,7 @@ class DirectTaskHandler(TaskHandler):
                 artifacts,
             )
         finally:
+            _ensure_log_artifact(log_path, artifacts)
             with self._cancel_lock:
                 self._active_cancel_events.pop(execution_id, None)
 
