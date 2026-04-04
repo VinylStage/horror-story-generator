@@ -111,6 +111,12 @@ class TestExecuteResearch:
                 mock_to_thread.assert_awaited_once()
                 fn = mock_to_thread.await_args.args[0]
                 assert fn.__name__ == "run_research_pipeline"
+                assert mock_to_thread.await_args.kwargs == {
+                    "topic": "Test topic",
+                    "tags": ["t1"],
+                    "model_spec": None,
+                    "timeout": 300,
+                }
 
 
 class TestValidateCard:

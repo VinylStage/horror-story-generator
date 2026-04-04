@@ -91,6 +91,7 @@ class DirectTaskHandler(TaskHandler):
         self.logs_dir = logs_dir
         self._active_cancel_events: dict[int, threading.Event] = {}
         self._cancel_lock = threading.Lock()
+        self._next_execution_id = 0
 
     def execute(
         self,
@@ -99,9 +100,10 @@ class DirectTaskHandler(TaskHandler):
     ) -> tuple[TaskRunStatus, Optional[str], Optional[int], list[str]]:
         """Execute task via direct function calls."""
         cancel_event = threading.Event()
-        thread_id = threading.get_ident()
         with self._cancel_lock:
-            self._active_cancel_events[thread_id] = cancel_event
+            self._next_execution_id += 1
+            execution_id = self._next_execution_id
+            self._active_cancel_events[execution_id] = cancel_event
         artifacts: list[str] = []
 
         # Ensure logs directory exists
@@ -116,6 +118,10 @@ class DirectTaskHandler(TaskHandler):
         logger.info(f"Executing task {task.task_id} ({task.task_type}) via direct handler")
 
         try:
+            def _ensure_log_artifact() -> None:
+                if Path(log_path).exists() and log_path not in artifacts:
+                    artifacts.insert(0, log_path)
+
             with open(log_path, "w") as log_file:
                 if task.task_type == "story":
                     self._execute_story_task(task, log_file, artifacts, cancel_event)
@@ -125,8 +131,7 @@ class DirectTaskHandler(TaskHandler):
                     raise ValueError(f"Unknown task type: {task.task_type}")
 
             if cancel_event.is_set():
-                if Path(log_path).exists() and log_path not in artifacts:
-                    artifacts.insert(0, log_path)
+                _ensure_log_artifact()
                 return (
                     TaskRunStatus.FAILED,
                     "Task was cancelled",
@@ -135,8 +140,7 @@ class DirectTaskHandler(TaskHandler):
                 )
 
             # Include execution log as artifact
-            if Path(log_path).exists():
-                artifacts.insert(0, log_path)
+            _ensure_log_artifact()
 
             return (
                 TaskRunStatus.COMPLETED,
@@ -147,8 +151,7 @@ class DirectTaskHandler(TaskHandler):
 
         except Exception as e:
             logger.exception(f"Error executing task {task.task_id}")
-            if Path(log_path).exists() and log_path not in artifacts:
-                artifacts.insert(0, log_path)
+            _ensure_log_artifact()
             return (
                 TaskRunStatus.FAILED,
                 str(e),
@@ -157,7 +160,7 @@ class DirectTaskHandler(TaskHandler):
             )
         finally:
             with self._cancel_lock:
-                self._active_cancel_events.pop(thread_id, None)
+                self._active_cancel_events.pop(execution_id, None)
 
     def cancel(self) -> bool:
         """Request cancellation for current task execution."""
