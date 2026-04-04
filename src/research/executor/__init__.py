@@ -1,7 +1,5 @@
 """
-Research Executor - Standalone CLI for local LLM research generation.
-
-Manual execution only. Uses Ollama for zero-cost local inference.
+Research Executor package.
 """
 
 from src import __version__

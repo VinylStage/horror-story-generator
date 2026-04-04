@@ -513,8 +513,10 @@ grep "duplicate detected" logs/horror_story_*.log
 
 **Solutions:**
 ```bash
-# 1. 새 연구 카드 생성
-python -m src.research.executor run "새로운 공포 주제" --tags horror new
+# 1. 새 연구 카드 생성 (API)
+curl -X POST http://localhost:8000/research/run \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"새로운 공포 주제","tags":["horror","new"]}'
 
 # 2. 사용된 시그니처 확인
 sqlite3 data/story_registry.db "SELECT story_signature, title FROM stories WHERE story_signature IS NOT NULL ORDER BY created_at DESC LIMIT 10"

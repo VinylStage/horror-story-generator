@@ -15,6 +15,7 @@ What Executor MUST NOT do:
 
 import logging
 import os
+import threading
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -30,6 +31,7 @@ from .persistence import PersistenceAdapter
 
 
 logger = logging.getLogger(__name__)
+_GLOBAL_ENV_LOCK = threading.Lock()
 
 
 class TaskHandler(ABC):
@@ -88,6 +90,7 @@ class DirectTaskHandler(TaskHandler):
         self.project_root = project_root
         self.logs_dir = logs_dir
         self._cancelled = False
+        self._cancel_event = threading.Event()
 
     def execute(
         self,
@@ -96,6 +99,7 @@ class DirectTaskHandler(TaskHandler):
     ) -> tuple[TaskRunStatus, Optional[str], Optional[int], list[str]]:
         """Execute task via direct function calls."""
         self._cancelled = False
+        self._cancel_event.clear()
         artifacts: list[str] = []
 
         # Ensure logs directory exists
@@ -151,6 +155,7 @@ class DirectTaskHandler(TaskHandler):
     def cancel(self) -> bool:
         """Request cancellation for current task execution."""
         self._cancelled = True
+        self._cancel_event.set()
         return True
 
     def _execute_story_task(self, task: Task, log_file, artifacts: list[str]) -> None:
@@ -164,72 +169,77 @@ class DirectTaskHandler(TaskHandler):
         from src.dedup.similarity import load_past_stories_into_memory
 
         params = task.params
-        max_stories = int(params.get("max_stories", 1) or 1)
-        interval_seconds = int(params.get("interval_seconds", 0) or 0)
+        max_stories = _coerce_int_param(params, "max_stories", 1)
+        interval_seconds = _coerce_int_param(params, "interval_seconds", 0)
         duration_seconds = params.get("duration_seconds")
         enable_dedup = bool(params.get("enable_dedup", False))
-        start_ts = time.time()
+        execution_start_time = time.time()
         stories_generated = 0
         registry = None
 
-        if params.get("thumbnail_provider"):
-            os.environ["THUMBNAIL_PROVIDER"] = str(params["thumbnail_provider"])
+        thumbnail_provider = params.get("thumbnail_provider")
+        with _GLOBAL_ENV_LOCK:
+            previous_thumbnail_provider = os.environ.get("THUMBNAIL_PROVIDER")
+            if thumbnail_provider:
+                os.environ["THUMBNAIL_PROVIDER"] = str(thumbnail_provider)
 
-        if enable_dedup:
-            registry = init_registry(db_path=params.get("db_path"))
-            load_history = int(params.get("load_history", 200) or 200)
-            past = registry.load_recent_accepted(limit=load_history)
-            if past:
-                load_past_stories_into_memory(past)
+            if enable_dedup:
+                registry = init_registry(db_path=params.get("db_path"))
+                load_history = _coerce_int_param(params, "load_history", 200)
+                past = registry.load_recent_accepted(limit=load_history)
+                if past:
+                    load_past_stories_into_memory(past)
 
-        try:
-            while stories_generated < max_stories:
-                if self._cancelled:
-                    break
-
-                if duration_seconds is not None and (time.time() - start_ts) >= float(duration_seconds):
-                    break
-
-                topic = params.get("topic")
-                if topic is not None:
-                    result = generate_with_topic(
-                        topic=topic,
-                        auto_research=params.get("auto_research", True),
-                        model_spec=params.get("model"),
-                        research_model_spec=params.get("research_model"),
-                        save_output=True,
-                        registry=registry,
-                        target_length=params.get("target_length"),
-                        custom_tags=params.get("tags"),
-                    )
-                elif enable_dedup and registry:
-                    result = generate_with_dedup_control(
-                        registry=registry,
-                        model_spec=params.get("model"),
-                        target_length=params.get("target_length"),
-                    )
-                else:
-                    result = generate_horror_story(
-                        model_spec=params.get("model"),
-                        target_length=params.get("target_length"),
-                    )
-
-                if result and result.get("file_path"):
-                    artifacts.append(result["file_path"])
-                if result:
-                    stories_generated += 1
-
-                if interval_seconds > 0 and stories_generated < max_stories:
-                    for _ in range(interval_seconds):
-                        if self._cancelled:
-                            break
-                        time.sleep(1)
+            try:
+                while stories_generated < max_stories:
                     if self._cancelled:
                         break
-        finally:
-            if registry is not None:
-                close_registry()
-            log_file.write(f"stories_generated={stories_generated}\n")
+
+                    elapsed_time = time.time() - execution_start_time
+                    if duration_seconds is not None and elapsed_time >= float(duration_seconds):
+                        break
+
+                    topic = params.get("topic")
+                    if topic is not None:
+                        result = generate_with_topic(
+                            topic=topic,
+                            auto_research=params.get("auto_research", True),
+                            model_spec=params.get("model"),
+                            research_model_spec=params.get("research_model"),
+                            save_output=True,
+                            registry=registry,
+                            target_length=params.get("target_length"),
+                            custom_tags=params.get("tags"),
+                        )
+                    elif enable_dedup and registry:
+                        result = generate_with_dedup_control(
+                            registry=registry,
+                            model_spec=params.get("model"),
+                            target_length=params.get("target_length"),
+                        )
+                    else:
+                        result = generate_horror_story(
+                            model_spec=params.get("model"),
+                            target_length=params.get("target_length"),
+                        )
+
+                    if result and result.get("file_path"):
+                        artifacts.append(result["file_path"])
+                    if result:
+                        stories_generated += 1
+
+                    if interval_seconds > 0 and stories_generated < max_stories:
+                        if self._cancel_event.wait(timeout=interval_seconds):
+                            break
+            finally:
+                if thumbnail_provider:
+                    if previous_thumbnail_provider is None:
+                        os.environ.pop("THUMBNAIL_PROVIDER", None)
+                    else:
+                        os.environ["THUMBNAIL_PROVIDER"] = previous_thumbnail_provider
+                if registry is not None:
+                    close_registry()
+                log_file.write(f"stories_generated={stories_generated}\n")
 
     def _execute_research_task(self, task: Task, log_file, artifacts: list[str]) -> None:
         """Execute research task using research pipeline."""
@@ -238,13 +248,13 @@ class DirectTaskHandler(TaskHandler):
         params = task.params
         topic = str(params.get("topic", "")).strip()
         if not topic:
-            raise ValueError("Research task requires non-empty 'topic'")
+            raise ValueError("Research task 'topic' parameter is required and must not be empty")
 
         result = run_research_pipeline(
             topic=topic,
             tags=params.get("tags") or [],
             model_spec=params.get("model"),
-            timeout=int(params.get("timeout", 300) or 300),
+            timeout=_coerce_int_param(params, "timeout", 300),
         )
         log_file.write(f"success={result.get('success', False)}\n")
 
@@ -397,3 +407,14 @@ class SkipExecutor:
 SubprocessTaskHandler = DirectTaskHandler
 JobHandler = TaskHandler
 SubprocessJobHandler = DirectTaskHandler
+
+
+def _coerce_int_param(params: dict, key: str, default: int) -> int:
+    """Convert task param to int while preserving explicit zero values."""
+    value = params.get(key)
+    if value is None or value == "":
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Invalid integer value for '{key}': {value!r}") from e

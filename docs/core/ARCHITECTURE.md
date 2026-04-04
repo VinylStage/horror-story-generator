@@ -463,7 +463,7 @@ canonical_core = {
 
 ```mermaid
 flowchart LR
-    A["Topic Input<br/>CLI"] --> B["Prompt Construction<br/>prompt_template.py"]
+    A["Topic Input<br/>API/Service"] --> B["Prompt Construction<br/>prompt_template.py"]
     B --> C["Ollama Generation<br/>executor.py"]
     C --> D["Validation<br/>validator.py"]
     D --> E["Create Embedding<br/>embedder.py"]
@@ -522,7 +522,7 @@ flowchart LR
 
 | Module | File | Responsibility |
 |--------|------|----------------|
-| CLI | `src/research/executor/cli.py` | Command-line interface |
+| API Service | `src/api/services/research_service.py` | In-process research pipeline execution |
 | Executor | `src/research/executor/executor.py` | Ollama API + generation |
 | Validator | `src/research/executor/validator.py` | Output parsing/validation |
 | Output Writer | `src/research/executor/output_writer.py` | File persistence |
@@ -843,17 +843,21 @@ GOOGLE_AI_MODEL=deep-research-pro-preview-12-2025  # Default model
 pip install google-genai
 ```
 
-**Usage:**
+**Usage (API):**
 ```bash
 # Enable Gemini in .env
 GEMINI_ENABLED=true
 GEMINI_API_KEY=your_api_key
 
 # Run research with Gemini standard
-python -m src.research.executor run "Korean horror themes" --model gemini
+curl -X POST http://localhost:8000/research/run \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"Korean horror themes","tags":["korean"],"model":"gemini"}'
 
 # Run research with Gemini Deep Research Agent (recommended)
-python -m src.research.executor run "Korean horror themes" --model deep-research
+curl -X POST http://localhost:8000/research/run \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"Korean horror themes","tags":["korean"],"model":"deep-research"}'
 ```
 
 ### Gemini Deep Research Agent
@@ -908,32 +912,26 @@ The story generator supports graceful shutdown via SIGINT/SIGTERM:
 
 ---
 
-## CLI Resource Cleanup (Research Executor)
+## Research Resource Cleanup
 
-The research executor CLI automatically unloads Ollama models after execution to release VRAM:
+The research pipeline relies on API-level resource lifecycle management to release model resources:
 
 ```mermaid
 flowchart LR
-    A["CLI Start"] --> B["Setup<br/>Signal Handlers"]
-    B --> C["Execute<br/>Research"]
-    C --> D["Unload Model<br/>(keep_alive=0)"]
+    A["API Request"] --> B["Execute<br/>Research Pipeline"]
+    B --> D["Unload Model<br/>(keep_alive=0)"]
     D --> E["Exit"]
-
-    F["SIGINT/SIGTERM"] --> G["Cleanup Handler"]
-    G --> D
 ```
 
 **Cleanup Mechanism:**
 1. Model tracked when `execute_research()` starts
-2. On success: Model unloaded via `unload_model()`
-3. On SIGINT/SIGTERM: Signal handler calls cleanup before exit
-4. `atexit` handler as fallback for abnormal exits
+2. API resource manager unloads inactive models based on lifecycle policy
+3. Cleanup also runs during server shutdown lifecycle
 
-**API vs CLI:**
+**Execution context:**
 | Context | Resource Manager | Cleanup Trigger |
 |---------|------------------|-----------------|
-| API Server | `OllamaResourceManager` | FastAPI lifespan events |
-| CLI | Signal handlers + atexit | Execution complete or signal |
+| API Server | `OllamaResourceManager` | FastAPI lifespan events + inactivity policy |
 
 ---
 

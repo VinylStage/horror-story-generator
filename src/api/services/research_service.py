@@ -6,19 +6,20 @@ Uses in-process research pipeline execution.
 Phase B+: Integrates with Ollama resource manager for model lifecycle.
 """
 
-import json
 import logging
-from pathlib import Path
+import re
 from typing import Dict, Any, List, Optional
 
 from .ollama_resource import get_resource_manager
 from src.research.executor.executor import run_research_pipeline
-from src.infra.research_context.repository import get_card_by_id, load_all_research_cards
+from src.infra.research_context.repository import load_all_research_cards, get_card_by_id
 
 logger = logging.getLogger(__name__)
 
 # Default model from config
 DEFAULT_MODEL = "qwen3:30b"
+# Card ID format: RC-YYYYMMDD-HHMMSS
+CARD_ID_PATTERN = re.compile(r"^RC-\d{8}-\d{6}$")
 
 
 async def execute_research(
@@ -87,38 +88,6 @@ async def execute_research(
         }
 
 
-def parse_cli_output(output: str) -> Dict[str, Any]:
-    """
-    Parse research execution output text to extract card info.
-
-    Expected format:
-        Card ID: RC-YYYYMMDD-HHMMSS
-        Title: Some Title
-        Quality: good
-        JSON: /path/to/file.json
-        Markdown: /path/to/file.md
-    """
-    result = {
-        "card_id": "",
-        "title": "",
-        "quality": "",
-        "output_path": None,
-        "message": None,
-    }
-
-    for line in output.splitlines():
-        if line.startswith("Card ID:"):
-            result["card_id"] = line.split(":", 1)[1].strip()
-        elif line.startswith("Title:"):
-            result["title"] = line.split(":", 1)[1].strip()
-        elif line.startswith("Quality:"):
-            result["quality"] = line.split(":", 1)[1].strip()
-        elif line.startswith("JSON:"):
-            result["output_path"] = line.split(":", 1)[1].strip()
-
-    return result
-
-
 async def validate_card(card_id: str) -> Dict[str, Any]:
     """
     Validate a research card from persisted JSON.
@@ -129,15 +98,7 @@ async def validate_card(card_id: str) -> Dict[str, Any]:
     Returns:
         Validation result dict
     """
-    # Find the card file
-    # Cards are stored in data/research/YYYY/MM/RC-YYYYMMDD-HHMMSS.json
-    parts = card_id.split("-")
-    if len(parts) >= 2:
-        date_str = parts[1]
-        year = date_str[:4]
-        month = date_str[4:6]
-        card_path = Path(f"data/research/{year}/{month}/{card_id}.json")
-    else:
+    if not CARD_ID_PATTERN.match(card_id):
         return {
             "card_id": card_id,
             "is_valid": False,
@@ -145,17 +106,15 @@ async def validate_card(card_id: str) -> Dict[str, Any]:
             "message": "Invalid card ID format",
         }
 
-    if not card_path.exists():
-        return {
-            "card_id": card_id,
-            "is_valid": False,
-            "quality_score": "not_found",
-            "message": f"Card not found: {card_path}",
-        }
-
     try:
-        with open(card_path, "r", encoding="utf-8") as f:
-            card_data = json.load(f)
+        card_data = get_card_by_id(card_id)
+        if card_data is None:
+            return {
+                "card_id": card_id,
+                "is_valid": False,
+                "quality_score": "not_found",
+                "message": f"Card not found: {card_id}",
+            }
         validation = card_data.get("validation")
         if not isinstance(validation, dict):
             return {
@@ -209,12 +168,14 @@ async def list_cards(
             score = validation.get("quality_score", "unknown")
             if quality and score != quality:
                 continue
+            created_at = card.get("metadata", {}).get("created_at", "")
+            created_at_short = created_at[:10] if created_at else "unknown"
             cards.append({
                 "card_id": card.get("card_id", ""),
                 "title": card.get("output", {}).get("title", ""),
                 "topic": card.get("input", {}).get("topic", ""),
                 "quality_score": score,
-                "created_at": card.get("metadata", {}).get("created_at", "")[:10],
+                "created_at": created_at_short,
             })
         paged_cards = cards[offset:offset + limit]
 
@@ -237,51 +198,6 @@ async def list_cards(
         }
 
 
-def parse_list_output(
-    output: str,
-    offset: int,
-    limit: int,
-    quality_filter: Optional[str]
-) -> List[Dict[str, Any]]:
-    """
-    Parse CLI list output.
-
-    Expected format per line:
-        RC-YYYYMMDD-HHMMSS  YYYY-MM-DD  [quality]  Title
-    """
-    cards = []
-    lines = output.splitlines()
-
-    for line in lines:
-        # Skip header lines
-        if not line.strip().startswith("RC-"):
-            continue
-
-        parts = line.strip().split(None, 3)
-        if len(parts) < 4:
-            continue
-
-        card_id = parts[0]
-        created_at = parts[1]
-        quality_match = parts[2].strip("[]")
-        title = parts[3] if len(parts) > 3 else ""
-
-        # Apply quality filter
-        if quality_filter and quality_match != quality_filter:
-            continue
-
-        cards.append({
-            "card_id": card_id,
-            "title": title,
-            "topic": "",  # Not available from list output
-            "quality_score": quality_match,
-            "created_at": created_at,
-        })
-
-    # Apply pagination
-    return cards[offset:offset + limit]
-
-
 async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
     """
     Check semantic duplicates for a research card using FAISS embeddings.
@@ -292,18 +208,10 @@ async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
     Returns:
         Dedup result dict with signal, similarity_score, similar_cards
     """
-    import json as json_module
     from src.dedup.research.dedup import check_duplicate, get_similar_cards
     from src.dedup.research.index import get_index
 
-    # Parse card ID to find file path
-    parts = card_id.split("-")
-    if len(parts) >= 2:
-        date_str = parts[1]
-        year = date_str[:4]
-        month = date_str[4:6]
-        card_path = Path(f"data/research/{year}/{month}/{card_id}.json")
-    else:
+    if not CARD_ID_PATTERN.match(card_id):
         return {
             "card_id": card_id,
             "signal": "LOW",
@@ -314,22 +222,18 @@ async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
             "message": "Invalid card ID format",
         }
 
-    if not card_path.exists():
-        return {
-            "card_id": card_id,
-            "signal": "LOW",
-            "similarity_score": 0.0,
-            "nearest_card_id": None,
-            "similar_cards": [],
-            "index_size": 0,
-            "message": f"Card not found: {card_path}",
-        }
-
     try:
-        # Load card data
-        with open(card_path, "r", encoding="utf-8") as f:
-            card_data = json_module.load(f)
-
+        card_data = get_card_by_id(card_id)
+        if card_data is None:
+            return {
+                "card_id": card_id,
+                "signal": "LOW",
+                "similarity_score": 0.0,
+                "nearest_card_id": None,
+                "similar_cards": [],
+                "index_size": 0,
+                "message": f"Card not found: {card_id}",
+            }
         # Get FAISS index
         index = get_index()
 

@@ -44,7 +44,7 @@ from .errors import (
 from .persistence import PersistenceAdapter
 from .queue_manager import QueueManager
 from .dispatcher import Dispatcher, DispatcherState
-from .executor import Executor, TaskHandler, SubprocessTaskHandler, SkipExecutor, JobHandler, SubprocessJobHandler
+from .executor import Executor, TaskHandler, DirectTaskHandler, SubprocessTaskHandler, SkipExecutor, JobHandler, SubprocessJobHandler
 from .retry_controller import RetryController
 from .recovery import RecoveryManager
 from .service import SchedulerService
@@ -91,6 +91,7 @@ __all__ = [
     # Executor (new names)
     "Executor",
     "TaskHandler",
+    "DirectTaskHandler",
     "SubprocessTaskHandler",
     "SkipExecutor",
     # Executor (backward compatibility)

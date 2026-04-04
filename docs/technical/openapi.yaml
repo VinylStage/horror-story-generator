@@ -685,7 +685,7 @@ paths:
       description: |
         Triggers research generation via Ollama LLM.
 
-        This endpoint spawns a subprocess to execute the research_executor CLI.
+        This endpoint executes the internal research pipeline in-process.
         The research card is generated and saved to disk.
 
         **Note**: This operation may take 30-120 seconds depending on the model.
