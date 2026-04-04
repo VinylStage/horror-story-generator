@@ -13,7 +13,9 @@ Each test validates end-to-end execution scenarios.
 import pytest
 import time
 import threading
+from pathlib import Path
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 from src.scheduler import (
     PersistenceAdapter,
@@ -28,6 +30,7 @@ from src.scheduler import (
     ReservationStatus,
     ReservationConflictError,
 )
+from src.scheduler.executor import DirectTaskHandler
 
 from .conftest import MockTaskHandler
 
@@ -361,6 +364,28 @@ class TestEPDirectExecution:
         result = dispatcher.dispatch_one()
         assert result is not None
         assert result[0].task_id == task.task_id
+
+    def test_direct_handler_cancelled_run_includes_log_artifact(
+        self,
+        tmp_path: Path,
+    ):
+        """Cancelled direct execution should still include log artifact."""
+        handler = DirectTaskHandler(project_root=tmp_path, logs_dir=tmp_path / "logs")
+        task = Task.create(task_type="story", params={})
+        log_path = str(tmp_path / "logs" / "cancelled.log")
+
+        def _mock_story_exec(_self, _task, log_file, _artifacts, cancel_event):
+            log_file.write("cancelled\n")
+            cancel_event.set()
+
+        with patch.object(DirectTaskHandler, "_execute_story_task", _mock_story_exec):
+            status, error, exit_code, artifacts = handler.execute(task=task, log_path=log_path)
+
+        assert status == TaskRunStatus.FAILED
+        assert error == "Task was cancelled"
+        assert exit_code == -1
+        assert artifacts
+        assert artifacts[0] == log_path
 
 
 # =============================================================================

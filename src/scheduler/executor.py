@@ -89,8 +89,8 @@ class DirectTaskHandler(TaskHandler):
         """
         self.project_root = project_root
         self.logs_dir = logs_dir
-        self._cancelled = False
-        self._cancel_event = threading.Event()
+        self._active_cancel_events: dict[int, threading.Event] = {}
+        self._cancel_lock = threading.Lock()
 
     def execute(
         self,
@@ -98,8 +98,10 @@ class DirectTaskHandler(TaskHandler):
         log_path: Optional[str] = None,
     ) -> tuple[TaskRunStatus, Optional[str], Optional[int], list[str]]:
         """Execute task via direct function calls."""
-        self._cancelled = False
-        self._cancel_event.clear()
+        cancel_event = threading.Event()
+        thread_id = threading.get_ident()
+        with self._cancel_lock:
+            self._active_cancel_events[thread_id] = cancel_event
         artifacts: list[str] = []
 
         # Ensure logs directory exists
@@ -116,13 +118,15 @@ class DirectTaskHandler(TaskHandler):
         try:
             with open(log_path, "w") as log_file:
                 if task.task_type == "story":
-                    self._execute_story_task(task, log_file, artifacts)
+                    self._execute_story_task(task, log_file, artifacts, cancel_event)
                 elif task.task_type == "research":
                     self._execute_research_task(task, log_file, artifacts)
                 else:
                     raise ValueError(f"Unknown task type: {task.task_type}")
 
-            if self._cancelled:
+            if cancel_event.is_set():
+                if Path(log_path).exists() and log_path not in artifacts:
+                    artifacts.insert(0, log_path)
                 return (
                     TaskRunStatus.FAILED,
                     "Task was cancelled",
@@ -151,14 +155,26 @@ class DirectTaskHandler(TaskHandler):
                 -1,
                 artifacts,
             )
+        finally:
+            with self._cancel_lock:
+                self._active_cancel_events.pop(thread_id, None)
 
     def cancel(self) -> bool:
         """Request cancellation for current task execution."""
-        self._cancelled = True
-        self._cancel_event.set()
-        return True
+        with self._cancel_lock:
+            if not self._active_cancel_events:
+                return False
+            for event in self._active_cancel_events.values():
+                event.set()
+            return True
 
-    def _execute_story_task(self, task: Task, log_file, artifacts: list[str]) -> None:
+    def _execute_story_task(
+        self,
+        task: Task,
+        log_file,
+        artifacts: list[str],
+        cancel_event: threading.Event,
+    ) -> None:
         """Execute story task using story generator pipeline."""
         from src.story.generator import (
             generate_horror_story,
@@ -192,7 +208,7 @@ class DirectTaskHandler(TaskHandler):
 
             try:
                 while stories_generated < max_stories:
-                    if self._cancelled:
+                    if cancel_event.is_set():
                         break
 
                     elapsed_time = time.time() - execution_start_time
@@ -229,7 +245,7 @@ class DirectTaskHandler(TaskHandler):
                         stories_generated += 1
 
                     if interval_seconds > 0 and stories_generated < max_stories:
-                        if self._cancel_event.wait(timeout=interval_seconds):
+                        if cancel_event.wait(timeout=interval_seconds):
                             break
             finally:
                 if thumbnail_provider:

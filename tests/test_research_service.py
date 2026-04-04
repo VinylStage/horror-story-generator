@@ -5,7 +5,7 @@ Validates in-process execution path without subprocess CLI calls.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 
 # Test card ID constants
@@ -88,6 +88,29 @@ class TestExecuteResearch:
 
                 assert result["status"] == "error"
                 assert "Process error" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_execute_research_uses_to_thread(self):
+        """Should offload sync pipeline execution to thread."""
+        from src.api.services.research_service import execute_research
+
+        with patch("src.api.services.research_service.get_resource_manager") as mock_rm:
+            mock_rm.return_value = MagicMock()
+            with patch(
+                "src.api.services.research_service.asyncio.to_thread",
+                new_callable=AsyncMock,
+                return_value={
+                    "success": True,
+                    "card_id": TEST_CARD_ID,
+                    "card_path": "/tmp/card.json",
+                },
+            ) as mock_to_thread:
+                result = await execute_research(topic="Test topic", tags=["t1"])
+
+                assert result["status"] == "complete"
+                mock_to_thread.assert_awaited_once()
+                fn = mock_to_thread.await_args.args[0]
+                assert fn.__name__ == "run_research_pipeline"
 
 
 class TestValidateCard:
@@ -182,6 +205,21 @@ class TestValidateCard:
             assert result["is_valid"] is False
             assert "Process error" in result["message"]
 
+    @pytest.mark.asyncio
+    async def test_validate_card_uses_to_thread(self):
+        """Should offload sync card loading to thread."""
+        from src.api.services.research_service import validate_card
+
+        with patch(
+            "src.api.services.research_service.asyncio.to_thread",
+            new_callable=AsyncMock,
+            return_value={"validation": {"quality_score": "good", "parse_error": None}},
+        ) as mock_to_thread:
+            result = await validate_card(TEST_CARD_ID)
+
+            assert result["is_valid"] is True
+            mock_to_thread.assert_awaited_once()
+
 
 class TestListCards:
     """Tests for list_cards function."""
@@ -261,3 +299,18 @@ class TestListCards:
 
             assert result["cards"] == []
             assert "Error" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_list_cards_uses_to_thread(self):
+        """Should offload sync card listing to thread."""
+        from src.api.services.research_service import list_cards
+
+        with patch(
+            "src.api.services.research_service.asyncio.to_thread",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as mock_to_thread:
+            result = await list_cards()
+
+            assert result["cards"] == []
+            mock_to_thread.assert_awaited_once()

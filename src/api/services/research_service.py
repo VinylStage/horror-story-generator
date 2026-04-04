@@ -8,6 +8,7 @@ Phase B+: Integrates with Ollama resource manager for model lifecycle.
 
 import logging
 import re
+import asyncio
 from typing import Dict, Any, List, Optional
 
 from .ollama_resource import get_resource_manager
@@ -48,7 +49,8 @@ async def execute_research(
     logger.info(f"[ResearchAPI] Executing research pipeline topic={topic}")
 
     try:
-        result = run_research_pipeline(
+        result = await asyncio.to_thread(
+            run_research_pipeline,
             topic=topic,
             tags=tags or [],
             model_spec=model,
@@ -107,7 +109,7 @@ async def validate_card(card_id: str) -> Dict[str, Any]:
         }
 
     try:
-        card_data = get_card_by_id(card_id)
+        card_data = await asyncio.to_thread(get_card_by_id, card_id)
         if card_data is None:
             return {
                 "card_id": card_id,
@@ -161,7 +163,7 @@ async def list_cards(
         List result dict with cards array
     """
     try:
-        all_cards = load_all_research_cards()
+        all_cards = await asyncio.to_thread(load_all_research_cards)
         cards = []
         for card in all_cards:
             validation = card.get("validation", {})
