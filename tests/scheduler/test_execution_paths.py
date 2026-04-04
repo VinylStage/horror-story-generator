@@ -376,6 +376,7 @@ class TestEPDirectExecution:
 
         def _mock_story_exec(_self, _task, log_file, _artifacts, cancel_event):
             log_file.write("cancelled\n")
+            log_file.flush()
             cancel_event.set()
 
         with patch.object(DirectTaskHandler, "_execute_story_task", _mock_story_exec):

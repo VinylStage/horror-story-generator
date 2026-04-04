@@ -35,7 +35,7 @@ _GLOBAL_ENV_LOCK = threading.Lock()
 
 
 def _ensure_log_artifact(log_path: str, artifacts: list[str]) -> None:
-    """Ensure execution log path is included in artifacts when file exists."""
+    """Ensure execution log is present as the first artifact when file exists."""
     if Path(log_path).exists() and log_path not in artifacts:
         artifacts.insert(0, log_path)
 
@@ -166,9 +166,10 @@ class DirectTaskHandler(TaskHandler):
         with self._cancel_lock:
             if not self._active_cancel_events:
                 return False
-            for event in self._active_cancel_events.values():
-                event.set()
-            return True
+            events = list(self._active_cancel_events.values())
+        for event in events:
+            event.set()
+        return True
 
     def _execute_story_task(
         self,
