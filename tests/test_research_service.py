@@ -320,3 +320,32 @@ class TestListCards:
 
             assert result["cards"] == []
             mock_to_thread.assert_awaited_once()
+
+
+class TestSemanticDedup:
+    """Tests for check_semantic_dedup function."""
+
+    @pytest.mark.asyncio
+    async def test_check_semantic_dedup_uses_to_thread_for_card_load(self):
+        """Should offload sync card loading to thread."""
+        from src.api.services.research_service import check_semantic_dedup
+
+        fake_index = MagicMock()
+        fake_index.size = 0
+        fake_result = MagicMock()
+        fake_result.signal.value = "LOW"
+        fake_result.similarity_score = 0.0
+        fake_result.nearest_card_id = None
+
+        with patch(
+            "src.api.services.research_service.asyncio.to_thread",
+            new_callable=AsyncMock,
+            return_value={"card_id": TEST_CARD_ID},
+        ) as mock_to_thread:
+            with patch("src.dedup.research.index.get_index", return_value=fake_index):
+                with patch("src.dedup.research.dedup.check_duplicate", return_value=fake_result):
+                    with patch("src.dedup.research.dedup.get_similar_cards", return_value=[]):
+                        result = await check_semantic_dedup(TEST_CARD_ID)
+
+        assert result["card_id"] == TEST_CARD_ID
+        mock_to_thread.assert_awaited_once()

@@ -388,6 +388,27 @@ class TestEPDirectExecution:
         assert artifacts
         assert artifacts[0] == log_path
 
+    def test_direct_handler_research_cancelled_before_start_skips_pipeline(
+        self,
+        tmp_path: Path,
+    ):
+        """Research execution should short-circuit when cancellation is already requested."""
+        handler = DirectTaskHandler(project_root=tmp_path, logs_dir=tmp_path / "logs")
+        task = Task.create(task_type="research", params={"topic": "test"})
+        log_path = str(tmp_path / "logs" / "research-cancelled.log")
+
+        def _mock_research_exec(_self, _task, log_file, _artifacts, cancel_event):
+            cancel_event.set()
+            log_file.write("cancel requested\n")
+
+        with patch.object(DirectTaskHandler, "_execute_research_task", _mock_research_exec):
+            status, error, exit_code, artifacts = handler.execute(task=task, log_path=log_path)
+
+        assert status == TaskRunStatus.FAILED
+        assert error == "Task was cancelled"
+        assert exit_code == -1
+        assert artifacts and artifacts[0] == log_path
+
 
 # =============================================================================
 # EP-RETRY: Retry Semantics (DEC-007)

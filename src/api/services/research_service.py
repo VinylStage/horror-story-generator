@@ -225,7 +225,7 @@ async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
         }
 
     try:
-        card_data = get_card_by_id(card_id)
+        card_data = await asyncio.to_thread(get_card_by_id, card_id)
         if card_data is None:
             return {
                 "card_id": card_id,

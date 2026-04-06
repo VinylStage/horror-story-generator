@@ -128,7 +128,7 @@ class DirectTaskHandler(TaskHandler):
                 if task.task_type == "story":
                     self._execute_story_task(task, log_file, artifacts, cancel_event)
                 elif task.task_type == "research":
-                    self._execute_research_task(task, log_file, artifacts)
+                    self._execute_research_task(task, log_file, artifacts, cancel_event)
                 else:
                     raise ValueError(f"Unknown task type: {task.task_type}")
 
@@ -197,70 +197,77 @@ class DirectTaskHandler(TaskHandler):
         registry = None
 
         thumbnail_provider = params.get("thumbnail_provider")
-        with _GLOBAL_ENV_LOCK:
-            previous_thumbnail_provider = os.environ.get("THUMBNAIL_PROVIDER")
-            if thumbnail_provider:
+        previous_thumbnail_provider = os.environ.get("THUMBNAIL_PROVIDER")
+        if thumbnail_provider:
+            with _GLOBAL_ENV_LOCK:
                 os.environ["THUMBNAIL_PROVIDER"] = str(thumbnail_provider)
 
-            if enable_dedup:
-                registry = init_registry(db_path=params.get("db_path"))
-                load_history = _coerce_int_param(params, "load_history", 200)
-                past = registry.load_recent_accepted(limit=load_history)
-                if past:
-                    load_past_stories_into_memory(past)
+        if enable_dedup:
+            registry = init_registry(db_path=params.get("db_path"))
+            load_history = _coerce_int_param(params, "load_history", 200)
+            past = registry.load_recent_accepted(limit=load_history)
+            if past:
+                load_past_stories_into_memory(past)
 
-            try:
-                while stories_generated < max_stories:
-                    if cancel_event.is_set():
+        try:
+            while stories_generated < max_stories:
+                if cancel_event.is_set():
+                    break
+
+                elapsed_time = time.time() - execution_start_time
+                if duration_seconds is not None and elapsed_time >= float(duration_seconds):
+                    break
+
+                topic = params.get("topic")
+                if topic is not None:
+                    result = generate_with_topic(
+                        topic=topic,
+                        auto_research=params.get("auto_research", True),
+                        model_spec=params.get("model"),
+                        research_model_spec=params.get("research_model"),
+                        save_output=True,
+                        registry=registry,
+                        target_length=params.get("target_length"),
+                        custom_tags=params.get("tags"),
+                    )
+                elif enable_dedup and registry:
+                    result = generate_with_dedup_control(
+                        registry=registry,
+                        model_spec=params.get("model"),
+                        target_length=params.get("target_length"),
+                    )
+                else:
+                    result = generate_horror_story(
+                        model_spec=params.get("model"),
+                        target_length=params.get("target_length"),
+                    )
+
+                if result and result.get("file_path"):
+                    artifacts.append(result["file_path"])
+                if result:
+                    stories_generated += 1
+
+                if interval_seconds > 0 and stories_generated < max_stories:
+                    if cancel_event.wait(timeout=interval_seconds):
                         break
-
-                    elapsed_time = time.time() - execution_start_time
-                    if duration_seconds is not None and elapsed_time >= float(duration_seconds):
-                        break
-
-                    topic = params.get("topic")
-                    if topic is not None:
-                        result = generate_with_topic(
-                            topic=topic,
-                            auto_research=params.get("auto_research", True),
-                            model_spec=params.get("model"),
-                            research_model_spec=params.get("research_model"),
-                            save_output=True,
-                            registry=registry,
-                            target_length=params.get("target_length"),
-                            custom_tags=params.get("tags"),
-                        )
-                    elif enable_dedup and registry:
-                        result = generate_with_dedup_control(
-                            registry=registry,
-                            model_spec=params.get("model"),
-                            target_length=params.get("target_length"),
-                        )
-                    else:
-                        result = generate_horror_story(
-                            model_spec=params.get("model"),
-                            target_length=params.get("target_length"),
-                        )
-
-                    if result and result.get("file_path"):
-                        artifacts.append(result["file_path"])
-                    if result:
-                        stories_generated += 1
-
-                    if interval_seconds > 0 and stories_generated < max_stories:
-                        if cancel_event.wait(timeout=interval_seconds):
-                            break
-            finally:
-                if thumbnail_provider:
+        finally:
+            if thumbnail_provider:
+                with _GLOBAL_ENV_LOCK:
                     if previous_thumbnail_provider is None:
                         os.environ.pop("THUMBNAIL_PROVIDER", None)
                     else:
                         os.environ["THUMBNAIL_PROVIDER"] = previous_thumbnail_provider
-                if registry is not None:
-                    close_registry()
-                log_file.write(f"stories_generated={stories_generated}\n")
+            if registry is not None:
+                close_registry()
+            log_file.write(f"stories_generated={stories_generated}\n")
 
-    def _execute_research_task(self, task: Task, log_file, artifacts: list[str]) -> None:
+    def _execute_research_task(
+        self,
+        task: Task,
+        log_file,
+        artifacts: list[str],
+        cancel_event: threading.Event,
+    ) -> None:
         """Execute research task using research pipeline."""
         from src.research.executor.executor import run_research_pipeline
 
@@ -268,6 +275,9 @@ class DirectTaskHandler(TaskHandler):
         topic = str(params.get("topic", "")).strip()
         if not topic:
             raise ValueError("Research task 'topic' parameter is required and must not be empty")
+        if cancel_event.is_set():
+            log_file.write("cancelled_before_start=true\n")
+            return
 
         result = run_research_pipeline(
             topic=topic,
