@@ -400,10 +400,7 @@ class TestEPDirectExecution:
         cancel_event = threading.Event()
         cancel_event.set()
 
-        with patch(
-            "src.research.executor.executor.run_research_pipeline",
-            side_effect=AssertionError("pipeline should not run when cancelled"),
-        ) as mock_pipeline:
+        with patch("src.research.executor.executor.run_research_pipeline") as mock_pipeline:
             with open(log_path, "w") as log_file:
                 artifacts: list[str] = []
                 handler._execute_research_task(task, log_file, artifacts, cancel_event)

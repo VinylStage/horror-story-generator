@@ -327,7 +327,7 @@ class TestSemanticDedup:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("index_size", [0, 3])
-    async def test_check_semantic_dedup_uses_to_thread_for_card_load(self, index_size):
+    async def test_check_semantic_dedup_offloads_card_load_to_thread(self, index_size):
         """Should offload sync card loading to thread for empty/non-empty index."""
         from src.api.services.research_service import check_semantic_dedup
 

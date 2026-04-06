@@ -197,9 +197,10 @@ class DirectTaskHandler(TaskHandler):
         registry = None
 
         thumbnail_provider = params.get("thumbnail_provider")
-        previous_thumbnail_provider = os.environ.get("THUMBNAIL_PROVIDER")
+        previous_thumbnail_provider = None
         if thumbnail_provider:
             with _GLOBAL_ENV_LOCK:
+                previous_thumbnail_provider = os.environ.get("THUMBNAIL_PROVIDER")
                 os.environ["THUMBNAIL_PROVIDER"] = str(thumbnail_provider)
 
         if enable_dedup:
