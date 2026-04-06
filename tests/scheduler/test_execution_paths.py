@@ -396,9 +396,23 @@ class TestEPDirectExecution:
         handler = DirectTaskHandler(project_root=tmp_path, logs_dir=tmp_path / "logs")
         task = Task.create(task_type="research", params={"topic": "test"})
         log_path = str(tmp_path / "logs" / "research-cancelled.log")
+        (tmp_path / "logs").mkdir(parents=True, exist_ok=True)
+        cancel_event = threading.Event()
+        cancel_event.set()
 
-        def _mock_research_exec(_self, _task, log_file, _artifacts, cancel_event):
-            cancel_event.set()
+        with patch(
+            "src.research.executor.executor.run_research_pipeline",
+            side_effect=AssertionError("pipeline should not run when cancelled"),
+        ) as mock_pipeline:
+            with open(log_path, "w") as log_file:
+                artifacts: list[str] = []
+                handler._execute_research_task(task, log_file, artifacts, cancel_event)
+
+        mock_pipeline.assert_not_called()
+        assert "cancelled_before_start=true" in Path(log_path).read_text(encoding="utf-8")
+
+        def _mock_research_exec(_self, _task, log_file, _artifacts, exec_cancel_event):
+            exec_cancel_event.set()
             log_file.write("cancel requested\n")
 
         with patch.object(DirectTaskHandler, "_execute_research_task", _mock_research_exec):

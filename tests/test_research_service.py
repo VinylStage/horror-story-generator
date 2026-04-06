@@ -326,12 +326,13 @@ class TestSemanticDedup:
     """Tests for check_semantic_dedup function."""
 
     @pytest.mark.asyncio
-    async def test_check_semantic_dedup_uses_to_thread_for_card_load(self):
-        """Should offload sync card loading to thread."""
+    @pytest.mark.parametrize("index_size", [0, 3])
+    async def test_check_semantic_dedup_uses_to_thread_for_card_load(self, index_size):
+        """Should offload sync card loading to thread for empty/non-empty index."""
         from src.api.services.research_service import check_semantic_dedup
 
         fake_index = MagicMock()
-        fake_index.size = 0
+        fake_index.size = index_size
         fake_result = MagicMock()
         fake_result.signal.value = "LOW"
         fake_result.similarity_score = 0.0
