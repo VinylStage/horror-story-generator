@@ -15,7 +15,7 @@ import time
 import threading
 from pathlib import Path
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from src.scheduler import (
     PersistenceAdapter,
@@ -411,8 +411,11 @@ class TestEPDirectExecution:
         mock_pipeline.assert_not_called()
         assert "cancelled_before_start=true" in Path(log_path).read_text(encoding="utf-8")
 
-        def _mock_research_exec(_self, _task, log_file, _artifacts, exec_cancel_event):
-            exec_cancel_event.set()
+        mock_research_exec = MagicMock()
+
+        def _mock_research_exec(self_obj, task_obj, log_file, artifacts, cancel_event):
+            mock_research_exec(self_obj, task_obj, log_file, artifacts, cancel_event)
+            cancel_event.set()
             log_file.write("cancel requested\n")
 
         with patch.object(DirectTaskHandler, "_execute_research_task", _mock_research_exec):
@@ -422,6 +425,7 @@ class TestEPDirectExecution:
         assert error == "Task was cancelled"
         assert exit_code == -1
         assert artifacts and artifacts[0] == log_path
+        mock_research_exec.assert_called_once()
 
 
 # =============================================================================
