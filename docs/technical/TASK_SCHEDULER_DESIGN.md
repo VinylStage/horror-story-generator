@@ -678,7 +678,7 @@ class ProcessPoolWorker:
 # Option C: Async (현재 방식 개선)
 class AsyncWorker:
     async def execute(self, task: Task):
-        process = await asyncio.create_subprocess_exec(...)
+        result = run_task_in_process(task)
 ```
 
 **권장:** Option C (Async) - 현재 구조와 일관성 유지

@@ -622,7 +622,7 @@ COMMIT
 **What This Means**:
 - No distributed locking required
 - SQLite sufficient (no PostgreSQL/CockroachDB)
-- Worker is same process or subprocess
+- Worker is same process (in-process execution)
 
 **If Ever Needed** (out of scope):
 | Requirement | Change |
@@ -685,4 +685,3 @@ Before any implementation, verify:
 - [DESIGN_GUARDS.md](./DESIGN_GUARDS.md) - 설계 가드레일
 - [RECOVERY_SCENARIOS.md](./RECOVERY_SCENARIOS.md) - 복구 시나리오
 - [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
-

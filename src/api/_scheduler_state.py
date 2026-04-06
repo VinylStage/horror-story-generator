@@ -38,7 +38,7 @@ def init_scheduler_service(
 
     Args:
         db_path: Path to SQLite database
-        project_root: Project root for subprocess execution
+        project_root: Project root for task execution
         logs_dir: Directory for execution logs
         poll_interval: Dispatcher poll interval in seconds
 
