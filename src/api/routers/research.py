@@ -40,7 +40,7 @@ async def run_research(request: ResearchRunRequest):
     """
     Execute research generation via Ollama.
 
-    This endpoint triggers src.research.executor CLI via subprocess.
+    This endpoint executes the research pipeline in-process.
 
     v1.4.3: Supports webhook_url for completion notification (fire-and-forget).
 

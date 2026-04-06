@@ -39,7 +39,7 @@ from src.infra.webhook import (
 )
 from .queue_manager import QueueManager
 from .dispatcher import Dispatcher
-from .executor import Executor, SubprocessTaskHandler
+from .executor import Executor, DirectTaskHandler
 from .retry_controller import RetryController
 from .recovery import RecoveryManager
 
@@ -173,7 +173,7 @@ class SchedulerService:
 
         Args:
             db_path: Path to SQLite database
-            project_root: Project root for subprocess execution
+            project_root: Project root for task execution
             logs_dir: Directory for execution logs
             poll_interval: Dispatcher poll interval in seconds
 
@@ -193,8 +193,8 @@ class SchedulerService:
             poll_interval=poll_interval,
         )
 
-        # Create executor with subprocess handler
-        handler = SubprocessTaskHandler(
+        # Create executor with direct in-process handler
+        handler = DirectTaskHandler(
             project_root=project_root,
             logs_dir=logs_dir,
         )

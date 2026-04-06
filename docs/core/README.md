@@ -93,7 +93,6 @@ horror-story-generator/
 │   │
 │   ├── story/                   # Story generation pipeline
 │   │   ├── generator.py         # Core generation orchestration
-│   │   ├── runner.py            # Subprocess entry point for scheduler
 │   │   ├── api_client.py        # Claude API client
 │   │   ├── prompt_builder.py    # Prompt construction
 │   │   ├── template_loader.py   # Template loading
@@ -381,4 +380,3 @@ CC BY-NC-SA 4.0
 - Horror research derived from academic sources (see Knowledge Units for citations)
 - Built with Claude API (Anthropic)
 - Research generation powered by Ollama
-
