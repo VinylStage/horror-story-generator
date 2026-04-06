@@ -392,7 +392,7 @@ class TestEPDirectExecution:
         self,
         tmp_path: Path,
     ):
-        """Research execution should short-circuit when cancellation is already requested."""
+        """Research execution helper should short-circuit when cancellation is already requested."""
         handler = DirectTaskHandler(project_root=tmp_path, logs_dir=tmp_path / "logs")
         task = Task.create(task_type="research", params={"topic": "test"})
         log_path = str(tmp_path / "logs" / "research-cancelled.log")
@@ -411,10 +411,19 @@ class TestEPDirectExecution:
         mock_pipeline.assert_not_called()
         assert "cancelled_before_start=true" in Path(log_path).read_text(encoding="utf-8")
 
-        mock_research_exec = MagicMock()
+    def test_direct_handler_research_cancelled_run_includes_log_artifact(
+        self,
+        tmp_path: Path,
+    ):
+        """Research cancellation via execute should return failed status and include log artifact."""
+        handler = DirectTaskHandler(project_root=tmp_path, logs_dir=tmp_path / "logs")
+        task = Task.create(task_type="research", params={"topic": "test"})
+        log_path = str(tmp_path / "logs" / "research-cancelled.log")
+
+        research_exec_spy = MagicMock()
 
         def _mock_research_exec(self_obj, task_obj, log_file, artifacts, cancel_event):
-            mock_research_exec(self_obj, task_obj, log_file, artifacts, cancel_event)
+            research_exec_spy(self_obj, task_obj, log_file, artifacts, cancel_event)
             cancel_event.set()
             log_file.write("cancel requested\n")
 
@@ -425,7 +434,7 @@ class TestEPDirectExecution:
         assert error == "Task was cancelled"
         assert exit_code == -1
         assert artifacts and artifacts[0] == log_path
-        mock_research_exec.assert_called_once()
+        research_exec_spy.assert_called_once()
 
 
 # =============================================================================
