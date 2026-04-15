@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.2](https://github.com/VinylStage/horror-story-generator/compare/v2.0.1...v2.0.2) (2026-04-15)
+
+
+### Bug Fixes
+
+* handle Claude API refusal response and update pytest ([#158](https://github.com/VinylStage/horror-story-generator/issues/158)) ([23f7f1a](https://github.com/VinylStage/horror-story-generator/commit/23f7f1a3693669ac2ec96a1cde8849ebfdfb637e))
+* handle Claude API refusal response in call_claude_api ([#153](https://github.com/VinylStage/horror-story-generator/issues/153)) ([#155](https://github.com/VinylStage/horror-story-generator/issues/155)) ([4a1a2ed](https://github.com/VinylStage/horror-story-generator/commit/4a1a2ed3b7d176eb46b5e6d07c0c46fb8b5d1bb9))
+
+
+### Code Refactoring
+
+* remove CLI paths and harden in-process scheduler/research async/concurrency behavior ([#151](https://github.com/VinylStage/horror-story-generator/issues/151)) ([723ba16](https://github.com/VinylStage/horror-story-generator/commit/723ba161d9a40ac88a6cfe396cbb616cfb4145c4))
+* remove CLI paths and harden in-process scheduler/research async/concurrency behavior ([#151](https://github.com/VinylStage/horror-story-generator/issues/151)) ([723ba16](https://github.com/VinylStage/horror-story-generator/commit/723ba161d9a40ac88a6cfe396cbb616cfb4145c4))
+* remove CLI paths and harden in-process scheduler/research async/concurrency behavior ([#151](https://github.com/VinylStage/horror-story-generator/issues/151)) ([#152](https://github.com/VinylStage/horror-story-generator/issues/152)) ([850c676](https://github.com/VinylStage/horror-story-generator/commit/850c676a14431a73efa62277cea10050c4cbc3a7))
+
 ## [2.0.1](https://github.com/VinylStage/horror-story-generator/compare/v2.0.0...v2.0.1) (2026-02-09)
 
 

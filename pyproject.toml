@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "horror-story-generator"
-version = "2.0.1"
+version = "2.0.2"
 description = "Korean horror story generator using Claude API with research integration"
 authors = ["VinylStage <mcpe9869@gmail.com>"]
 license = "CC-BY-NC-SA-4.0"

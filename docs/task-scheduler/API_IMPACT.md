@@ -2,7 +2,7 @@
 
 > **Status:** FINAL (v2.0.0 — Legacy Removed)
 > **Document Version:** 2.0.0
-> **Application Version:** 2.0.1 <!-- x-release-please-version -->
+> **Application Version:** 2.0.2 <!-- x-release-please-version -->
 > **Last Updated:** 2026-02-08
 
 ---
