@@ -125,8 +125,8 @@ curl -X POST http://localhost:8000/story/generate \
 └─────────────────┘       └─────────────────┘       └────────┬────────┘
                                                               │
                           ┌─────────────────┐                 │
-                          │  CLI Executor   │◀────────────────┘
-                          │  (Subprocess)   │
+                          │ Direct Executor │◀────────────────┘
+                          │  (In-Process)   │
                           └─────────────────┘
 ```
 

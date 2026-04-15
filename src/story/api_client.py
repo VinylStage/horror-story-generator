@@ -67,6 +67,9 @@ def call_claude_api(
             ]
         )
 
+        if not message.content:
+            stop_reason = getattr(message, 'stop_reason', 'unknown')
+            raise Exception(f"Claude API refused to generate content (stop_reason: {stop_reason})")
         story_text = message.content[0].text
 
         # Phase 1: Defensive usage extraction - handle missing usage gracefully

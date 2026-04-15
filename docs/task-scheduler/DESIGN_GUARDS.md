@@ -397,7 +397,7 @@ The following questions have been resolved and documented as decisions:
 **Implications**:
 - SQLite is sufficient
 - No distributed locks needed
-- Worker is same process or subprocess
+- Worker is same process (in-process execution)
 
 ---
 
@@ -496,4 +496,3 @@ Before implementation of any component:
 - [API_CONTRACT.md](./API_CONTRACT.md) - API 계약
 - [TEST_STRATEGY.md](./TEST_STRATEGY.md) - 테스트 전략
 - [TASK_SCHEDULER_DESIGN.md](../technical/TASK_SCHEDULER_DESIGN.md) - 시스템 설계 개요
-

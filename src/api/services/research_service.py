@@ -1,28 +1,26 @@
 """
 Research service - business logic for research operations.
 
-Connects to src.research.executor CLI via subprocess.
+Uses in-process research pipeline execution.
 
 Phase B+: Integrates with Ollama resource manager for model lifecycle.
 """
 
-import asyncio
-import json
 import logging
-import sys
-from pathlib import Path
+import re
+import asyncio
 from typing import Dict, Any, List, Optional
 
 from .ollama_resource import get_resource_manager
+from src.research.executor.executor import run_research_pipeline
+from src.infra.research_context.repository import load_all_research_cards, get_card_by_id
 
 logger = logging.getLogger(__name__)
 
-# Path to research_executor module
-RESEARCH_EXECUTOR_MODULE = "src.research.executor"
-
-
 # Default model from config
 DEFAULT_MODEL = "qwen3:30b"
+# Card ID format: RC-YYYYMMDD-HHMMSS
+CARD_ID_PATTERN = re.compile(r"^RC-\d{8}-\d{6}$")
 
 
 async def execute_research(
@@ -32,7 +30,7 @@ async def execute_research(
     timeout: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    Execute research generation via research_executor CLI.
+    Execute research generation via in-process research pipeline.
 
     Args:
         topic: Research topic
@@ -48,60 +46,42 @@ async def execute_research(
     resource_manager = get_resource_manager()
     resource_manager.mark_model_used(used_model)
 
-    # Build command
-    cmd = [sys.executable, "-m", RESEARCH_EXECUTOR_MODULE, "run", topic]
-
-    if model:
-        cmd.extend(["--model", model])
-
-    if tags:
-        cmd.extend(["--tags"] + tags)
-
-    if timeout:
-        cmd.extend(["--timeout", str(timeout)])
-
-    logger.info(f"[ResearchAPI] Executing: {' '.join(cmd)}")
+    logger.info(f"[ResearchAPI] Executing research pipeline topic={topic}")
 
     try:
-        # Run subprocess
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        result = await asyncio.to_thread(
+            run_research_pipeline,
+            topic=topic,
+            tags=tags or [],
+            model_spec=model,
+            timeout=timeout or 300,
         )
 
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=timeout or 300
-        )
-
-        stdout_text = stdout.decode("utf-8").strip()
-        stderr_text = stderr.decode("utf-8").strip()
-
-        if process.returncode != 0:
-            logger.error(f"[ResearchAPI] CLI error: {stderr_text}")
+        if not result.get("success"):
+            error_message = result.get("error", "Research generation failed")
+            if "timed out" in str(error_message).lower():
+                return {
+                    "card_id": "",
+                    "status": "timeout",
+                    "message": str(error_message),
+                    "output_path": None,
+                }
+            logger.error(f"[ResearchAPI] Pipeline error: {error_message}")
             return {
                 "card_id": "",
                 "status": "error",
-                "message": stderr_text or f"Exit code: {process.returncode}",
+                "message": str(error_message),
                 "output_path": None,
             }
 
-        # Parse output (CLI prints "Card ID: RC-XXXXXX-XXXXXX")
-        result = parse_cli_output(stdout_text)
-        result["status"] = "complete"
-        return result
-
-    except asyncio.TimeoutError:
-        logger.error(f"[ResearchAPI] Subprocess timeout")
         return {
-            "card_id": "",
-            "status": "timeout",
-            "message": f"Research execution timed out after {timeout}s",
-            "output_path": None,
+            "card_id": result.get("card_id", ""),
+            "status": "complete",
+            "message": None,
+            "output_path": result.get("card_path"),
         }
     except Exception as e:
-        logger.error(f"[ResearchAPI] Subprocess error: {e}")
+        logger.error(f"[ResearchAPI] Pipeline error: {e}")
         return {
             "card_id": "",
             "status": "error",
@@ -110,41 +90,9 @@ async def execute_research(
         }
 
 
-def parse_cli_output(output: str) -> Dict[str, Any]:
-    """
-    Parse CLI output to extract card info.
-
-    Expected format:
-        Card ID: RC-YYYYMMDD-HHMMSS
-        Title: Some Title
-        Quality: good
-        JSON: /path/to/file.json
-        Markdown: /path/to/file.md
-    """
-    result = {
-        "card_id": "",
-        "title": "",
-        "quality": "",
-        "output_path": None,
-        "message": None,
-    }
-
-    for line in output.splitlines():
-        if line.startswith("Card ID:"):
-            result["card_id"] = line.split(":", 1)[1].strip()
-        elif line.startswith("Title:"):
-            result["title"] = line.split(":", 1)[1].strip()
-        elif line.startswith("Quality:"):
-            result["quality"] = line.split(":", 1)[1].strip()
-        elif line.startswith("JSON:"):
-            result["output_path"] = line.split(":", 1)[1].strip()
-
-    return result
-
-
 async def validate_card(card_id: str) -> Dict[str, Any]:
     """
-    Validate a research card via CLI.
+    Validate a research card from persisted JSON.
 
     Args:
         card_id: Card ID to validate
@@ -152,15 +100,7 @@ async def validate_card(card_id: str) -> Dict[str, Any]:
     Returns:
         Validation result dict
     """
-    # Find the card file
-    # Cards are stored in data/research/YYYY/MM/RC-YYYYMMDD-HHMMSS.json
-    parts = card_id.split("-")
-    if len(parts) >= 2:
-        date_str = parts[1]
-        year = date_str[:4]
-        month = date_str[4:6]
-        card_path = Path(f"data/research/{year}/{month}/{card_id}.json")
-    else:
+    if not CARD_ID_PATTERN.match(card_id):
         return {
             "card_id": card_id,
             "is_valid": False,
@@ -168,51 +108,32 @@ async def validate_card(card_id: str) -> Dict[str, Any]:
             "message": "Invalid card ID format",
         }
 
-    if not card_path.exists():
-        return {
-            "card_id": card_id,
-            "is_valid": False,
-            "quality_score": "not_found",
-            "message": f"Card not found: {card_path}",
-        }
-
-    cmd = [sys.executable, "-m", RESEARCH_EXECUTOR_MODULE, "validate", str(card_path)]
-
-    logger.info(f"[ResearchAPI] Executing: {' '.join(cmd)}")
-
     try:
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=30
-        )
-
-        stdout_text = stdout.decode("utf-8").strip()
-
-        if process.returncode != 0:
+        card_data = await asyncio.to_thread(get_card_by_id, card_id)
+        if card_data is None:
+            return {
+                "card_id": card_id,
+                "is_valid": False,
+                "quality_score": "not_found",
+                "message": f"Card not found: {card_id}",
+            }
+        validation = card_data.get("validation")
+        if not isinstance(validation, dict):
             return {
                 "card_id": card_id,
                 "is_valid": False,
                 "quality_score": "error",
-                "message": stderr.decode("utf-8").strip(),
+                "message": "Missing validation section",
             }
-
-        # Parse validation output
-        quality_score = "unknown"
-        for line in stdout_text.splitlines():
-            if "quality_score:" in line:
-                quality_score = line.split(":")[-1].strip()
+        quality_score = validation.get("quality_score", "unknown")
+        parse_error = validation.get("parse_error")
+        is_valid = not parse_error and quality_score not in {"invalid", "error"}
 
         return {
             "card_id": card_id,
-            "is_valid": True,
+            "is_valid": is_valid,
             "quality_score": quality_score,
-            "message": "Validation passed",
+            "message": "Validation passed" if is_valid else (parse_error or "Validation failed"),
         }
 
     except Exception as e:
@@ -231,7 +152,7 @@ async def list_cards(
     quality: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    List research cards via CLI.
+    List research cards from persisted storage.
 
     Args:
         limit: Max cards to return
@@ -241,38 +162,27 @@ async def list_cards(
     Returns:
         List result dict with cards array
     """
-    cmd = [sys.executable, "-m", RESEARCH_EXECUTOR_MODULE, "list", "--limit", str(limit + offset)]
-
-    logger.info(f"[ResearchAPI] Executing: {' '.join(cmd)}")
-
     try:
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=30
-        )
-
-        stdout_text = stdout.decode("utf-8").strip()
-
-        if process.returncode != 0:
-            return {
-                "cards": [],
-                "total": 0,
-                "limit": limit,
-                "offset": offset,
-                "message": stderr.decode("utf-8").strip(),
-            }
-
-        # Parse list output
-        cards = parse_list_output(stdout_text, offset, limit, quality)
+        all_cards = await asyncio.to_thread(load_all_research_cards)
+        cards = []
+        for card in all_cards:
+            validation = card.get("validation", {})
+            score = validation.get("quality_score", "unknown")
+            if quality and score != quality:
+                continue
+            created_at = card.get("metadata", {}).get("created_at", "")
+            created_at_short = created_at[:10] if created_at else "unknown"
+            cards.append({
+                "card_id": card.get("card_id", ""),
+                "title": card.get("output", {}).get("title", ""),
+                "topic": card.get("input", {}).get("topic", ""),
+                "quality_score": score,
+                "created_at": created_at_short,
+            })
+        paged_cards = cards[offset:offset + limit]
 
         return {
-            "cards": cards,
+            "cards": paged_cards,
             "total": len(cards),
             "limit": limit,
             "offset": offset,
@@ -290,51 +200,6 @@ async def list_cards(
         }
 
 
-def parse_list_output(
-    output: str,
-    offset: int,
-    limit: int,
-    quality_filter: Optional[str]
-) -> List[Dict[str, Any]]:
-    """
-    Parse CLI list output.
-
-    Expected format per line:
-        RC-YYYYMMDD-HHMMSS  YYYY-MM-DD  [quality]  Title
-    """
-    cards = []
-    lines = output.splitlines()
-
-    for line in lines:
-        # Skip header lines
-        if not line.strip().startswith("RC-"):
-            continue
-
-        parts = line.strip().split(None, 3)
-        if len(parts) < 4:
-            continue
-
-        card_id = parts[0]
-        created_at = parts[1]
-        quality_match = parts[2].strip("[]")
-        title = parts[3] if len(parts) > 3 else ""
-
-        # Apply quality filter
-        if quality_filter and quality_match != quality_filter:
-            continue
-
-        cards.append({
-            "card_id": card_id,
-            "title": title,
-            "topic": "",  # Not available from list output
-            "quality_score": quality_match,
-            "created_at": created_at,
-        })
-
-    # Apply pagination
-    return cards[offset:offset + limit]
-
-
 async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
     """
     Check semantic duplicates for a research card using FAISS embeddings.
@@ -345,18 +210,10 @@ async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
     Returns:
         Dedup result dict with signal, similarity_score, similar_cards
     """
-    import json as json_module
     from src.dedup.research.dedup import check_duplicate, get_similar_cards
     from src.dedup.research.index import get_index
 
-    # Parse card ID to find file path
-    parts = card_id.split("-")
-    if len(parts) >= 2:
-        date_str = parts[1]
-        year = date_str[:4]
-        month = date_str[4:6]
-        card_path = Path(f"data/research/{year}/{month}/{card_id}.json")
-    else:
+    if not CARD_ID_PATTERN.match(card_id):
         return {
             "card_id": card_id,
             "signal": "LOW",
@@ -367,22 +224,18 @@ async def check_semantic_dedup(card_id: str) -> Dict[str, Any]:
             "message": "Invalid card ID format",
         }
 
-    if not card_path.exists():
-        return {
-            "card_id": card_id,
-            "signal": "LOW",
-            "similarity_score": 0.0,
-            "nearest_card_id": None,
-            "similar_cards": [],
-            "index_size": 0,
-            "message": f"Card not found: {card_path}",
-        }
-
     try:
-        # Load card data
-        with open(card_path, "r", encoding="utf-8") as f:
-            card_data = json_module.load(f)
-
+        card_data = await asyncio.to_thread(get_card_by_id, card_id)
+        if card_data is None:
+            return {
+                "card_id": card_id,
+                "signal": "LOW",
+                "similarity_score": 0.0,
+                "nearest_card_id": None,
+                "similar_cards": [],
+                "index_size": 0,
+                "message": f"Card not found: {card_id}",
+            }
         # Get FAISS index
         index = get_index()
 

@@ -215,7 +215,6 @@ horror-story-generator/
 ├── src/
 │   ├── story/                   # 스토리 생성 파이프라인
 │   │   ├── generator.py         # 핵심 생성 로직
-│   │   ├── runner.py            # 스케줄러용 서브프로세스 진입점
 │   │   ├── api_client.py        # Claude API 클라이언트
 │   │   └── template_loader.py   # 템플릿 스켈레톤 로더
 │   ├── research/                # 연구 생성
