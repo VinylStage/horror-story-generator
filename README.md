@@ -1,5 +1,9 @@
 # 호러 소설 생성기
 
+> **Made by [Sacrum Impietatis](https://sacrumimpietatis.com)**  
+> 1인 공포 IP 스튜디오의 AI 기반 콘텐츠 제작 파이프라인입니다.  
+> Contact: contact@sacrumimpietatis.com
+
 Claude API (Sonnet 4.5)를 활용한 한국어 호러 소설 자동 생성 시스템입니다.
 
 > **Version:** v2.0.2 <!-- x-release-please-version -->
@@ -307,6 +311,23 @@ hybrid_score = (canonical_score × 0.3) + (semantic_score × 0.7)
 
 ---
 
+## 생성 예시
+
+[샘플 스토리 보기](docs/examples/sample_story.md)
+
+```json
+{
+  "topic": "한국 아파트 공포",
+  "template": "isolation_horror",
+  "length": 2847,
+  "dedup_signal": "LOW"
+}
+```
+
+> <!-- TODO: 실제 생성된 소설 첫 300자로 교체 예정 -->
+
+---
+
 ## 문서
 
 | 문서 | 설명 |
@@ -327,3 +348,5 @@ CC BY-NC-SA 4.0
 ## 문의
 
 이슈나 개선 제안이 있으시면 언제든지 연락주세요!
+
+<!-- GitHub Topics 권장: horror, korean, ai, story-generation, claude-api, fastapi, python -->
