@@ -1,6 +1,6 @@
 # KU → Canonical Key Generation Rules
 
-> **Version:** v2.0.2 <!-- x-release-please-version -->
+> **Version:** v2.0.3 <!-- x-release-please-version -->
 > **Enum Version:** 1.0
 > **Status:** Active
 

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.3](https://github.com/VinylStage/horror-story-generator/compare/v2.0.2...v2.0.3) (2026-07-25)
+
+
+### Documentation
+
+* add studio identity and generation sample for ([3471b41](https://github.com/VinylStage/horror-story-generator/commit/3471b4136f97c2c977429d5c091f970314c33764))
+
 ## [2.0.2](https://github.com/VinylStage/horror-story-generator/compare/v2.0.1...v2.0.2) (2026-04-15)
 
 
