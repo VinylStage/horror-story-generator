@@ -2,7 +2,7 @@
 
 > **Status:** RESOLVED → DEC-011
 > **Document Version:** 1.0.0
-> **Application Version:** 2.0.2 <!-- x-release-please-version -->
+> **Application Version:** 2.0.3 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 >
 > **Decision**: Option A selected — Global single concurrency.

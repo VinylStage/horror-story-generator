@@ -2,7 +2,7 @@
 
 > **Status:** IMPLEMENTED (Phase 3 API Integration Complete)
 > **Document Version:** 2.0.0
-> **Application Version:** 2.0.2 <!-- x-release-please-version -->
+> **Application Version:** 2.0.3 <!-- x-release-please-version -->
 > **Last Updated:** 2026-01-18
 > **Implementation Branch:** feat/88-scheduler-api-integration
 

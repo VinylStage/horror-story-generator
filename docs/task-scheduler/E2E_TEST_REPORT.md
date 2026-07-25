@@ -1,7 +1,7 @@
 # Task Scheduler E2E Test Report
 
 **Document Version:** 1.1.0
-**Application Version:** 2.0.2 <!-- x-release-please-version -->
+**Application Version:** 2.0.3 <!-- x-release-please-version -->
 **Phase:** 6-B Real Pipeline Validation
 **Test Date:** 2026-01-18
 **Status:** PASS
